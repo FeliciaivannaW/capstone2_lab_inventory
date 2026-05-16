@@ -1,0 +1,21 @@
+# Node.js
+backend-node/node_modules/
+backend-node/.env
+backend-node/uploads/
+
+# Laravel
+frontend-laravel/vendor/
+frontend-laravel/node_modules/
+frontend-laravel/.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# System
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
