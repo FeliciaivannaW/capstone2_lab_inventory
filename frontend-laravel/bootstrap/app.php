@@ -11,8 +11,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'frontend.auth' => \App\Http\Middleware\FrontendAuth::class,
+            'frontend.role' => \App\Http\Middleware\FrontendRole::class,
+        ]);
     })
+        
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();

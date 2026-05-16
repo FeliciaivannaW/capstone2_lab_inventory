@@ -148,6 +148,15 @@
 
     <div class="sidebar">
         <h2>Lab Inventory</h2>
+        @php
+            $authUser = session('auth_user');
+            $role = $authUser['role'] ?? null;
+        @endphp
+
+        <div style="font-size: 13px; color: #d1d5db; margin-bottom: 18px; line-height: 1.5;">
+            <strong>{{ $authUser['name'] ?? 'User' }}</strong><br>
+            {{ $role ?? '-' }}
+        </div>
 
         <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
             Dashboard
@@ -176,6 +185,20 @@
         <a href="{{ route('maintenance') }}" class="{{ request()->routeIs('maintenance') ? 'active' : '' }}">
             Maintenance
         </a>
+        <form method="POST" action="{{ route('logout') }}" style="margin-top: 20px;">
+            @csrf
+            <button type="submit" style="
+                width: 100%;
+                padding: 10px 12px;
+                background: #991b1b;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+            ">
+                Logout
+            </button>
+        </form>
     </div>
 
     <div class="main">
