@@ -1,6 +1,6 @@
 const db = require("../config/database");
 
-const getLaboratories = async (req, res) => {
+const getLaboratories = async (req, res, next) => {
   try {
     const [laboratories] = await db.query(`
       SELECT
@@ -25,10 +25,11 @@ const getLaboratories = async (req, res) => {
       data: laboratories
     });
   } catch (error) {
+    console.error("[LABORATORIES ERROR]", error);
     res.status(500).json({
       status: "error",
-      message: "Failed to get laboratories",
-      error: error.message
+      message: "Gagal mengambil data laboratorium",
+      detail: error.message || "Kesalahan tidak diketahui"
     });
   }
 };

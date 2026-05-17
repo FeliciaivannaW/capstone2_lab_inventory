@@ -1,6 +1,6 @@
 const db = require("../config/database");
 
-const getRooms = async (req, res) => {
+const getRooms = async (req, res, next) => {
   try {
     const [rooms] = await db.query(`
       SELECT 
@@ -25,10 +25,11 @@ const getRooms = async (req, res) => {
       data: rooms
     });
   } catch (error) {
+    console.error("[ROOMS ERROR]", error);
     res.status(500).json({
       status: "error",
-      message: "Failed to get rooms",
-      error: error.message
+      message: "Gagal mengambil data ruangan",
+      detail: error.message || "Kesalahan tidak diketahui"
     });
   }
 };

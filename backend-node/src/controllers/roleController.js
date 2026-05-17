@@ -1,6 +1,6 @@
 const db = require("../config/database");
 
-const getRoles = async (req, res) => {
+const getRoles = async (req, res, next) => {
   try {
     const [roles] = await db.query("SELECT * FROM roles ORDER BY id ASC");
 
@@ -9,10 +9,11 @@ const getRoles = async (req, res) => {
       data: roles
     });
   } catch (error) {
+    console.error("[ROLES ERROR]", error);
     res.status(500).json({
       status: "error",
-      message: "Failed to get roles",
-      error: error.message
+      message: "Gagal mengambil data roles",
+      detail: error.message || "Kesalahan tidak diketahui"
     });
   }
 };

@@ -2,7 +2,7 @@ const db = require("../config/database");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const login = async (req, res) => {
+const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -11,6 +11,10 @@ const login = async (req, res) => {
         status: "error",
         message: "Email dan password wajib diisi"
       });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET tidak dikonfigurasi di environment variables");
     }
 
     const [users] = await db.query(`
@@ -80,16 +84,24 @@ const login = async (req, res) => {
       user
     });
   } catch (error) {
+    console.error("[AUTH ERROR]", error);
     res.status(500).json({
       status: "error",
       message: "Login gagal",
-      error: error.sqlMessage || error.message
+      detail: error.message || "Kesalahan tidak diketahui"
     });
   }
 };
 
-const profile = async (req, res) => {
+const profile = async (req, res, next) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        status: "error",
+        message: "User tidak terautentikasi"
+      });
+    }
+
     const [users] = await db.query(`
       SELECT 
         users.id,
@@ -105,15 +117,23 @@ const profile = async (req, res) => {
       LIMIT 1
     `, [req.user.id]);
 
+    if (users.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "User tidak ditemukan"
+      });
+    }
+
     res.json({
       status: "success",
       data: users[0]
     });
   } catch (error) {
+    console.error("[PROFILE ERROR]", error);
     res.status(500).json({
       status: "error",
       message: "Gagal mengambil profile",
-      error: error.sqlMessage || error.message
+      detail: error.message || "Kesalahan tidak diketahui"
     });
   }
 };

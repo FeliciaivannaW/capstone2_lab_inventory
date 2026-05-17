@@ -64,54 +64,210 @@ This system implements role-based access control for five different user roles. 
 
 ## 4. Workflow and Environment
 
-### a. Quick-Start Guide
+### a. System Requirements
 
-Before running this project locally, make sure the following software is installed on your computer:
+Before running this project, make sure the following software is installed:
 
-- PHP
-- Composer
-- Node.js
-- MySQL
+- **Node.js** (v16 or higher)
+- **npm** or **yarn**
+- **PHP** (v8.1 or higher)
+- **Composer**
+- **MySQL** (or MariaDB)
+- **Git**
 
-### How to Run the Project Locally
+### b. Quick Installation (Automated Setup - Windows & Linux/Mac)
 
-1. Clone this repository to your computer.
+#### **For Windows Users:**
+1. Navigate to project root folder
+2. Double-click `setup.bat`
+3. Wait for setup to complete
+4. The script will automatically launch 3 servers:
+   - Backend: http://localhost:3000
+   - Frontend: http://localhost:8000
+   - Vite Dev Server: http://localhost:5173
 
-2. Open a terminal in the backend folder, then run:
+#### **For Linux/Mac Users:**
+1. Navigate to project root folder
+2. Run: `bash setup.sh`
+3. Wait for setup to complete
+4. The script will automatically launch 3 servers
 
-   ```bash
-   npm install
-   ```
+---
 
-3. Open a terminal in the frontend folder, then run:
+### c. Step-by-Step Manual Setup
 
-   ```bash
-   composer install
-   ```
+If you prefer to set up manually or encounter issues with automated setup:
 
-4. Copy the `.env.example` file and rename it to `.env`.
+#### **Step 1: Database Setup**
 
-5. Adjust the MySQL database configuration and backend URL inside the `.env` file.
+```bash
+# Using MySQL CLI
+mysql -u root -p
 
-6. Run the database migration:
+# In MySQL prompt:
+SOURCE path/to/database/schema.sql;
+SOURCE path/to/database/seed.sql;
+EXIT;
+```
 
-   ```bash
-   php artisan migrate
-   ```
+#### **Step 2: Backend Setup (Node.js)**
 
-7. Start the backend API server:
+```bash
+cd backend-node
 
-   ```bash
-   node server.js
-   ```
+# Install dependencies
+npm install
 
-8. Start the Laravel frontend server:
+# Create .env file (copy from .env.example if needed)
+# Make sure database credentials match your MySQL setup
+cat .env
+# Check: DB_HOST=localhost, DB_NAME=lab_inventory_db, DB_USER=root
 
-   ```bash
-   php artisan serve
-   ```
+# Start backend server
+npm run dev
+```
 
-9. Open the application in your browser using the URL shown in the terminal.
+The backend will run on: **http://localhost:3000**
+
+Test it:
+```bash
+curl http://localhost:3000/api/health
+```
+
+#### **Step 3: Frontend Setup (Laravel + Vite)**
+
+Open **another terminal** and run:
+
+```bash
+cd frontend-laravel
+
+# Install PHP dependencies
+composer install
+
+# Create .env file
+cp .env.example .env
+
+# Update .env with your configuration
+# Important: 
+#   - APP_KEY= (will be generated)
+#   - VITE_BACKEND_URL=http://localhost:3000
+
+# Generate APP_KEY
+php artisan key:generate
+
+# Install Node.js dependencies for Vite
+npm install
+
+# Start Laravel development server
+php artisan serve
+```
+
+The Laravel server will run on: **http://localhost:8000**
+
+#### **Step 4: Start Vite Dev Server**
+
+Open **another terminal** and run:
+
+```bash
+cd frontend-laravel
+
+# Start Vite for asset compilation and hot reload
+npm run dev
+```
+
+The Vite server will run on: **http://localhost:5173** (for hot reload reference)
+
+---
+
+### d. Accessing the Application
+
+Once all servers are running:
+
+1. **Open browser** → http://localhost:8000
+2. **Login with test credentials:**
+   - Email: `admin@example.com`
+   - Password: `password123`
+
+---
+
+### e. Test API Endpoints
+
+#### Health Check:
+```bash
+curl http://localhost:3000/api/health
+```
+
+#### Get All Roles:
+```bash
+curl http://localhost:3000/api/roles
+```
+
+#### Login:
+```bash
+curl -X POST http://localhost:3000/api/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "password123"
+  }'
+```
+
+---
+
+### f. Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| **Port 3000 already in use** | Change backend port in `.env`: `PORT=3001` |
+| **Port 8000 already in use** | Change frontend port: `php artisan serve --port=8001` |
+| **Port 5173 already in use** | Vite will auto-use next available port |
+| **MySQL connection failed** | Check `.env` database credentials and MySQL is running |
+| **404 on frontend routes** | Ensure both backend and frontend servers are running |
+| **CORS errors** | Check backend `src/app.js` CORS configuration |
+| **Assets not loading** | Ensure Vite dev server (`npm run dev` in frontend) is running |
+
+---
+
+### g. Environment Variables Reference
+
+#### Backend `.env` (backend-node/.env):
+```
+PORT=3000
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=lab_inventory_db
+DB_USER=root
+DB_PASSWORD=
+JWT_SECRET=capstone_lab_inventory_secret
+```
+
+#### Frontend `.env` (frontend-laravel/.env):
+```
+APP_NAME=Lab Inventory System
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost
+
+DB_CONNECTION=sqlite
+SESSION_DRIVER=database
+
+VITE_BACKEND_URL=http://localhost:3000
+VITE_API_URL=http://localhost:3000/api
+```
+
+---
+
+### h. Default Test Users
+
+| Email | Password | Role |
+|-------|----------|------|
+| admin@example.com | password123 | Administrator |
+| kalab@example.com | password123 | Head of Laboratory |
+| kaprodi@example.com | password123 | Head of Study Program |
+| stafadmin@example.com | password123 | Administrative Staff |
+| staflab@example.com | password123 | Laboratory Staff |
+
+⚠️ **For Production:** Hash all passwords with bcrypt instead of storing plain text.
 
 ---
 
