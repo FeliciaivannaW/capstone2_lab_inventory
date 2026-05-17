@@ -21,6 +21,9 @@ DROP TABLE IF EXISTS room_types;
 DROP TABLE IF EXISTS floors;
 DROP TABLE IF EXISTS buildings;
 DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS cache_locks;
+DROP TABLE IF EXISTS cache;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -350,4 +353,30 @@ CREATE TABLE bhp_stock_movements (
 
     CONSTRAINT fk_bhp_stock_movements_performed_by
         FOREIGN KEY (performed_by) REFERENCES users(id)
+);
+
+-- Laravel Framework Tables
+CREATE TABLE sessions (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id BIGINT UNSIGNED NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    payload LONGTEXT NOT NULL,
+    last_activity INT NOT NULL,
+    INDEX idx_sessions_user_id (user_id),
+    INDEX idx_sessions_last_activity (last_activity)
+);
+
+CREATE TABLE cache (
+    `key` VARCHAR(255) NOT NULL PRIMARY KEY,
+    `value` MEDIUMTEXT NOT NULL,
+    `expiration` INT NOT NULL,
+    INDEX idx_cache_expiration (expiration)
+);
+
+CREATE TABLE cache_locks (
+    `key` VARCHAR(255) NOT NULL PRIMARY KEY,
+    owner VARCHAR(255) NOT NULL,
+    expiration INT NOT NULL,
+    INDEX idx_cache_locks_expiration (expiration)
 );
