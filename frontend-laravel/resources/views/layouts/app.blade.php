@@ -162,32 +162,46 @@
         </div>
 
         <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
-            Dashboard
+            Dashboard Utama
         </a>
 
-        <a href="{{ route('laboratories') }}" class="{{ request()->routeIs('laboratories') ? 'active' : '' }}">
-            Laboratorium
-        </a>
+        @if($role === 'admin')
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #374151;">
+                <div style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; padding: 0 12px;">Administrator</div>
+                <a href="{{ route('laboratories') }}" class="{{ request()->routeIs('laboratories') ? 'active' : '' }}">Laboratorium</a>
+                <a href="{{ route('rooms') }}" class="{{ request()->routeIs('rooms') ? 'active' : '' }}">Ruangan</a>
+                <!-- Optional: User Management bisa ditambahkan di sini nantinya -->
+            </div>
+        @endif
 
-        <a href="{{ route('rooms') }}" class="{{ request()->routeIs('rooms') ? 'active' : '' }}">
-            Ruangan
-        </a>
+        @if(in_array($role, ['kalab', 'kaprodi']))
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #374151;">
+                <div style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; padding: 0 12px;">Manajemen Pengadaan</div>
+                <a href="{{ route('procurement') }}" class="{{ request()->routeIs('procurement') ? 'active' : '' }}">Draf Pengadaan</a>
+                <a href="{{ route('inventory') }}" class="{{ request()->routeIs('inventory') ? 'active' : '' }}">Katalog Inventaris</a>
+            </div>
+        @endif
 
-        <a href="{{ route('inventory') }}" class="{{ request()->routeIs('inventory') ? 'active' : '' }}">
-            Inventaris
-        </a>
+        @if($role === 'staf_laboratorium')
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #374151;">
+                <div style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; padding: 0 12px;">Staf Laboratorium</div>
+                <a href="{{ route('bhp') }}" class="{{ request()->routeIs('bhp') ? 'active' : '' }}">Kelola Stok BHP</a>
+                <a href="{{ route('maintenance') }}" class="{{ request()->routeIs('maintenance') ? 'active' : '' }}">Log Maintenance</a>
+                <a href="{{ route('inventory') }}" class="{{ request()->routeIs('inventory') ? 'active' : '' }}">Update Kondisi Aset</a>
+            </div>
+        @endif
 
-        <a href="{{ route('bhp') }}" class="{{ request()->routeIs('bhp') ? 'active' : '' }}">
-            BHP
-        </a>
+        @if($role === 'staf_administrasi')
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #374151;">
+                <div style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; padding: 0 12px;">Staf Administrasi</div>
+                <a href="{{ route('staf-admin.dashboard') }}" class="{{ request()->routeIs('staf-admin.dashboard') ? 'active' : '' }}">Dashboard Statistik</a>
+                <a href="{{ route('staf-admin.procurement-approved') }}" class="{{ request()->routeIs('staf-admin.procurement-approved*') ? 'active' : '' }}">Draf Disetujui & Penerimaan</a>
+                <a href="{{ route('staf-admin.inventory-label') }}" class="{{ request()->routeIs('staf-admin.inventory-label*') ? 'active' : '' }}">Update Label & Foto</a>
+                <a href="{{ route('staf-admin.asset-list') }}" class="{{ request()->routeIs('staf-admin.asset*') ? 'active' : '' }}">Pelacakan Siklus</a>
+                <a href="{{ route('inventory') }}" class="{{ request()->routeIs('inventory') ? 'active' : '' }}">Semua Inventaris</a>
+            </div>
+        @endif
 
-        <a href="{{ route('procurement') }}" class="{{ request()->routeIs('procurement') ? 'active' : '' }}">
-            Pengadaan
-        </a>
-
-        <a href="{{ route('maintenance') }}" class="{{ request()->routeIs('maintenance') ? 'active' : '' }}">
-            Maintenance
-        </a>
         <form method="POST" action="{{ route('logout') }}" style="margin-top: 20px;">
             @csrf
             <button type="submit" style="

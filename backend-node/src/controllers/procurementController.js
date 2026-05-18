@@ -6,6 +6,31 @@ const db = require("../config/database");
  */
 const getProcurementDrafts = async (req, res, next) => {
   try {
+    // Query parameter filters
+    const { status, budget_year, search } = req.query;
+
+    let whereConditions = [];
+    let params = [];
+
+    if (status) {
+      whereConditions.push("pd.status = ?");
+      params.push(status);
+    }
+
+    if (budget_year) {
+      whereConditions.push("pd.budget_year = ?");
+      params.push(budget_year);
+    }
+
+    if (search) {
+      whereConditions.push("(pd.title LIKE ? OR l.name LIKE ?)");
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    const whereClause = whereConditions.length > 0
+      ? "WHERE " + whereConditions.join(" AND ")
+      : "";
+
     const [drafts] = await db.query(`
       SELECT
         pd.id,
@@ -31,9 +56,10 @@ const getProcurementDrafts = async (req, res, next) => {
       JOIN users AS uc ON pd.created_by = uc.id
       LEFT JOIN users AS uf ON pd.finalized_by = uf.id
       LEFT JOIN procurement_items AS pi ON pd.id = pi.draft_id
+      ${whereClause}
       GROUP BY pd.id
       ORDER BY pd.created_at DESC
-    `);
+    `, params);
 
     res.json({
       status: "success",

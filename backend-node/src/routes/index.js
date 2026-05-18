@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
+const path = require("path");
 
 const healthController = require("../controllers/healthController");
 const roleController = require("../controllers/roleController");
@@ -7,9 +9,41 @@ const roomController = require("../controllers/roomController");
 const laboratoryController = require("../controllers/laboratoryController");
 const procurementController = require("../controllers/procurementController");
 const authController = require("../controllers/authController");
+const goodsReceiptController = require("../controllers/goodsReceiptController");
+const inventoryController = require("../controllers/inventoryController");
+const statisticsController = require("../controllers/statisticsController");
 
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
+
+// Multer configuration for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../../uploads/qr');
+    const fs = require('fs');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'qr-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Hanya file gambar (JPEG, PNG, WEBP) yang diperbolehkan'));
+    }
+  }
+});
 
 router.get("/health", healthController.checkHealth);
 
@@ -89,6 +123,72 @@ router.post(
   authMiddleware,
   roleMiddleware(["ketua_program_studi"]),
   procurementController.finalizeProcurementDraft
+);
+
+// ============================================================
+// GOODS RECEIPT ROUTES (Staf Administrasi - Fitur 2)
+// ============================================================
+router.get(
+  "/goods-receipts/by-draft/:draftId",
+  authMiddleware,
+  roleMiddleware(["staf_administrasi", "administrator"]),
+  goodsReceiptController.getReceiptsByDraft
+);
+
+router.post(
+  "/goods-receipts",
+  authMiddleware,
+  roleMiddleware(["staf_administrasi"]),
+  goodsReceiptController.createGoodsReceipt
+);
+
+// ============================================================
+// INVENTORY ASSET ROUTES (Staf Administrasi - Fitur 3 & 5)
+// ============================================================
+router.get(
+  "/inventory/assets",
+  authMiddleware,
+  roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium"]),
+  inventoryController.getInventoryAssets
+);
+
+router.get(
+  "/inventory/assets/:id",
+  authMiddleware,
+  roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium"]),
+  inventoryController.getInventoryAsset
+);
+
+router.put(
+  "/inventory/assets/:id/label",
+  authMiddleware,
+  roleMiddleware(["staf_administrasi"]),
+  inventoryController.updateAssetLabel
+);
+
+router.post(
+  "/inventory/assets/:id/label",
+  authMiddleware,
+  roleMiddleware(["staf_administrasi"]),
+  upload.single('qr_photo'),
+  inventoryController.updateAssetLabel
+);
+
+router.get(
+  "/inventory/assets/:id/timeline",
+  authMiddleware,
+  roleMiddleware(["staf_administrasi", "administrator"]),
+  inventoryController.getAssetTimeline
+);
+
+// ============================================================
+// STATISTICS ROUTES (Staf Administrasi - Fitur 4)
+// ============================================================
+router.get(
+  "/statistics/summary",
+  authMiddleware,
+  roleMiddleware(["staf_administrasi", "administrator"]),
+  statisticsController.getSummary
 );
 
 router.get(
