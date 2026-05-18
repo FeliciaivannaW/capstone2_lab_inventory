@@ -274,9 +274,367 @@ const finalizeProcurementDraft = async (req, res, next) => {
   }
 };
 
+/**
+ * Create a new procurement draft
+ * Accessible to: kepala_laboratorium, staf_administrasi
+ */
+const createProcurementDraft = async (req, res, next) => {
+  try {
+    const { title, lab_id, budget_year, notes } = req.body;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    // Validation
+    if (!title || !lab_id || !budget_year) {
+      return res.status(400).json({
+        status: "error",
+        message: "Field title, lab_id, dan budget_year harus diisi"
+      });
+    }
+
+    // Authorization: kepala_lab hanya bisa membuat untuk lab mereka
+    if (userRole === 'kepala_laboratorium') {
+      const [userLabs] = await db.query(
+        `SELECT lab_id FROM users WHERE id = ?`,
+        [userId]
+      );
+      if (!userLabs.length || userLabs[0].lab_id != lab_id) {
+        return res.status(403).json({
+          status: "error",
+          message: "Anda hanya bisa membuat draf untuk laboratorium Anda sendiri"
+        });
+      }
+    }
+
+    const createdAt = new Date();
+    await db.query(
+      `INSERT INTO procurement_drafts (lab_id, created_by, title, budget_year, notes, status, created_at)
+       VALUES (?, ?, ?, ?, ?, 'draft', ?)`,
+      [lab_id, userId, title, budget_year, notes || null, createdAt]
+    );
+
+    res.json({
+      status: "success",
+      message: "Draf pengadaan berhasil dibuat",
+      data: {
+        title,
+        lab_id,
+        budget_year,
+        status: 'draft',
+        is_locked: false,
+        created_at: createdAt
+      }
+    });
+  } catch (error) {
+    console.error("[PROCUREMENT CREATE ERROR]", error);
+    res.status(500).json({
+      status: "error",
+      message: "Gagal membuat draf pengadaan",
+      detail: error.message || "Kesalahan tidak diketahui"
+    });
+  }
+};
+
+/**
+ * Update procurement draft
+ * Accessible to: creator or staf_administrasi
+ * Draft must be in 'draft' status
+ */
+const updateProcurementDraft = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { title, lab_id, budget_year, notes } = req.body;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    // Check draft exists
+    const [draftRows] = await db.query(
+      `SELECT id, created_by, status, is_locked FROM procurement_drafts WHERE id = ?`,
+      [id]
+    );
+
+    if (draftRows.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Draf pengadaan tidak ditemukan"
+      });
+    }
+
+    const draft = draftRows[0];
+
+    // Guard: draft must be in 'draft' status
+    if (draft.status !== 'draft' || draft.is_locked) {
+      return res.status(403).json({
+        status: "error",
+        message: "Draf tidak bisa diubah dalam status ini"
+      });
+    }
+
+    // Authorization: only creator or staf_administrasi
+    if (userRole !== 'staf_administrasi' && draft.created_by !== userId) {
+      return res.status(403).json({
+        status: "error",
+        message: "Anda tidak memiliki wewenang untuk mengubah draf ini"
+      });
+    }
+
+    await db.query(
+      `UPDATE procurement_drafts SET title = ?, lab_id = ?, budget_year = ?, notes = ?
+       WHERE id = ?`,
+      [title, lab_id, budget_year, notes || null, id]
+    );
+
+    res.json({
+      status: "success",
+      message: "Draf pengadaan berhasil diperbarui",
+      data: { id, title, lab_id, budget_year }
+    });
+  } catch (error) {
+    console.error("[PROCUREMENT UPDATE ERROR]", error);
+    res.status(500).json({
+      status: "error",
+      message: "Gagal memperbarui draf pengadaan",
+      detail: error.message || "Kesalahan tidak diketahui"
+    });
+  }
+};
+
+/**
+ * Delete procurement draft
+ * Accessible to: creator or staf_administrasi
+ * Draft must be in 'draft' status with no items
+ */
+const deleteProcurementDraft = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    // Check draft exists
+    const [draftRows] = await db.query(
+      `SELECT id, created_by, status, is_locked FROM procurement_drafts WHERE id = ?`,
+      [id]
+    );
+
+    if (draftRows.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Draf pengadaan tidak ditemukan"
+      });
+    }
+
+    const draft = draftRows[0];
+
+    // Guard: draft must be in 'draft' status
+    if (draft.status !== 'draft' || draft.is_locked) {
+      return res.status(403).json({
+        status: "error",
+        message: "Hanya draf berstatus 'draft' yang bisa dihapus"
+      });
+    }
+
+    // Authorization: only creator or staf_administrasi
+    if (userRole !== 'staf_administrasi' && draft.created_by !== userId) {
+      return res.status(403).json({
+        status: "error",
+        message: "Anda tidak memiliki wewenang untuk menghapus draf ini"
+      });
+    }
+
+    // Check if draft has items
+    const [itemCount] = await db.query(
+      `SELECT COUNT(*) as count FROM procurement_items WHERE draft_id = ?`,
+      [id]
+    );
+
+    if (itemCount[0].count > 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "Tidak bisa menghapus draf yang memiliki items. Hapus items terlebih dahulu."
+      });
+    }
+
+    // Delete draft
+    await db.query(`DELETE FROM procurement_drafts WHERE id = ?`, [id]);
+
+    res.json({
+      status: "success",
+      message: "Draf pengadaan berhasil dihapus"
+    });
+  } catch (error) {
+    console.error("[PROCUREMENT DELETE ERROR]", error);
+    res.status(500).json({
+      status: "error",
+      message: "Gagal menghapus draf pengadaan",
+      detail: error.message || "Kesalahan tidak diketahui"
+    });
+  }
+};
+
+/**
+ * Add item to procurement draft
+ * Accessible to: creator or staf_administrasi
+ * Draft must be in 'draft' status
+ */
+const addProcurementItem = async (req, res, next) => {
+  try {
+    const { id: draftId } = req.params;
+    const { item_name, item_type, quantity, estimated_price, purchase_link, replacement_asset_id } = req.body;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    // Check draft exists and accessible
+    const [draftRows] = await db.query(
+      `SELECT id, created_by, status, is_locked FROM procurement_drafts WHERE id = ?`,
+      [draftId]
+    );
+
+    if (draftRows.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Draf pengadaan tidak ditemukan"
+      });
+    }
+
+    const draft = draftRows[0];
+
+    if (draft.status !== 'draft' || draft.is_locked) {
+      return res.status(403).json({
+        status: "error",
+        message: "Tidak bisa menambah item ke draf ini"
+      });
+    }
+
+    if (userRole !== 'staf_administrasi' && draft.created_by !== userId) {
+      return res.status(403).json({
+        status: "error",
+        message: "Anda tidak memiliki wewenang untuk mengubah draf ini"
+      });
+    }
+
+    // Validate input
+    if (!item_name || !item_type || !quantity || estimated_price === undefined) {
+      return res.status(400).json({
+        status: "error",
+        message: "Field item_name, item_type, quantity, dan estimated_price harus diisi"
+      });
+    }
+
+    const createdAt = new Date();
+    await db.query(
+      `INSERT INTO procurement_items 
+       (draft_id, item_name, item_type, quantity, estimated_price, purchase_link, replacement_asset_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [draftId, item_name, item_type, quantity, estimated_price, purchase_link || null, replacement_asset_id || null, createdAt]
+    );
+
+    res.json({
+      status: "success",
+      message: "Item berhasil ditambahkan ke draf",
+      data: {
+        item_name,
+        item_type,
+        quantity,
+        estimated_price,
+        review_status: 'pending',
+        created_at: createdAt
+      }
+    });
+  } catch (error) {
+    console.error("[PROCUREMENT ADD ITEM ERROR]", error);
+    res.status(500).json({
+      status: "error",
+      message: "Gagal menambahkan item",
+      detail: error.message || "Kesalahan tidak diketahui"
+    });
+  }
+};
+
+/**
+ * Delete item from procurement draft
+ * Accessible to: creator or staf_administrasi
+ * Item must have pending review status
+ */
+const deleteProcurementItem = async (req, res, next) => {
+  try {
+    const { id: draftId, itemId } = req.params;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    // Check draft exists
+    const [draftRows] = await db.query(
+      `SELECT id, created_by, status FROM procurement_drafts WHERE id = ?`,
+      [draftId]
+    );
+
+    if (draftRows.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Draf pengadaan tidak ditemukan"
+      });
+    }
+
+    const draft = draftRows[0];
+
+    if (draft.status !== 'draft') {
+      return res.status(403).json({
+        status: "error",
+        message: "Tidak bisa menghapus item dari draf ini"
+      });
+    }
+
+    if (userRole !== 'staf_administrasi' && draft.created_by !== userId) {
+      return res.status(403).json({
+        status: "error",
+        message: "Anda tidak memiliki wewenang"
+      });
+    }
+
+    // Check item exists and is pending
+    const [itemRows] = await db.query(
+      `SELECT id, review_status FROM procurement_items WHERE id = ? AND draft_id = ?`,
+      [itemId, draftId]
+    );
+
+    if (itemRows.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Item tidak ditemukan"
+      });
+    }
+
+    if (itemRows[0].review_status !== 'pending') {
+      return res.status(403).json({
+        status: "error",
+        message: "Hanya item dengan status pending yang bisa dihapus"
+      });
+    }
+
+    // Delete item
+    await db.query(`DELETE FROM procurement_items WHERE id = ?`, [itemId]);
+
+    res.json({
+      status: "success",
+      message: "Item berhasil dihapus"
+    });
+  } catch (error) {
+    console.error("[PROCUREMENT DELETE ITEM ERROR]", error);
+    res.status(500).json({
+      status: "error",
+      message: "Gagal menghapus item",
+      detail: error.message || "Kesalahan tidak diketahui"
+    });
+  }
+};
+
 module.exports = {
   getProcurementDrafts,
   getProcurementDraft,
   reviewProcurementItem,
-  finalizeProcurementDraft
+  finalizeProcurementDraft,
+  createProcurementDraft,
+  updateProcurementDraft,
+  deleteProcurementDraft,
+  addProcurementItem,
+  deleteProcurementItem
 };

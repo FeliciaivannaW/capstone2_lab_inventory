@@ -35,11 +35,46 @@ router.get(
   procurementController.getProcurementDrafts
 );
 
+router.post(
+  "/procurement/drafts",
+  authMiddleware,
+  roleMiddleware(["kepala_laboratorium", "staf_administrasi"]),
+  procurementController.createProcurementDraft
+);
+
 router.get(
   "/procurement/drafts/:id",
   authMiddleware,
   roleMiddleware(["administrator", "kepala_laboratorium", "ketua_program_studi", "staf_administrasi"]),
   procurementController.getProcurementDraft
+);
+
+router.put(
+  "/procurement/drafts/:id",
+  authMiddleware,
+  roleMiddleware(["kepala_laboratorium", "staf_administrasi"]),
+  procurementController.updateProcurementDraft
+);
+
+router.delete(
+  "/procurement/drafts/:id",
+  authMiddleware,
+  roleMiddleware(["kepala_laboratorium", "staf_administrasi"]),
+  procurementController.deleteProcurementDraft
+);
+
+router.post(
+  "/procurement/drafts/:id/items",
+  authMiddleware,
+  roleMiddleware(["kepala_laboratorium", "staf_administrasi"]),
+  procurementController.addProcurementItem
+);
+
+router.delete(
+  "/procurement/drafts/:id/items/:itemId",
+  authMiddleware,
+  roleMiddleware(["kepala_laboratorium", "staf_administrasi"]),
+  procurementController.deleteProcurementItem
 );
 
 router.post(

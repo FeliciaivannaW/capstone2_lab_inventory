@@ -33,11 +33,43 @@
         .btn-link:hover {
             text-decoration: underline;
         }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 4px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
     </style>
 
     <div class="header">
         <h1>Pengadaan</h1>
         <p>Riwayat draf pengadaan aset dan BHP dengan status review dan finalisasi.</p>
+        @php
+            $authUser = session('auth_user');
+        @endphp
+        @if(in_array($authUser['role'] ?? null, ['kepala_laboratorium', 'staf_administrasi']))
+            <div style="margin-top: 15px;">
+                <a href="{{ route('procurement.create') }}" class="btn btn-primary">
+                    + Buat Draf Pengadaan
+                </a>
+            </div>
+        @endif
     </div>
 
     <div class="section">

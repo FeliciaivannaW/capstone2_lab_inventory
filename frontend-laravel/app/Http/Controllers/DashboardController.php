@@ -14,7 +14,8 @@ class DashboardController extends Controller
     private function getApiData($endpoint)
     {
         try {
-            $response = Http::get($this->apiUrl() . $endpoint);
+            $token = session('auth_token');
+            $response = Http::withToken($token)->get($this->apiUrl() . $endpoint);
 
             if ($response->successful()) {
                 return $response->json('data') ?? $response->json();
@@ -73,7 +74,7 @@ class DashboardController extends Controller
     {
         $drafts = $this->getApiData('/procurement/drafts');
 
-        return view('pages.procurement', compact('drafts'));
+        return view('pages.procurement.index', compact('drafts'));
     }
 
     public function maintenance()

@@ -67,7 +67,9 @@
                         <th>Catatan Reviewer</th>
                         <th>Link Pembelian</th>
                         <th>Barang Pengganti</th>
-                        <th>Aksi</th>
+                        @if($canEdit)
+                            <th>Aksi</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody>
@@ -97,7 +99,7 @@
                                 @endif
                             </td>
                             <td>{{ $item['replacement_asset_code'] ?? '-' }}</td>
-                            @if(!$draft['is_locked'] && $draft['status'] !== 'finalized' && $item['review_status'] === 'pending')
+                            @if($canEdit && $item['review_status'] === 'pending')
                                 <td>
                                     <button onclick="showReviewModal({{ $item['id'] }}, '{{ addslashes($item['item_name']) }}')" class="btn-link" style="color: blue;">Review</button>
                                 </td>
@@ -106,14 +108,60 @@
                     @endforeach
                 </tbody>
             </table>
-
-            @if(!$draft['is_locked'] && $draft['status'] !== 'finalized')
-                <div class="section-actions" style="margin-top: 20px;">
-                    <h4>Aksi Review Item</h4>
-                    <p><em>Gunakan tombol "Review" pada kolom aksi untuk menyetujui atau menolak item pengadaan.</em></p>
-                </div>
-            @endif
         @endif
+    </div>
+
+    <div class="section">
+        <div class="section-actions">
+            <div class="actions-left">
+                @php
+                    $authUser = session('auth_user');
+                    $isCreator = $authUser['id'] === ($draft['created_by_id'] ?? null);
+                    $canEditDraft = ($authUser['role'] === 'staf_administrasi' || $isCreator) && 
+                                    $draft['status'] === 'draft' && 
+                                    !$draft['is_locked'];
+                    $canReview = $authUser['role'] === 'ketua_program_studi' && 
+                                 !$draft['is_locked'] && 
+                                 $draft['status'] !== 'finalized';
+                @endphp
+
+                @if($canReview)
+                    <button class="btn btn-primary" onclick="handleFinalize()">
+                        Finalisasi Draf
+                    </button>
+                @elseif($canEditDraft)
+                    <a href="{{ route('procurement.edit', $draft['id']) }}" class="btn btn-primary">
+                        Edit Draf
+                    </a>
+                    <button class="btn btn-danger" onclick="showDeleteModal()">
+                        Hapus Draf
+                    </button>
+                @else
+                    @if($draft['is_locked'])
+                        <span class="badge badge-secondary">Draf sudah terkunci</span>
+                    @endif
+                @endif
+            </div>
+            <a href="{{ route('procurement') }}" class="btn btn-secondary">Kembali ke Riwayat</a>
+        </div>
+
+        <!-- Delete Modal -->
+        <div id="deleteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 400px;">
+                <h3>Hapus Draf Pengadaan?</h3>
+                <p>Tindakan ini tidak dapat dibatalkan.</p>
+                <div style="text-align: right;">
+                    <button type="button" onclick="closeDeleteModal()" class="btn btn-secondary" style="margin-right: 10px;">
+                        Batal
+                    </button>
+                    <form method="POST" action="{{ route('procurement.destroy', $draft['id']) }}" style="display: inline;">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger">Ya, Hapus</button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Review Modal -->
@@ -145,9 +193,22 @@
         </div>
     </div>
 
+    <!-- Finalize Modal -->
+    <div id="finalizeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+            <h3>Finalisasi Draf Pengadaan</h3>
+            <p>Apakah Anda yakin ingin menfinalisasi draf ini? <strong>Setelah difinalisasi, draf akan terkunci dan tidak bisa diubah lagi.</strong></p>
+            
+            <div style="text-align: right;">
+                <button type="button" onclick="closeFinalizeModal()" style="padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">Batal</button>
+                <button type="button" onclick="confirmFinalize()" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">Ya, Finalisasi</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentItemId = null;
-        let currentDraftId = {{ $draft['id'] }};
+        let currentDraftId = {{ $draft['id'] ?? 0 }};
 
         function showReviewModal(itemId, itemName) {
             currentItemId = itemId;
@@ -173,8 +234,7 @@
                 return;
             }
 
-            // Send review to backend
-            fetch('/api/procurement/drafts/' + currentDraftId + '/items/' + currentItemId + '/review', {
+            fetch('/api/procurement/' + currentDraftId + '/items/' + currentItemId + '/review', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -189,7 +249,6 @@
             .then(data => {
                 if (data.status === 'success') {
                     alert('Review berhasil disimpan');
-                    // Reload halaman untuk update data
                     location.reload();
                 } else {
                     alert('Error: ' + (data.message || 'Gagal menyimpan review'));
@@ -203,41 +262,14 @@
             closeReviewModal();
         }
 
-        // Close modal when clicking outside
-        document.getElementById('reviewModal').addEventListener('click', function(event) {
-            if (event.target === this) {
-                closeReviewModal();
-            }
-        });
-    </script>
+        function showDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'block';
+        }
 
-    <div class="section">
-        <div class="section-actions">
-            @if(!$draft['is_locked'] && $draft['status'] !== 'finalized')
-                <button class="btn btn-primary" onclick="handleFinalize()">
-                    Finalisasi Draf
-                </button>
-            @else
-                <span class="badge badge-secondary">Draf sudah terkunci</span>
-            @endif
-            <a href="{{ route('procurement') }}" class="btn btn-secondary">Kembali ke Riwayat</a>
-        </div>
-    </div>
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
 
-    <!-- Finalize Confirmation Modal -->
-    <div id="finalizeModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
-            <h3>Finalisasi Draf Pengadaan</h3>
-            <p>Apakah Anda yakin ingin menfinalisasi draf ini? <strong>Setelah difinalisasi, draf akan terkunci dan tidak bisa diubah lagi.</strong></p>
-            
-            <div style="text-align: right;">
-                <button type="button" onclick="closeFinalizeModal()" style="padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">Batal</button>
-                <button type="button" onclick="confirmFinalize()" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">Ya, Finalisasi</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
         function handleFinalize() {
             document.getElementById('finalizeModal').style.display = 'block';
         }
@@ -247,9 +279,7 @@
         }
 
         function confirmFinalize() {
-            const draftId = {{ $draft['id'] }};
-
-            fetch('/api/procurement/drafts/' + draftId + '/finalize', {
+            fetch('/api/procurement/' + currentDraftId + '/finalize', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -273,90 +303,159 @@
             closeFinalizeModal();
         }
 
-        // Close modal when clicking outside
-        document.getElementById('finalizeModal').addEventListener('click', function(event) {
-            if (event.target === this) {
-                closeFinalizeModal();
-            }
+        // Close modals when clicking outside
+        document.getElementById('reviewModal').addEventListener('click', function(e) {
+            if (e.target === this) closeReviewModal();
+        });
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDeleteModal();
+        });
+        document.getElementById('finalizeModal').addEventListener('click', function(e) {
+            if (e.target === this) closeFinalizeModal();
         });
     </script>
+
+    <style>
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        .info-item label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .section-actions {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .actions-left {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            margin-right: 0;
+            border-radius: 4px;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            border-color: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: white;
+        }
+
+        .badge-secondary {
+            background-color: #6c757d;
+        }
+
+        .badge-info {
+            background-color: #17a2b8;
+        }
+
+        .badge-success {
+            background-color: #28a745;
+        }
+
+        .badge-danger {
+            background-color: #dc3545;
+        }
+
+        .badge-warning {
+            background-color: #ffc107;
+            color: #333;
+        }
+
+        .btn-link {
+            color: #0066cc;
+            text-decoration: none;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 14px;
+            padding: 0;
+        }
+
+        .btn-link:hover {
+            text-decoration: underline;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background: #f3f4f6;
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+    </style>
 @endsection
-
-<style>
-    .info-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 15px;
-        margin-bottom: 20px;
-    }
-
-    .info-item {
-        padding: 10px;
-        background-color: #f5f5f5;
-        border-radius: 4px;
-    }
-
-    .info-item label {
-        font-weight: bold;
-        display: block;
-        margin-bottom: 5px;
-    }
-
-    .section-actions {
-        padding: 15px;
-        background-color: #f9f9f9;
-        border-radius: 4px;
-    }
-
-    .btn {
-        display: inline-block;
-        padding: 8px 16px;
-        margin-right: 10px;
-        border-radius: 4px;
-        text-decoration: none;
-        cursor: pointer;
-        border: 1px solid #ccc;
-    }
-
-    .btn-primary {
-        background-color: #007bff;
-        color: white;
-        border-color: #007bff;
-    }
-
-    .btn-secondary {
-        background-color: #6c757d;
-        color: white;
-        border-color: #6c757d;
-    }
-
-    .badge {
-        display: inline-block;
-        padding: 4px 8px;
-        border-radius: 3px;
-        font-size: 0.85em;
-        font-weight: bold;
-        color: white;
-    }
-
-    .badge-secondary {
-        background-color: #6c757d;
-    }
-
-    .badge-info {
-        background-color: #17a2b8;
-    }
-
-    .badge-success {
-        background-color: #28a745;
-    }
-
-    .badge-danger {
-        background-color: #dc3545;
-    }
-
-    .badge-warning {
-        background-color: #ffc107;
-        color: #333;
-    }
-</style>
