@@ -71,7 +71,9 @@ class DashboardController extends Controller
 
     public function procurement()
     {
-        return view('pages.procurement');
+        $drafts = $this->getApiData('/procurement/drafts');
+
+        return view('pages.procurement', compact('drafts'));
     }
 
     public function maintenance()

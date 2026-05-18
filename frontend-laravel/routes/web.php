@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProcurementController;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.process');
@@ -33,7 +34,15 @@ Route::middleware('frontend.auth')->group(function () {
         ->middleware('frontend.role:administrator,kepala_laboratorium,ketua_program_studi,staf_administrasi')
         ->name('procurement');
 
+    Route::get('/procurement/{id}', [ProcurementController::class, 'show'])
+        ->middleware('frontend.role:administrator,kepala_laboratorium,ketua_program_studi,staf_administrasi')
+        ->name('procurement.show');
+
     Route::get('/maintenance', [DashboardController::class, 'maintenance'])
         ->middleware('frontend.role:administrator,staf_laboratorium')
         ->name('maintenance');
+
+    // API Routes for AJAX/Frontend to Backend Proxy
+    Route::post('/api/procurement/drafts/{draftId}/items/{itemId}/review', [ProcurementController::class, 'reviewItem']);
+    Route::post('/api/procurement/drafts/{id}/finalize', [ProcurementController::class, 'finalize']);
 });
