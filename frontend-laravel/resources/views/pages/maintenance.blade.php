@@ -3,105 +3,162 @@
 @section('title', 'Log Maintenance')
 
 @section('content')
-
 <div class="mb-8">
-    <h1 class="text-2xl font-bold text-slate-900">Log Maintenance</h1>
-    <p class="text-sm text-slate-500 mt-1">Riwayat perbaikan aset, update kondisi barang, dan pemakaian BHP per sesi maintenance.</p>
+    <h1 class="text-2xl font-bold text-slate-900">Log Maintenance Inventaris</h1>
+    <p class="text-sm text-slate-500 mt-1">Input maintenance, update kondisi aset, dan kurangi stok BHP otomatis saat dipakai.</p>
 </div>
 
-{{-- Preview: activity feed style --}}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-    <div class="lg:col-span-2">
-        <div class="glass-card rounded-2xl overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100">
-                <h2 class="text-sm font-bold text-slate-900">Riwayat Maintenance</h2>
-                <p class="text-xs text-slate-400">Demo — data sesungguhnya segera hadir</p>
+@if(session('success'))
+    <div class="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('success') }}</div>
+@endif
+@if(session('error'))
+    <div class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>
+@endif
+@if($errors->any())
+    <div class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ $errors->first() }}</div>
+@endif
+
+@php
+    $conditionClass = ['baik'=>'badge-approved','rusak_ringan'=>'badge-pending','rusak_berat'=>'badge-rejected','maintenance'=>'badge-active','dihapus'=>'badge-rejected','diganti'=>'badge-draft'];
+    $statusClass = ['planned'=>'badge-draft','in_progress'=>'badge-active','done'=>'badge-approved','cancelled'=>'badge-rejected'];
+@endphp
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <div class="glass-card rounded-2xl p-6">
+        <h2 class="text-sm font-bold text-slate-900 mb-4">Input Log Maintenance</h2>
+        <form action="{{ route('maintenance.store') }}" method="POST" class="space-y-3">
+            @csrf
+            <div>
+                <label class="text-xs font-semibold text-slate-500">Aset Inventaris</label>
+                <select name="inventory_asset_id" class="w-full mt-1 rounded-xl border-slate-200 text-sm" required>
+                    <option value="">Pilih aset</option>
+                    @foreach($assets as $asset)
+                        <option value="{{ $asset['id'] }}">
+                            {{ $asset['asset_code'] }} — {{ $asset['item_name'] ?? $asset['catalog_name'] ?? 'Aset' }} {{ $asset['label_number'] ? '(' . $asset['label_number'] . ')' : '' }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-500">Tanggal</label>
+                    <input type="date" name="maintenance_date" value="{{ date('Y-m-d') }}" class="w-full mt-1 rounded-xl border-slate-200 text-sm" required>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-500">Status</label>
+                    <select name="status" class="w-full mt-1 rounded-xl border-slate-200 text-sm" required>
+                        <option value="done">Done</option>
+                        <option value="planned">Planned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-slate-500">Masalah</label>
+                <textarea name="issue_description" rows="2" class="w-full mt-1 rounded-xl border-slate-200 text-sm" placeholder="Contoh: keyboard tidak responsif"></textarea>
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-slate-500">Tindakan</label>
+                <textarea name="action_taken" rows="2" class="w-full mt-1 rounded-xl border-slate-200 text-sm" placeholder="Contoh: ganti switch keyboard dan cleaning"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-500">Kondisi Akhir</label>
+                    <select name="condition_after" class="w-full mt-1 rounded-xl border-slate-200 text-sm" required>
+                        <option value="baik">Baik</option>
+                        <option value="rusak_ringan">Rusak ringan</option>
+                        <option value="rusak_berat">Rusak berat</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="dihapus">Dihapus</option>
+                        <option value="diganti">Diganti</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-500">Biaya</label>
+                    <input type="number" min="0" name="cost" value="0" class="w-full mt-1 rounded-xl border-slate-200 text-sm">
+                </div>
             </div>
 
-            {{-- Demo activity feed --}}
-            @php
-                $demoLogs = [
-                    ['tech' => 'Ahmad R.', 'asset' => 'Mikroskop #A001', 'action' => 'Kalibrasi lensa dan pembersihan optik', 'condition' => 'baik', 'date' => '24 Mei 2025', 'bhp' => ['Alkohol 70%', 'Tisu Lensa']],
-                    ['tech' => 'Siti W.',  'asset' => 'Centrifuge #A012', 'action' => 'Penggantian rotor + pelumasan motor', 'condition' => 'rusak_ringan', 'date' => '22 Mei 2025', 'bhp' => ['Oli Mesin']],
-                    ['tech' => 'Budi S.',  'asset' => 'PCR Machine #A023', 'action' => 'Update firmware dan cek sensor suhu', 'condition' => 'baik', 'date' => '18 Mei 2025', 'bhp' => []],
-                ];
-                $condColors = ['baik' => 'badge-approved', 'rusak_ringan' => 'badge-pending', 'rusak_berat' => 'badge-rejected', 'maintenance' => 'badge-active'];
-            @endphp
-
-            <div class="divide-y divide-slate-100">
-                @foreach($demoLogs as $log)
-                    <div class="px-6 py-4 hover:bg-slate-50 transition-colors">
-                        <div class="flex items-start gap-4">
-                            {{-- Avatar --}}
-                            <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700 flex-shrink-0 mt-0.5">
-                                {{ strtoupper(substr($log['tech'], 0, 1)) }}
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2 mb-1 flex-wrap">
-                                    <span class="text-sm font-semibold text-slate-800">{{ $log['tech'] }}</span>
-                                    <span class="text-slate-400 text-xs">·</span>
-                                    <span class="text-xs text-slate-500">{{ $log['date'] }}</span>
-                                    <span class="badge {{ $condColors[$log['condition']] ?? 'badge-draft' }} text-xs ml-auto">
-                                        {{ str_replace('_', ' ', ucfirst($log['condition'])) }}
-                                    </span>
-                                </div>
-                                <p class="text-sm text-slate-600 mb-2">
-                                    <span class="font-semibold text-indigo-600">{{ $log['asset'] }}</span>
-                                    — {{ $log['action'] }}
-                                </p>
-                                @if(!empty($log['bhp']))
-                                    <div class="flex items-center gap-1.5 flex-wrap">
-                                        <span class="text-xs text-slate-400">BHP:</span>
-                                        @foreach($log['bhp'] as $b)
-                                            <span class="inline-flex items-center px-2 py-0.5 text-[0.68rem] font-semibold bg-amber-50 text-amber-700 border border-amber-200 rounded-md">
-                                                {{ $b }}
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
+            <div class="rounded-xl bg-amber-50 border border-amber-200 p-3">
+                <p class="text-xs font-bold text-amber-800 mb-2">BHP yang dipakai</p>
+                @for($i = 0; $i < 3; $i++)
+                    <div class="grid grid-cols-3 gap-2 mb-2 last:mb-0">
+                        <select name="bhp_stock_id[]" class="col-span-2 rounded-xl border-amber-200 text-xs">
+                            <option value="">Tidak pakai BHP</option>
+                            @foreach($stocks as $stock)
+                                <option value="{{ $stock['id'] }}">{{ $stock['item_name'] }} — stok {{ $stock['current_stock'] }} {{ $stock['unit'] }}</option>
+                            @endforeach
+                        </select>
+                        <input type="number" min="1" name="bhp_quantity[]" class="rounded-xl border-amber-200 text-xs" placeholder="Qty">
                     </div>
-                @endforeach
+                @endfor
+                <p class="text-[0.68rem] text-amber-700 mt-2">Saat form disimpan, stok BHP otomatis berkurang sesuai qty.</p>
             </div>
-        </div>
+
+            <div>
+                <label class="text-xs font-semibold text-slate-500">Catatan</label>
+                <textarea name="notes" rows="2" class="w-full mt-1 rounded-xl border-slate-200 text-sm"></textarea>
+            </div>
+            <button class="w-full rounded-xl bg-indigo-600 text-white text-sm font-semibold py-2.5 hover:bg-indigo-700">Simpan Maintenance</button>
+        </form>
     </div>
 
-    <div class="space-y-5">
-        {{-- Stats --}}
-        <div class="glass-card rounded-2xl p-5">
-            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Statistik Bulan Ini</p>
-            <div class="space-y-3">
-                <div class="flex justify-between items-center">
-                    <span class="text-sm text-slate-600">Total Sesi</span>
-                    <span class="text-sm font-bold text-slate-900">—</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-sm text-slate-600">Kondisi Baik</span>
-                    <span class="text-sm font-bold text-emerald-600">—</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-sm text-slate-600">Perlu Perhatian</span>
-                    <span class="text-sm font-bold text-amber-600">—</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-sm text-slate-600">BHP Terpakai</span>
-                    <span class="text-sm font-bold text-indigo-600">—</span>
-                </div>
+    <div class="glass-card rounded-2xl overflow-hidden xl:col-span-2">
+        <div class="px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+            <div>
+                <p class="text-sm font-bold text-slate-800">Riwayat Maintenance</p>
+                <p class="text-xs text-slate-400">{{ count($logs) }} log maintenance</p>
             </div>
+            <form method="GET" class="flex gap-2">
+                <input name="search" value="{{ request('search') }}" placeholder="Cari aset/masalah" class="rounded-xl border-slate-200 text-sm">
+                <select name="status" class="rounded-xl border-slate-200 text-sm">
+                    <option value="">Semua</option>
+                    <option value="planned" {{ request('status') === 'planned' ? 'selected' : '' }}>Planned</option>
+                    <option value="in_progress" {{ request('status') === 'in_progress' ? 'selected' : '' }}>In Progress</option>
+                    <option value="done" {{ request('status') === 'done' ? 'selected' : '' }}>Done</option>
+                    <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                </select>
+                <button class="rounded-xl bg-slate-900 text-white text-sm font-semibold px-4">Filter</button>
+            </form>
         </div>
-
-        {{-- Info banner --}}
-        <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-5">
-            <div class="flex gap-3">
-                <svg class="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                </svg>
-                <div>
-                    <p class="text-xs font-bold text-indigo-800 mb-1">Fitur dalam Pengembangan</p>
-                    <p class="text-xs text-indigo-600 leading-relaxed">Log maintenance aktual dan form input sesi maintenance akan tersedia segera.</p>
+        <div class="divide-y divide-slate-100">
+            @forelse($logs as $log)
+                <div class="px-6 py-4 hover:bg-slate-50 transition-colors">
+                    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                <span class="font-mono text-xs font-bold bg-slate-100 px-2 py-0.5 rounded-md">{{ $log['asset_code'] }}</span>
+                                <span class="text-sm font-bold text-slate-800">{{ $log['item_name'] }}</span>
+                                <span class="badge {{ $statusClass[$log['status']] ?? 'badge-draft' }} text-xs">{{ str_replace('_', ' ', $log['status']) }}</span>
+                                <span class="badge {{ $conditionClass[$log['condition_after']] ?? 'badge-draft' }} text-xs">{{ str_replace('_', ' ', $log['condition_after']) }}</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mb-2">{{ $log['maintenance_date'] }} · {{ $log['performed_by_name'] }} · {{ $log['room_name'] ?? 'tanpa ruangan' }}</p>
+                            @if($log['issue_description'])
+                                <p class="text-sm text-slate-600"><span class="font-semibold">Masalah:</span> {{ $log['issue_description'] }}</p>
+                            @endif
+                            @if($log['action_taken'])
+                                <p class="text-sm text-slate-600"><span class="font-semibold">Tindakan:</span> {{ $log['action_taken'] }}</p>
+                            @endif
+                            @if(!empty($log['bhp_usages']))
+                                <div class="flex flex-wrap gap-1.5 mt-2">
+                                    @foreach($log['bhp_usages'] as $usage)
+                                        <span class="inline-flex items-center px-2 py-0.5 text-[0.68rem] font-semibold bg-amber-50 text-amber-700 border border-amber-200 rounded-md">
+                                            {{ $usage['item_name'] }} -{{ $usage['quantity'] }} {{ $usage['unit'] }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                        <div class="text-xs text-slate-500 lg:text-right whitespace-nowrap">
+                            Biaya<br>
+                            <span class="text-sm font-bold text-slate-900">Rp {{ number_format($log['cost'] ?? 0, 0, ',', '.') }}</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            @empty
+                <div class="py-16 text-center text-sm text-slate-400">Belum ada log maintenance.</div>
+            @endforelse
         </div>
     </div>
 </div>

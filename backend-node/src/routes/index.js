@@ -7,6 +7,9 @@ const fs      = require("fs");
 const healthController      = require("../controllers/healthController");
 const roleController        = require("../controllers/roleController");
 const roomController        = require("../controllers/roomController");
+const userController        = require("../controllers/userController");
+const bhpController         = require("../controllers/bhpController");
+const maintenanceController = require("../controllers/maintenanceController");
 const laboratoryController  = require("../controllers/laboratoryController");
 const procurementController = require("../controllers/procurementController");
 const authController        = require("../controllers/authController");
@@ -78,6 +81,144 @@ router.get("/profile",  authMiddleware, authController.profile);
 router.get("/roles",       roleController.getRoles);
 router.get("/rooms",       roomController.getRooms);
 router.get("/laboratories", laboratoryController.getLaboratories);
+
+// ============================================================
+// USER MANAGEMENT ROUTES (Administrator)
+// ============================================================
+router.get(
+  "/users",
+  authMiddleware,
+  roleMiddleware(["administrator"]),
+  userController.getUsers
+);
+
+router.get(
+  "/users/:id",
+  authMiddleware,
+  roleMiddleware(["administrator"]),
+  userController.getUser
+);
+
+router.post(
+  "/users",
+  authMiddleware,
+  roleMiddleware(["administrator"]),
+  userController.createUser
+);
+
+router.put(
+  "/users/:id",
+  authMiddleware,
+  roleMiddleware(["administrator"]),
+  userController.updateUser
+);
+
+router.delete(
+  "/users/:id",
+  authMiddleware,
+  roleMiddleware(["administrator"]),
+  userController.deleteUser
+);
+
+// ============================================================
+// ROOM MANAGEMENT ROUTES (Administrator)
+// ============================================================
+router.get(
+  "/rooms/options",
+  authMiddleware,
+  roleMiddleware(["administrator"]),
+  roomController.getRoomOptions
+);
+
+router.get(
+  "/rooms/:id",
+  authMiddleware,
+  roleMiddleware(["administrator"]),
+  roomController.getRoom
+);
+
+router.post(
+  "/rooms",
+  authMiddleware,
+  roleMiddleware(["administrator"]),
+  roomController.createRoom
+);
+
+router.put(
+  "/rooms/:id",
+  authMiddleware,
+  roleMiddleware(["administrator"]),
+  roomController.updateRoom
+);
+
+router.delete(
+  "/rooms/:id",
+  authMiddleware,
+  roleMiddleware(["administrator"]),
+  roomController.deleteRoom
+);
+
+// ============================================================
+// BHP STOCK ROUTES (Staf Lab + Administrator)
+// ============================================================
+router.get(
+  "/bhp/catalogs",
+  authMiddleware,
+  roleMiddleware(["administrator", "staf_laboratorium"]),
+  bhpController.getBhpCatalogs
+);
+
+router.get(
+  "/bhp/stocks",
+  authMiddleware,
+  roleMiddleware(["administrator", "staf_laboratorium"]),
+  bhpController.getStocks
+);
+
+router.post(
+  "/bhp/stocks",
+  authMiddleware,
+  roleMiddleware(["administrator", "staf_laboratorium"]),
+  bhpController.createStock
+);
+
+router.put(
+  "/bhp/stocks/:id",
+  authMiddleware,
+  roleMiddleware(["administrator", "staf_laboratorium"]),
+  bhpController.updateStock
+);
+
+router.post(
+  "/bhp/stocks/:id/movements",
+  authMiddleware,
+  roleMiddleware(["administrator", "staf_laboratorium"]),
+  bhpController.adjustStock
+);
+
+router.get(
+  "/bhp/stocks/:id/movements",
+  authMiddleware,
+  roleMiddleware(["administrator", "staf_laboratorium"]),
+  bhpController.getStockMovements
+);
+
+// ============================================================
+// MAINTENANCE ROUTES (Staf Lab + Administrator)
+// ============================================================
+router.get(
+  "/maintenance/logs",
+  authMiddleware,
+  roleMiddleware(["administrator", "staf_laboratorium"]),
+  maintenanceController.getMaintenanceLogs
+);
+
+router.post(
+  "/maintenance/logs",
+  authMiddleware,
+  roleMiddleware(["administrator", "staf_laboratorium"]),
+  maintenanceController.createMaintenanceLog
+);
 
 // ============================================================
 // PROCUREMENT DRAFT ROUTES
