@@ -29,6 +29,11 @@
     <style>
         * { font-family: 'Inter', system-ui, sans-serif; }
 
+        [x-cloak] {
+        display: none !important;
+        }
+
+        
         @keyframes slideInContent {
             from { opacity: 0; transform: translateY(12px); }
             to   { opacity: 1; transform: translateY(0); }
@@ -109,6 +114,7 @@
         $userName = $authUser['name'] ?? 'User';
 
         $roleLabels = [
+            'administrator'       => 'Administrator',
             'admin'               => 'Administrator',
             'kepala_laboratorium' => 'Kepala Laboratorium',
             'ketua_program_studi' => 'Ketua Program Studi',
@@ -191,8 +197,8 @@
                 </a>
             @endif
 
-            {{-- Staf Lab --}}
-            @if($role === 'staf_laboratorium')
+            {{-- Staf Lab + Administrator --}}
+            @if(in_array($role, ['administrator', 'staf_laboratorium']))
                 <div class="nav-section sidebar-label">Laboratorium</div>
                 <a href="{{ route('bhp') }}" class="nav-link {{ request()->routeIs('bhp') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
