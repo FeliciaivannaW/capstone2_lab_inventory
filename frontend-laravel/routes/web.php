@@ -5,6 +5,10 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProcurementController;
 use App\Http\Controllers\StafAdminController;
+use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\RoomManagementController;
+use App\Http\Controllers\BhpController;
+use App\Http\Controllers\MaintenanceController;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.process');
@@ -19,17 +23,34 @@ Route::middleware('frontend.auth')->group(function () {
     Route::get('/laboratories', [DashboardController::class, 'laboratories'])
         ->name('laboratories');
 
-    Route::get('/rooms', [DashboardController::class, 'rooms'])
-        ->middleware('frontend.role:administrator')
-        ->name('rooms');
+    Route::middleware('frontend.role:administrator')->group(function () {
+        Route::get('/users', [UserManagementController::class, 'index'])->name('users');
+        Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
+        Route::put('/users/{id}', [UserManagementController::class, 'update'])->name('users.update');
+        Route::delete('/users/{id}', [UserManagementController::class, 'destroy'])->name('users.destroy');
+
+        Route::get('/rooms', [RoomManagementController::class, 'index'])->name('rooms');
+        Route::post('/rooms', [RoomManagementController::class, 'store'])->name('rooms.store');
+        Route::put('/rooms/{id}', [RoomManagementController::class, 'update'])->name('rooms.update');
+        Route::delete('/rooms/{id}', [RoomManagementController::class, 'destroy'])->name('rooms.destroy');
+    });
 
     Route::get('/inventory', [DashboardController::class, 'inventory'])
         ->middleware('frontend.role:administrator,staf_administrasi,staf_laboratorium')
         ->name('inventory');
 
-    Route::get('/bhp', [DashboardController::class, 'bhp'])
+    Route::get('/bhp', [BhpController::class, 'index'])
         ->middleware('frontend.role:administrator,staf_laboratorium')
         ->name('bhp');
+    Route::post('/bhp', [BhpController::class, 'store'])
+        ->middleware('frontend.role:administrator,staf_laboratorium')
+        ->name('bhp.store');
+    Route::put('/bhp/{id}', [BhpController::class, 'update'])
+        ->middleware('frontend.role:administrator,staf_laboratorium')
+        ->name('bhp.update');
+    Route::post('/bhp/{id}/movement', [BhpController::class, 'movement'])
+        ->middleware('frontend.role:administrator,staf_laboratorium')
+        ->name('bhp.movement');
 
     Route::get('/procurement', [DashboardController::class, 'procurement'])
         ->middleware('frontend.role:administrator,kepala_laboratorium,ketua_program_studi,staf_administrasi')
@@ -59,9 +80,12 @@ Route::middleware('frontend.auth')->group(function () {
         ->middleware('frontend.role:kepala_laboratorium,staf_administrasi')
         ->name('procurement.destroy');
 
-    Route::get('/maintenance', [DashboardController::class, 'maintenance'])
+    Route::get('/maintenance', [MaintenanceController::class, 'index'])
         ->middleware('frontend.role:administrator,staf_laboratorium')
         ->name('maintenance');
+    Route::post('/maintenance', [MaintenanceController::class, 'store'])
+        ->middleware('frontend.role:administrator,staf_laboratorium')
+        ->name('maintenance.store');
 
     // API Routes for AJAX/Frontend to Backend Proxy
     Route::post('/api/procurement/{draftId}/items', [ProcurementController::class, 'addItem']);
