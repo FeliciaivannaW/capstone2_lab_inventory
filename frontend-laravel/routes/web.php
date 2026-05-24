@@ -66,8 +66,10 @@ Route::middleware('frontend.auth')->group(function () {
     // API Routes for AJAX/Frontend to Backend Proxy
     Route::post('/api/procurement/{draftId}/items', [ProcurementController::class, 'addItem']);
     Route::delete('/api/procurement/{draftId}/items/{itemId}', [ProcurementController::class, 'deleteItem']);
+    Route::patch('/api/procurement/{draftId}/items/{itemId}', [ProcurementController::class, 'updateItem']);
     Route::post('/api/procurement/{draftId}/items/{itemId}/review', [ProcurementController::class, 'reviewItem']);
     Route::post('/api/procurement/{id}/finalize', [ProcurementController::class, 'finalize']);
+    Route::post('/api/procurement/{id}/submit', [ProcurementController::class, 'submit']);
 
     // ============================================================
     // STAF ADMINISTRASI ROUTES
@@ -81,6 +83,8 @@ Route::middleware('frontend.auth')->group(function () {
             ->name('staf-admin.procurement-approved.detail');
 
         // Fitur 2: Input Tanggal Penerimaan Barang
+        Route::get('/goods-receipt', [StafAdminController::class, 'goodsReceiptIndex'])
+            ->name('staf-admin.goods-receipt-index');
         Route::get('/goods-receipt/{draftId}', [StafAdminController::class, 'goodsReceipt'])
             ->name('staf-admin.goods-receipt');
         Route::post('/api/goods-receipt', [StafAdminController::class, 'storeGoodsReceipt'])
@@ -93,6 +97,9 @@ Route::middleware('frontend.auth')->group(function () {
             ->name('staf-admin.inventory-label.edit');
         Route::put('/inventory-label/{id}', [StafAdminController::class, 'inventoryLabelUpdate'])
             ->name('staf-admin.inventory-label.update');
+        // AJAX label update (JSON, no file)
+        Route::post('/api/inventory-label/{id}', [StafAdminController::class, 'inventoryLabelUpdateAjax'])
+            ->name('staf-admin.inventory-label.ajax');
 
         // Fitur 4: Dashboard Ringkasan (Statistik)
         Route::get('/dashboard', [StafAdminController::class, 'dashboard'])
@@ -103,5 +110,9 @@ Route::middleware('frontend.auth')->group(function () {
             ->name('staf-admin.asset-list');
         Route::get('/asset-timeline/{id}', [StafAdminController::class, 'assetTimeline'])
             ->name('staf-admin.asset-timeline');
+
+        // Fitur 6: Semua Inventaris (read-only, dedicated page)
+        Route::get('/inventaris', [StafAdminController::class, 'inventaris'])
+            ->name('staf-admin.inventaris');
     });
 });

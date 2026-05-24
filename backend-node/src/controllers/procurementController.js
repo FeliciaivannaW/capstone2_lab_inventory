@@ -50,7 +50,23 @@ const getProcurementDrafts = async (req, res, next) => {
         COUNT(pi.id) AS item_count,
         SUM(CASE WHEN pi.review_status = 'approved' THEN 1 ELSE 0 END) AS approved_count,
         SUM(CASE WHEN pi.review_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_count,
-        SUM(CASE WHEN pi.review_status = 'pending' THEN 1 ELSE 0 END) AS pending_count
+        SUM(CASE WHEN pi.review_status = 'pending' THEN 1 ELSE 0 END) AS pending_count,
+        -- Jumlah item approved yang SUDAH fully received (sum qty_received >= qty ordered)
+        SUM(
+          CASE WHEN pi.review_status = 'approved' AND (
+            SELECT COALESCE(SUM(gr2.quantity_received), 0)
+            FROM goods_receipts gr2
+            WHERE gr2.procurement_item_id = pi.id
+          ) >= pi.quantity THEN 1 ELSE 0 END
+        ) AS received_items,
+        -- Jumlah item approved yang BELUM fully received
+        SUM(
+          CASE WHEN pi.review_status = 'approved' AND (
+            SELECT COALESCE(SUM(gr3.quantity_received), 0)
+            FROM goods_receipts gr3
+            WHERE gr3.procurement_item_id = pi.id
+          ) < pi.quantity THEN 1 ELSE 0 END
+        ) AS pending_items
       FROM procurement_drafts AS pd
       JOIN laboratories AS l ON pd.lab_id = l.id
       JOIN users AS uc ON pd.created_by = uc.id
@@ -653,14 +669,133 @@ const deleteProcurementItem = async (req, res, next) => {
   }
 };
 
+/**
+ * Submit procurement draft (change status draft → submitted)
+ * Accessible to: kepala_laboratorium, staf_administrasi
+ * Validations: must have >= 1 item, is_locked must be false
+ */
+const submitProcurementDraft = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId  = req.user?.id;
+
+    const [draftRows] = await db.query(
+      `SELECT id, status, is_locked FROM procurement_drafts WHERE id = ?`,
+      [id]
+    );
+
+    if (draftRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Draf pengadaan tidak ditemukan" });
+    }
+
+    const draft = draftRows[0];
+
+    if (draft.is_locked) {
+      return res.status(403).json({ success: false, message: "Draf sudah terkunci, tidak bisa diubah" });
+    }
+
+    if (draft.status !== 'draft') {
+      return res.status(400).json({ success: false, message: `Draf sudah dalam status '${draft.status}', tidak bisa di-submit ulang` });
+    }
+
+    // Must have at least 1 item
+    const [itemCount] = await db.query(
+      `SELECT COUNT(*) AS cnt FROM procurement_items WHERE draft_id = ?`,
+      [id]
+    );
+    if (itemCount[0].cnt < 1) {
+      return res.status(400).json({ success: false, message: "Draf harus memiliki minimal 1 item sebelum di-submit" });
+    }
+
+    const submittedAt = new Date();
+    await db.query(
+      `UPDATE procurement_drafts SET status = 'submitted', submitted_at = ? WHERE id = ?`,
+      [submittedAt, id]
+    );
+
+    res.json({
+      success: true,
+      message: "Draf berhasil di-submit untuk review Kaprodi",
+      data:    { draft_id: id, status: 'submitted', submitted_at: submittedAt }
+    });
+  } catch (error) {
+    console.error("[PROCUREMENT SUBMIT ERROR]", error);
+    res.status(500).json({ success: false, message: "Gagal submit draf", errors: { detail: error.message } });
+  }
+};
+
+/**
+ * Update a single procurement item (edit)
+ * Accessible to: kepala_laboratorium (creator), staf_administrasi
+ * Draft must be in 'draft' status, is_locked must be false
+ */
+const updateProcurementItem = async (req, res, next) => {
+  try {
+    const { id: draftId, itemId } = req.params;
+    const { item_name, item_type, quantity, estimated_price, purchase_link, replacement_asset_id } = req.body;
+    const userId   = req.user?.id;
+    const userRole = req.user?.role;
+
+    // Check draft
+    const [draftRows] = await db.query(
+      `SELECT id, created_by, status, is_locked FROM procurement_drafts WHERE id = ?`,
+      [draftId]
+    );
+    if (draftRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Draf tidak ditemukan" });
+    }
+    const draft = draftRows[0];
+
+    if (draft.is_locked || draft.status !== 'draft') {
+      return res.status(403).json({ success: false, message: "Draf tidak bisa diedit dalam status ini" });
+    }
+    if (userRole !== 'staf_administrasi' && draft.created_by !== userId) {
+      return res.status(403).json({ success: false, message: "Tidak memiliki wewenang untuk mengubah item ini" });
+    }
+
+    // Check item exists in draft
+    const [itemRows] = await db.query(
+      `SELECT id FROM procurement_items WHERE id = ? AND draft_id = ?`,
+      [itemId, draftId]
+    );
+    if (itemRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Item tidak ditemukan dalam draf ini" });
+    }
+
+    // Build update
+    const fields = [];
+    const params = [];
+    if (item_name)        { fields.push('item_name = ?');        params.push(item_name); }
+    if (item_type)        { fields.push('item_type = ?');        params.push(item_type); }
+    if (quantity)         { fields.push('quantity = ?');         params.push(quantity); }
+    if (estimated_price !== undefined) { fields.push('estimated_price = ?'); params.push(estimated_price); }
+    if (purchase_link !== undefined)   { fields.push('purchase_link = ?');   params.push(purchase_link || null); }
+    if (replacement_asset_id !== undefined) { fields.push('replacement_asset_id = ?'); params.push(replacement_asset_id || null); }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ success: false, message: "Tidak ada field yang diubah" });
+    }
+
+    params.push(itemId);
+    await db.query(`UPDATE procurement_items SET ${fields.join(', ')} WHERE id = ?`, params);
+
+    res.json({ success: true, message: "Item berhasil diperbarui", data: { item_id: itemId } });
+  } catch (error) {
+    console.error("[PROCUREMENT UPDATE ITEM ERROR]", error);
+    res.status(500).json({ success: false, message: "Gagal memperbarui item", errors: { detail: error.message } });
+  }
+};
+
 module.exports = {
   getProcurementDrafts,
   getProcurementDraft,
   reviewProcurementItem,
   finalizeProcurementDraft,
+  submitProcurementDraft,
   createProcurementDraft,
   updateProcurementDraft,
   deleteProcurementDraft,
   addProcurementItem,
+  updateProcurementItem,
   deleteProcurementItem
 };

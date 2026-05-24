@@ -1,121 +1,219 @@
 @extends('layouts.app')
-@section('title', 'Dashboard Statistik')
+
+@section('title', 'Dashboard')
+
 @section('content')
-<style>
-    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
-    .stat-card { background:white; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border-left:4px solid #3b82f6; }
-    .stat-card.green { border-left-color:#22c55e; }
-    .stat-card.yellow { border-left-color:#f59e0b; }
-    .stat-card.red { border-left-color:#ef4444; }
-    .stat-card.purple { border-left-color:#8b5cf6; }
-    .stat-card h4 { margin:0 0 4px; font-size:13px; color:#64748b; font-weight:600; }
-    .stat-card .number { font-size:28px; font-weight:700; color:#1e293b; }
-    .stat-card .sub { font-size:12px; color:#94a3b8; margin-top:4px; }
-    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-    .chart-section { background:white; padding:20px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:20px; }
-    .chart-section h3 { margin:0 0 16px; font-size:16px; }
-    .mini-table { width:100%; font-size:13px; }
-    .mini-table th { background:#f8fafc; padding:8px 12px; text-align:left; font-size:12px; color:#64748b; }
-    .mini-table td { padding:8px 12px; border-bottom:1px solid #f1f5f9; }
-    .bar { display:inline-block; height:18px; border-radius:4px; min-width:4px; }
-    .bar-blue { background:#3b82f6; }
-    .bar-green { background:#22c55e; }
-    .bar-yellow { background:#f59e0b; }
-    .bar-red { background:#ef4444; }
-    @media(max-width:900px) { .stats-grid { grid-template-columns:repeat(2,1fr); } .two-col { grid-template-columns:1fr; } }
-</style>
-
-<div class="header">
-    <h1>📊 Dashboard Statistik</h1>
-    <p>Ringkasan data inventaris, stok BHP, dan pengadaan laboratorium.</p>
-</div>
-
 @php
-    $inv = $stats['inventory'] ?? [];
-    $bhp = $stats['bhp'] ?? [];
-    $proc = $stats['procurement'] ?? [];
+    $userName = session('auth_user')['name'] ?? 'Staf';
+    $inv  = $stats['inventory'] ?? [];
     $recv = $stats['reception'] ?? [];
-    $maint = $stats['maintenance'] ?? [];
-    $bhpCat = $stats['bhpByCategory'] ?? [];
+
+    // 3 fitur summary
+    $draftsTotal     = $draftsTotal     ?? 0;
+    $draftsPending   = $draftsPending   ?? 0;
+    $itemsPending    = $itemsPending    ?? 0;
+    $assetsUnlabeled = $assetsUnlabeled ?? 0;
+    $assetsLabeled   = $assetsLabeled   ?? 0;
 @endphp
 
-<div class="stats-grid">
-    <div class="stat-card green">
-        <h4>Total Inventaris Aktif</h4>
-        <div class="number">{{ $inv['active'] ?? 0 }}</div>
-        <div class="sub">dari {{ $inv['total'] ?? 0 }} total aset</div>
-    </div>
-    <div class="stat-card yellow">
-        <h4>Dalam Maintenance</h4>
-        <div class="number">{{ $inv['in_maintenance'] ?? 0 }}</div>
-        <div class="sub">{{ $inv['disposed'] ?? 0 }} dihapus, {{ $inv['replaced'] ?? 0 }} diganti</div>
-    </div>
-    <div class="stat-card">
-        <h4>Stok BHP</h4>
-        <div class="number">{{ $bhp['total_items'] ?? 0 }}</div>
-        <div class="sub">{{ $bhp['low_stock_count'] ?? 0 }} hampir habis</div>
-    </div>
-    <div class="stat-card purple">
-        <h4>Draf Pengadaan</h4>
-        <div class="number">{{ $proc['total_drafts'] ?? 0 }}</div>
-        <div class="sub">{{ $proc['finalized_count'] ?? 0 }} finalized</div>
-    </div>
+{{-- Greeting --}}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-900">
+        Selamat datang, {{ explode(' ', $userName)[0] }} 👋
+    </h1>
+    <p class="text-sm text-slate-500 mt-1">
+        Pantau dan kelola 3 tugas utama Staf Administrasi: draf disetujui, penerimaan barang, dan pelabelan inventaris.
+    </p>
 </div>
 
-<div class="two-col">
-    <div class="chart-section">
-        <h3>📦 Status Inventaris</h3>
-        <table class="mini-table">
-            <tr><td>Kondisi Baik</td><td><span class="bar bar-green" style="width:{{ min(($inv['condition_good'] ?? 0)*3, 200) }}px"></span></td><td><strong>{{ $inv['condition_good'] ?? 0 }}</strong></td></tr>
-            <tr><td>Rusak Ringan</td><td><span class="bar bar-yellow" style="width:{{ min(($inv['condition_light_damage'] ?? 0)*3, 200) }}px"></span></td><td><strong>{{ $inv['condition_light_damage'] ?? 0 }}</strong></td></tr>
-            <tr><td>Rusak Berat</td><td><span class="bar bar-red" style="width:{{ min(($inv['condition_heavy_damage'] ?? 0)*3, 200) }}px"></span></td><td><strong>{{ $inv['condition_heavy_damage'] ?? 0 }}</strong></td></tr>
-            <tr><td>Sudah Label</td><td><span class="bar bar-green" style="width:{{ min(($inv['labeled'] ?? 0)*3, 200) }}px"></span></td><td><strong>{{ $inv['labeled'] ?? 0 }}</strong></td></tr>
-            <tr><td>Belum Label</td><td><span class="bar bar-yellow" style="width:{{ min(($inv['unlabeled'] ?? 0)*3, 200) }}px"></span></td><td><strong>{{ $inv['unlabeled'] ?? 0 }}</strong></td></tr>
-        </table>
-    </div>
+{{-- ───── WORKFLOW STRIP ───── --}}
+@include('components.staf-admin.workflow-strip', ['active' => null])
 
-    <div class="chart-section">
-        <h3>🛒 Status Pengadaan</h3>
-        <table class="mini-table">
-            <tr><td>Draft</td><td><span class="bar bar-blue" style="width:{{ min(($proc['draft_count'] ?? 0)*8, 200) }}px"></span></td><td><strong>{{ $proc['draft_count'] ?? 0 }}</strong></td></tr>
-            <tr><td>Submitted</td><td><span class="bar bar-yellow" style="width:{{ min(($proc['submitted_count'] ?? 0)*8, 200) }}px"></span></td><td><strong>{{ $proc['submitted_count'] ?? 0 }}</strong></td></tr>
-            <tr><td>Finalized</td><td><span class="bar bar-green" style="width:{{ min(($proc['finalized_count'] ?? 0)*8, 200) }}px"></span></td><td><strong>{{ $proc['finalized_count'] ?? 0 }}</strong></td></tr>
-            <tr><td>Barang Diterima</td><td><span class="bar bar-green" style="width:{{ min(($recv['received_items'] ?? 0)*8, 200) }}px"></span></td><td><strong>{{ $recv['received_items'] ?? 0 }}</strong></td></tr>
-            <tr><td>Belum Diterima</td><td><span class="bar bar-red" style="width:{{ min(($recv['pending_items'] ?? 0)*8, 200) }}px"></span></td><td><strong>{{ $recv['pending_items'] ?? 0 }}</strong></td></tr>
-        </table>
-    </div>
-</div>
+{{-- ───── 3 FITUR — ACTION CARDS ───── --}}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
 
-<div class="two-col">
-    <div class="chart-section">
-        <h3>📋 Stok BHP per Kategori</h3>
-        @if(empty($bhpCat))
-            <p style="color:#94a3b8;">Belum ada data BHP.</p>
+    {{-- ▸ Fitur 1 — Draf Disetujui --}}
+    <a href="{{ route('staf-admin.procurement-approved') }}"
+       class="glass-card rounded-2xl p-6 hover:shadow-lg hover:-translate-y-0.5 transition-all group block">
+        <div class="flex items-start justify-between mb-4">
+            <div class="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <span class="text-[0.6rem] font-bold text-violet-700 bg-violet-100 px-2 py-1 rounded-full uppercase tracking-wider">Fitur 1</span>
+        </div>
+        <h3 class="text-sm font-bold text-slate-900">Draf Disetujui</h3>
+        <p class="text-xs text-slate-500 mt-0.5 mb-4">Hasil finalisasi Kaprodi yang siap ditindaklanjuti</p>
+
+        <div class="flex items-end gap-2">
+            <p class="text-4xl font-bold text-slate-900 leading-none">{{ $draftsTotal }}</p>
+            <p class="text-xs text-slate-500 pb-1">draf finalisasi</p>
+        </div>
+        @if($draftsPending > 0)
+            <p class="text-xs text-amber-600 font-semibold mt-3 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 4a1 1 0 011 1v4a1 1 0 11-2 0V7a1 1 0 011-1zm0 9a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                {{ $draftsPending }} draf masih menunggu penerimaan
+            </p>
         @else
-            <table class="mini-table">
-                <thead><tr><th>Kategori</th><th>Item</th><th>Total Stok</th><th>Stok Rendah</th></tr></thead>
-                <tbody>
-                    @foreach($bhpCat as $cat)
-                        <tr>
-                            <td>{{ $cat['category_name'] ?? 'Tanpa Kategori' }}</td>
-                            <td>{{ $cat['item_count'] }}</td>
-                            <td>{{ $cat['total_stock'] }}</td>
-                            <td>@if($cat['low_stock'] > 0)<span style="color:#ef4444; font-weight:600;">⚠ {{ $cat['low_stock'] }}</span>@else <span style="color:#22c55e;">✓</span> @endif</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+            <p class="text-xs text-emerald-600 font-semibold mt-3">Semua draf sudah ditindaklanjuti ✓</p>
         @endif
+
+        <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span class="font-semibold text-violet-600 group-hover:translate-x-1 transition-transform">Buka halaman →</span>
+        </div>
+    </a>
+
+    {{-- ▸ Fitur 3 — Penerimaan Barang --}}
+    <a href="{{ route('staf-admin.goods-receipt-index') }}"
+       class="glass-card rounded-2xl p-6 hover:shadow-lg hover:-translate-y-0.5 transition-all group block">
+        <div class="flex items-start justify-between mb-4">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-3l-2 3h-6l-2-3H4"/>
+                </svg>
+            </div>
+            <span class="text-[0.6rem] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full uppercase tracking-wider">Fitur 3</span>
+        </div>
+        <h3 class="text-sm font-bold text-slate-900">Penerimaan Barang</h3>
+        <p class="text-xs text-slate-500 mt-0.5 mb-4">Catat tanggal terima — barang bisa datang bertahap</p>
+
+        <div class="flex items-end gap-2">
+            <p class="text-4xl font-bold text-slate-900 leading-none">{{ $itemsPending }}</p>
+            <p class="text-xs text-slate-500 pb-1">item belum diterima</p>
+        </div>
+        <p class="text-xs {{ $itemsPending > 0 ? 'text-amber-600' : 'text-emerald-600' }} font-semibold mt-3">
+            {{ $recv['received_items'] ?? 0 }} item sudah tercatat masuk
+        </p>
+
+        <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span class="font-semibold text-emerald-600 group-hover:translate-x-1 transition-transform">Catat penerimaan →</span>
+        </div>
+    </a>
+
+    {{-- ▸ Fitur 2 — Update Label & Foto --}}
+    <a href="{{ route('staf-admin.inventory-label') }}"
+       class="glass-card rounded-2xl p-6 hover:shadow-lg hover:-translate-y-0.5 transition-all group block">
+        <div class="flex items-start justify-between mb-4">
+            <div class="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+            </div>
+            <span class="text-[0.6rem] font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full uppercase tracking-wider">Fitur 2</span>
+        </div>
+        <h3 class="text-sm font-bold text-slate-900">Update Label & Foto QR</h3>
+        <p class="text-xs text-slate-500 mt-0.5 mb-4">Nomor label dan foto QR/Barcode untuk aset</p>
+
+        <div class="flex items-end gap-2">
+            <p class="text-4xl font-bold text-slate-900 leading-none">{{ $assetsUnlabeled }}</p>
+            <p class="text-xs text-slate-500 pb-1">aset belum berlabel</p>
+        </div>
+        <p class="text-xs {{ $assetsUnlabeled > 0 ? 'text-amber-600' : 'text-emerald-600' }} font-semibold mt-3">
+            {{ $assetsLabeled }} aset sudah berlabel
+        </p>
+
+        <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span class="font-semibold text-amber-600 group-hover:translate-x-1 transition-transform">Beri label →</span>
+        </div>
+    </a>
+</div>
+
+{{-- ───── RECENT ACTIVITY (focus to 3 fitur) ───── --}}
+<div class="glass-card rounded-2xl overflow-hidden mb-6">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div>
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block animate-pulse"></span>
+                Aktivitas Inventaris Terbaru
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">5 aset yang baru diperbarui — siap untuk dilabel atau dilacak</p>
+        </div>
+        <a href="{{ route('staf-admin.asset-list') }}" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+            Lihat semua →
+        </a>
     </div>
 
-    <div class="chart-section">
-        <h3>🔧 Maintenance</h3>
-        <table class="mini-table">
-            <tr><td>Planned</td><td><strong>{{ $maint['planned'] ?? 0 }}</strong></td></tr>
-            <tr><td>In Progress</td><td><strong>{{ $maint['in_progress'] ?? 0 }}</strong></td></tr>
-            <tr><td>Done</td><td><strong>{{ $maint['done'] ?? 0 }}</strong></td></tr>
-            <tr><td>Cancelled</td><td><strong>{{ $maint['cancelled'] ?? 0 }}</strong></td></tr>
-        </table>
+    @if(empty($recentAssets))
+        <div class="px-6 py-12 text-center">
+            <svg class="w-12 h-12 text-slate-200 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-sm text-slate-400">Belum ada aktivitas — mulai dari "Penerimaan Barang"</p>
+        </div>
+    @else
+        <ul class="divide-y divide-slate-100">
+            @foreach($recentAssets as $a)
+                @php
+                    $hasLabel = !empty($a['label_number']);
+                    $ts = $a['updated_at'] ?? $a['received_date'] ?? $a['created_at'] ?? null;
+                @endphp
+                <li class="px-6 py-3.5 flex items-center gap-4 hover:bg-slate-50/60 transition-colors">
+                    {{-- Icon: label status --}}
+                    <div class="w-9 h-9 rounded-full {{ $hasLabel ? 'bg-emerald-100' : 'bg-amber-100' }} flex items-center justify-center flex-shrink-0">
+                        @if($hasLabel)
+                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        @else
+                            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        @endif
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-slate-800 truncate">{{ $a['item_name'] ?? '—' }}</p>
+                        <p class="text-xs text-slate-500 mt-0.5 truncate">
+                            <span class="font-mono">{{ $a['asset_code'] ?? '—' }}</span> · {{ $a['room_name'] ?? 'tanpa ruangan' }}
+                        </p>
+                    </div>
+                    @if($hasLabel)
+                        <span class="badge badge-approved text-xs">{{ $a['label_number'] }}</span>
+                    @else
+                        <a href="{{ route('staf-admin.inventory-label', ['search' => $a['asset_code'] ?? '']) }}"
+                           class="text-[0.65rem] font-semibold text-white bg-amber-500 hover:bg-amber-600 px-2.5 py-1 rounded-full transition-colors">
+                            Beri Label
+                        </a>
+                    @endif
+                    <span class="text-[0.65rem] text-slate-400 flex-shrink-0 hidden sm:inline">
+                        {{ $ts ? date('d M', strtotime($ts)) : '—' }}
+                    </span>
+                </li>
+            @endforeach
+        </ul>
+    @endif
+</div>
+
+{{-- ───── INVENTORY HEALTH (informasi tambahan) ───── --}}
+<div class="glass-card rounded-2xl p-6">
+    <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+        Status Inventaris
+        <span class="text-[0.65rem] font-normal text-slate-400 ml-1">(informasi pelengkap)</span>
+    </h3>
+    @php
+        $invBars = [
+            ['label' => 'Kondisi Baik',  'value' => $inv['condition_good'] ?? 0,         'color' => 'bg-emerald-500'],
+            ['label' => 'Rusak Ringan',  'value' => $inv['condition_light_damage'] ?? 0, 'color' => 'bg-amber-400'],
+            ['label' => 'Rusak Berat',   'value' => $inv['condition_heavy_damage'] ?? 0, 'color' => 'bg-red-500'],
+            ['label' => 'Sudah Label',   'value' => $inv['labeled'] ?? $assetsLabeled,   'color' => 'bg-indigo-500'],
+            ['label' => 'Belum Label',   'value' => $inv['unlabeled'] ?? $assetsUnlabeled,'color' => 'bg-slate-400'],
+        ];
+        $invMax = max(array_column($invBars, 'value') ?: [1]);
+    @endphp
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+        @foreach($invBars as $bar)
+            @php $pct = $invMax > 0 ? ($bar['value'] / $invMax) * 100 : 0; @endphp
+            <div>
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs text-slate-600">{{ $bar['label'] }}</span>
+                    <span class="text-xs font-bold text-slate-900">{{ $bar['value'] }}</span>
+                </div>
+                <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div class="{{ $bar['color'] }} h-full rounded-full transition-all" style="width: {{ $pct }}%"></div>
+                </div>
+            </div>
+        @endforeach
     </div>
 </div>
 @endsection

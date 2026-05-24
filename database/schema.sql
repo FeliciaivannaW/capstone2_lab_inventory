@@ -226,7 +226,7 @@ CREATE TABLE inventory_assets (
     purchase_date DATE,
     received_date DATE,
     asset_condition ENUM('baik', 'rusak_ringan', 'rusak_berat', 'maintenance', 'dihapus', 'diganti') NOT NULL DEFAULT 'baik',
-    status ENUM('available', 'in_use', 'maintenance', 'disposed', 'replaced') NOT NULL DEFAULT 'available',
+    status ENUM('received', 'labeled', 'available', 'in_use', 'maintenance', 'disposed', 'replaced') NOT NULL DEFAULT 'received',
     photo_url VARCHAR(255),
     notes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

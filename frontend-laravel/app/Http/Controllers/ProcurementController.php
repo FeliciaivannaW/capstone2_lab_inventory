@@ -32,28 +32,29 @@ class ProcurementController extends Controller
     {
         try {
             $token = session('auth_token');
-            $response = $method === 'PUT' 
-                ? Http::withToken($token)->put($this->apiUrl() . $endpoint, $data)
-                : ($method === 'DELETE'
-                    ? Http::withToken($token)->delete($this->apiUrl() . $endpoint)
-                    : Http::withToken($token)->post($this->apiUrl() . $endpoint, $data)
-                );
+            $response = match(strtoupper($method)) {
+                'PUT'    => Http::withToken($token)->put($this->apiUrl() . $endpoint, $data),
+                'PATCH'  => Http::withToken($token)->patch($this->apiUrl() . $endpoint, $data),
+                'DELETE' => Http::withToken($token)->delete($this->apiUrl() . $endpoint),
+                default  => Http::withToken($token)->post($this->apiUrl() . $endpoint, $data),
+            };
 
             if ($response->successful()) {
                 return [
-                    'status' => $response->json('status'),
-                    'data' => $response->json('data'),
+                    'status'  => $response->json('status') ?? ($response->json('success') ? 'success' : 'error'),
+                    'success' => $response->json('success'),
+                    'data'    => $response->json('data'),
                     'message' => $response->json('message')
                 ];
             }
 
             return [
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => $response->json('message') ?? 'Request failed'
             ];
         } catch (\Exception $e) {
             return [
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => $e->getMessage()
             ];
         }
@@ -232,13 +233,46 @@ class ProcurementController extends Controller
     }
 
     /**
+     * Submit draft to Kaprodi (AJAX endpoint)
+     * Proxies to PATCH /procurement/drafts/:id/submit on Node.js API
+     */
+    public function submit(Request $request, $id)
+    {
+        $result = $this->postApiData("/procurement/drafts/{$id}/submit", [], 'PATCH');
+        return response()->json($result);
+    }
+
+    /**
+     * Update a single item in draft (AJAX endpoint)
+     * Proxies to PATCH /procurement/drafts/:draftId/items/:itemId
+     */
+    public function updateItem(Request $request, $draftId, $itemId)
+    {
+        $validated = $request->validate([
+            'item_name'       => 'nullable|string',
+            'item_type'       => 'nullable|in:inventory,bhp',
+            'quantity'        => 'nullable|integer|min:1',
+            'estimated_price' => 'nullable|numeric|min:0',
+            'purchase_link'   => 'nullable|url',
+        ]);
+
+        $result = $this->postApiData(
+            "/procurement/drafts/{$draftId}/items/{$itemId}",
+            array_filter($validated, fn($v) => $v !== null),
+            'PATCH'
+        );
+
+        return response()->json($result);
+    }
+
+    /**
      * Review item (API endpoint)
      */
     public function reviewItem(Request $request, $draftId, $itemId)
     {
         $validated = $request->validate([
             'review_status' => 'required|in:approved,rejected',
-            'review_note' => 'nullable|string'
+            'review_note'   => 'nullable|string'
         ]);
 
         $result = $this->postApiData(
@@ -255,7 +289,6 @@ class ProcurementController extends Controller
     public function finalize(Request $request, $id)
     {
         $result = $this->postApiData("/procurement/drafts/{$id}/finalize");
-
         return response()->json($result);
     }
 }

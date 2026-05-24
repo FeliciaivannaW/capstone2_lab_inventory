@@ -1,100 +1,171 @@
 @extends('layouts.app')
-@section('title', 'Timeline Aset')
-@section('content')
-<style>
-    .asset-header { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
-    .asset-info { flex:1; min-width:140px; padding:14px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; }
-    .asset-info label { font-size:11px; color:#64748b; font-weight:600; display:block; margin-bottom:2px; }
-    .asset-info span { font-size:14px; font-weight:500; color:#1e293b; }
-    .timeline { position:relative; padding-left:40px; margin-top:20px; }
-    .timeline::before { content:''; position:absolute; left:16px; top:0; bottom:0; width:3px; background:#e2e8f0; border-radius:2px; }
-    .timeline-item { position:relative; margin-bottom:24px; padding:16px 20px; background:white; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border-left:4px solid #3b82f6; }
-    .timeline-item.procurement { border-left-color:#8b5cf6; }
-    .timeline-item.receipt { border-left-color:#22c55e; }
-    .timeline-item.condition_change { border-left-color:#f59e0b; }
-    .timeline-item.maintenance { border-left-color:#3b82f6; }
-    .timeline-item.disposal { border-left-color:#ef4444; }
-    .timeline-dot { position:absolute; left:-32px; top:18px; width:12px; height:12px; border-radius:50%; border:3px solid white; box-shadow:0 0 0 2px #3b82f6; }
-    .timeline-item.procurement .timeline-dot { background:#8b5cf6; box-shadow:0 0 0 2px #8b5cf6; }
-    .timeline-item.receipt .timeline-dot { background:#22c55e; box-shadow:0 0 0 2px #22c55e; }
-    .timeline-item.condition_change .timeline-dot { background:#f59e0b; box-shadow:0 0 0 2px #f59e0b; }
-    .timeline-item.maintenance .timeline-dot { background:#3b82f6; box-shadow:0 0 0 2px #3b82f6; }
-    .timeline-item.disposal .timeline-dot { background:#ef4444; box-shadow:0 0 0 2px #ef4444; }
-    .timeline-title { font-size:15px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:8px; }
-    .timeline-date { font-size:12px; color:#94a3b8; margin-bottom:6px; }
-    .timeline-desc { font-size:14px; color:#475569; margin-bottom:4px; }
-    .timeline-detail { font-size:13px; color:#64748b; font-style:italic; }
-    .timeline-meta { font-size:12px; color:#94a3b8; margin-top:6px; }
-    .type-icon { font-size:18px; }
-    .badge { display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:600; }
-    .badge-purple { background:#ede9fe; color:#6d28d9; }
-    .badge-green { background:#dcfce7; color:#166534; }
-    .badge-yellow { background:#fef3c7; color:#92400e; }
-    .badge-blue { background:#dbeafe; color:#1e40af; }
-    .badge-red { background:#fee2e2; color:#991b1b; }
-    .btn-back { display:inline-block; padding:8px 18px; background:#6b7280; color:white; text-decoration:none; border-radius:6px; font-size:14px; margin-top:12px; }
-</style>
 
-<div class="header">
-    <h1>📜 Timeline Siklus Barang</h1>
-    <p>Riwayat lengkap dari pengadaan hingga penghapusan</p>
+@section('title', 'Timeline Aset')
+
+@section('content')
+
+{{-- Back --}}
+<div class="flex items-center gap-3 mb-6">
+    <a href="{{ route('staf-admin.asset-list') }}"
+       class="flex items-center gap-1.5 text-sm text-slate-500 hover:text-indigo-600 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Kembali ke Daftar Aset
+    </a>
 </div>
 
-<div class="section">
-    <div class="asset-header">
-        <div class="asset-info"><label>Kode Aset</label><span>{{ $asset['asset_code'] }}</span></div>
-        <div class="asset-info"><label>Nama</label><span>{{ $asset['item_name'] }}</span></div>
-        <div class="asset-info"><label>Kategori</label><span>{{ $asset['category_name'] ?? '-' }}</span></div>
-        <div class="asset-info"><label>Kondisi</label><span>{{ str_replace('_',' ',ucfirst($asset['asset_condition'])) }}</span></div>
-        <div class="asset-info"><label>Status</label><span>{{ ucfirst(str_replace('_',' ',$asset['status'])) }}</span></div>
-        <div class="asset-info"><label>Ruangan</label><span>{{ $asset['room_name'] ?? '-' }}</span></div>
+<div class="mb-7">
+    <h1 class="text-2xl font-bold text-slate-900">Timeline Siklus Barang</h1>
+    <p class="text-sm text-slate-500 mt-1">Riwayat lengkap dari pengadaan hingga penghapusan.</p>
+</div>
+
+{{-- Asset info --}}
+<div class="glass-card rounded-2xl p-5 mb-6">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        @php
+            $assetFields = [
+                ['Kode Aset',  $asset['asset_code']],
+                ['Nama',       $asset['item_name']],
+                ['Kategori',   $asset['category_name'] ?? '—'],
+                ['Status',     ucfirst(str_replace('_', ' ', $asset['status'] ?? '—'))],
+                ['Ruangan',    $asset['room_name'] ?? '—'],
+            ];
+            $condMap = ['baik'=>'badge-approved','rusak_ringan'=>'badge-pending','rusak_berat'=>'badge-rejected','maintenance'=>'badge-active','dihapus'=>'badge-rejected','diganti'=>'badge-draft'];
+        @endphp
+        @foreach($assetFields as [$label, $value])
+            <div>
+                <p class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider mb-1">{{ $label }}</p>
+                <p class="text-sm font-semibold text-slate-800">{{ $value }}</p>
+            </div>
+        @endforeach
+        <div>
+            <p class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider mb-1">Kondisi</p>
+            <span class="badge {{ $condMap[$asset['asset_condition']] ?? 'badge-draft' }} text-xs">
+                {{ str_replace('_', ' ', ucfirst($asset['asset_condition'])) }}
+            </span>
+        </div>
+    </div>
+
+    {{-- Lifecycle strip --}}
+    @php
+        $lcStages = [
+            ['key' => 'procured',    'label' => 'Procured',    'color' => 'bg-violet-500'],
+            ['key' => 'received',    'label' => 'Received',    'color' => 'bg-blue-500'],
+            ['key' => 'labeled',     'label' => 'Labeled',     'color' => 'bg-cyan-500'],
+            ['key' => 'active',      'label' => 'Active',      'color' => 'bg-emerald-500'],
+            ['key' => 'maintenance', 'label' => 'Maintenance', 'color' => 'bg-amber-500'],
+            ['key' => 'replaced',    'label' => 'Replaced',    'color' => 'bg-slate-400'],
+        ];
+        $currentStageIdx = match($asset['status'] ?? '') {
+            'procured'    => 0,
+            'received'    => 1,
+            'labeled'     => 2,
+            'active'      => 3,
+            'maintenance' => 4,
+            default       => in_array($asset['asset_condition'] ?? '', ['dihapus','diganti']) ? 5 : 3,
+        };
+    @endphp
+    <div class="flex items-center gap-0 mt-5 pt-5 border-t border-slate-100 overflow-x-auto pb-1">
+        @foreach($lcStages as $i => $stage)
+            <div class="flex items-center">
+                <div class="flex flex-col items-center gap-1.5 flex-shrink-0">
+                    <div class="w-3 h-3 rounded-full {{ $i <= $currentStageIdx ? $stage['color'] : 'bg-slate-200' }} ring-2 ring-white ring-offset-1"></div>
+                    <span class="text-[0.6rem] font-semibold {{ $i <= $currentStageIdx ? 'text-slate-700' : 'text-slate-400' }} whitespace-nowrap">
+                        {{ $stage['label'] }}
+                    </span>
+                </div>
+                @if($i < count($lcStages) - 1)
+                    <div class="w-12 sm:w-20 h-px {{ $i < $currentStageIdx ? 'bg-indigo-300' : 'bg-slate-200' }} flex-shrink-0 -mt-4"></div>
+                @endif
+            </div>
+        @endforeach
     </div>
 </div>
 
-<div class="section">
-    <h3>🕐 Timeline Siklus Hidup</h3>
+{{-- Timeline --}}
+<div class="glass-card rounded-2xl overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100">
+        <h2 class="text-sm font-bold text-slate-900">Timeline Siklus Hidup</h2>
+        <p class="text-xs text-slate-400 mt-0.5">{{ count($timeline ?? []) }} event tercatat</p>
+    </div>
 
     @if(empty($timeline))
-        <div class="empty">
-            <p style="text-align:center;">Belum ada riwayat siklus untuk aset ini.</p>
-            <p style="text-align:center; color:#999; font-size:13px;">Timeline akan terisi otomatis saat ada aktivitas pengadaan, penerimaan, maintenance, atau penghapusan.</p>
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+            <svg class="w-12 h-12 text-slate-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-sm text-slate-400">Belum ada riwayat siklus untuk aset ini</p>
+            <p class="text-xs text-slate-400 mt-1">Timeline terisi otomatis saat ada aktivitas aset.</p>
         </div>
     @else
-        <div class="timeline">
-            @foreach($timeline as $event)
-                @php
-                    $icons = ['procurement'=>'🛒','receipt'=>'📦','condition_change'=>'🔄','maintenance'=>'🔧','disposal'=>'🗑️'];
-                    $badgeClass = ['procurement'=>'purple','receipt'=>'green','condition_change'=>'yellow','maintenance'=>'blue','disposal'=>'red'];
-                    $icon = $icons[$event['type']] ?? '📌';
-                    $bc = $badgeClass[$event['type']] ?? 'blue';
-                @endphp
-                <div class="timeline-item {{ $event['type'] }}">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-title">
-                        <span class="type-icon">{{ $icon }}</span>
-                        {{ $event['title'] }}
-                        <span class="badge badge-{{ $bc }}">{{ ucfirst(str_replace('_',' ',$event['status'] ?? '')) }}</span>
+        @php
+            $typeConfig = [
+                'procurement'      => ['icon' => '🛒', 'color' => 'border-violet-400', 'dot' => 'bg-violet-500', 'badge' => 'badge-active'],
+                'receipt'          => ['icon' => '📦', 'color' => 'border-emerald-400','dot' => 'bg-emerald-500','badge' => 'badge-approved'],
+                'condition_change' => ['icon' => '🔄', 'color' => 'border-amber-400',  'dot' => 'bg-amber-500',  'badge' => 'badge-pending'],
+                'maintenance'      => ['icon' => '🔧', 'color' => 'border-blue-400',   'dot' => 'bg-blue-500',   'badge' => 'badge-active'],
+                'disposal'         => ['icon' => '🗑️', 'color' => 'border-red-400',    'dot' => 'bg-red-500',    'badge' => 'badge-rejected'],
+            ];
+        @endphp
+
+        <div class="relative px-6 py-6">
+            {{-- Vertical line --}}
+            <div class="absolute left-[2.875rem] top-6 bottom-6 w-px bg-slate-200"></div>
+
+            <div class="space-y-5">
+                @foreach($timeline as $event)
+                    @php
+                        $cfg = $typeConfig[$event['type']] ?? ['icon'=>'📌','color'=>'border-slate-300','dot'=>'bg-slate-400','badge'=>'badge-draft'];
+                    @endphp
+                    <div class="flex gap-4">
+                        {{-- Dot --}}
+                        <div class="flex-shrink-0 w-5 h-5 rounded-full {{ $cfg['dot'] }} border-2 border-white shadow-sm mt-3 z-10"></div>
+
+                        {{-- Card --}}
+                        <div class="flex-1 bg-white border border-slate-200 rounded-xl p-4 border-l-4 {{ $cfg['color'] }} shadow-sm">
+                            <div class="flex items-start justify-between gap-2 mb-1 flex-wrap">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">{{ $cfg['icon'] }}</span>
+                                    <span class="text-sm font-bold text-slate-900">{{ $event['title'] }}</span>
+                                    @if($event['status'] ?? null)
+                                        <span class="badge {{ $cfg['badge'] }} text-xs">
+                                            {{ ucfirst(str_replace('_', ' ', $event['status'])) }}
+                                        </span>
+                                    @endif
+                                </div>
+                                <span class="text-xs text-slate-400 flex-shrink-0">
+                                    {{ $event['date'] ? date('d M Y, H:i', strtotime($event['date'])) : '—' }}
+                                </span>
+                            </div>
+
+                            @if($event['description'] ?? null)
+                                <p class="text-sm text-slate-600 mt-1">{{ $event['description'] }}</p>
+                            @endif
+                            @if($event['detail'] ?? null)
+                                <p class="text-xs text-slate-400 italic mt-1">{{ $event['detail'] }}</p>
+                            @endif
+
+                            <div class="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                                @if($event['user'] ?? null)
+                                    <span class="flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                        </svg>
+                                        {{ $event['user'] }}
+                                    </span>
+                                @endif
+                                @if(isset($event['cost']) && $event['cost'])
+                                    <span class="flex items-center gap-1 font-semibold text-emerald-600">
+                                        Rp {{ number_format($event['cost'], 0, ',', '.') }}
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
                     </div>
-                    <div class="timeline-date">
-                        {{ $event['date'] ? date('d M Y, H:i', strtotime($event['date'])) : 'Tanggal tidak tersedia' }}
-                    </div>
-                    <div class="timeline-desc">{{ $event['description'] ?? '' }}</div>
-                    @if($event['detail'])
-                        <div class="timeline-detail">{{ $event['detail'] }}</div>
-                    @endif
-                    <div class="timeline-meta">
-                        👤 {{ $event['user'] ?? '-' }}
-                        @if(isset($event['cost']) && $event['cost'])
-                            &nbsp;|&nbsp; 💰 Rp {{ number_format($event['cost'], 0, ',', '.') }}
-                        @endif
-                    </div>
-                </div>
-            @endforeach
+                @endforeach
+            </div>
         </div>
     @endif
-</div>
-
-<div class="section">
-    <a href="{{ route('staf-admin.asset-list') }}" class="btn-back">← Kembali ke Daftar Aset</a>
 </div>
 @endsection
