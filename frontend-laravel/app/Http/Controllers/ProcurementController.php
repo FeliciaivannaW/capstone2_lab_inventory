@@ -99,6 +99,11 @@ class ProcurementController extends Controller
         $result = $this->postApiData('/procurement/drafts', $validated);
 
         if ($result['status'] === 'success') {
+            $draftId = $result['data']['id'] ?? null;
+            if ($draftId) {
+                return redirect()->route('procurement.edit', $draftId)
+                    ->with('success', 'Draf pengadaan berhasil dibuat. Silakan tambahkan item pengadaan.');
+            }
             return redirect()->route('procurement')
                 ->with('success', 'Draf pengadaan berhasil dibuat');
         }

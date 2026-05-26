@@ -36,7 +36,7 @@
 {{-- Table card --}}
 <div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($drafts) }})">
     @php
-        $years = collect($drafts)->pluck('year')->unique()->filter()->values()->toArray();
+        $years = collect($drafts)->pluck('budget_year')->unique()->filter()->values()->toArray();
         $yearOptions = count($years) ? array_combine($years, $years) : [];
         $labs = collect($drafts)->pluck('lab_name')->unique()->filter()->values()->toArray();
         $labOptions = count($labs) ? array_combine($labs, $labs) : [];
@@ -95,7 +95,7 @@
                         @php
                             $st = $statusMap[$draft['status']] ?? ['label' => ucfirst($draft['status']), 'class' => 'badge-draft'];
                         @endphp
-                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-status="{{ $draft['status'] }}" data-filter-lab="{{ $draft['lab_name'] }}" data-filter-year="{{ $draft['year'] }}">
+                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-status="{{ $draft['status'] }}" data-filter-lab="{{ $draft['lab_name'] }}" data-filter-year="{{ $draft['budget_year'] }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $index + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $draft['title'] }}</td>
                             <td>

@@ -157,13 +157,21 @@
 
 {{-- Add Item Modal --}}
 @if($isEdit && !$draft['is_locked'])
+@push('modals')
     <div x-data="{ open: false, loading: false }" id="addItemModalWrap">
-        <div x-show="open" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
-            <div class="absolute inset-0 bg-navy/60 backdrop-blur-sm" @click="open = false"></div>
-            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+        <div x-show="open" x-cloak
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;">
+            <div style="position:absolute;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);" @click="open = false"></div>
+            <div style="position:relative;background:#fff;border-radius:1rem;box-shadow:0 25px 50px rgba(0,0,0,0.25);width:100%;max-width:32rem;padding:1.5rem;max-height:90vh;overflow-y:auto;">
                 <h3 class="text-base font-bold text-slate-900 mb-5">Tambah Item Pengadaan</h3>
 
-                <form id="addItemForm" @submit.prevent="submitItem($event)" class="space-y-4">
+                <form id="addItemForm" @submit.prevent class="space-y-4">
                     <div>
                         <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Nama Barang <span class="text-red-500">*</span></label>
                         <input type="text" name="item_name" required placeholder="Nama barang yang akan dibeli"
@@ -213,26 +221,40 @@
 
         <script>
             function openAddItemModal() {
-                document.getElementById('addItemModalWrap').__x.$data.open = true;
+                document.getElementById('addItemModalWrap')._x_dataStack[0].open = true;
             }
 
             document.getElementById('addItemForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                const wrap = document.getElementById('addItemModalWrap').__x.$data;
+                const wrap = document.getElementById('addItemModalWrap')._x_dataStack[0];
                 wrap.loading = true;
 
                 const formData = new FormData(this);
                 const draftId = {{ $draft['id'] ?? 0 }};
+                const payload = Object.fromEntries(formData);
+                if (payload.purchase_link === '') {
+                    delete payload.purchase_link;
+                }
 
                 try {
                     const res = await fetch(`/api/procurement/${draftId}/items`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                        body: JSON.stringify(Object.fromEntries(formData))
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                        },
+                        body: JSON.stringify(payload)
                     });
                     const data = await res.json();
                     if (data.status === 'success') location.reload();
-                    else alert('Error: ' + (data.message || 'Gagal menambah item'));
+                    else {
+                        let errorMsg = data.message || 'Gagal menambah item';
+                        if (data.errors) {
+                            errorMsg += '\n' + Object.values(data.errors).flat().join('\n');
+                        }
+                        alert('Error: ' + errorMsg);
+                    }
                 } catch(err) {
                     alert('Terjadi kesalahan');
                 }
@@ -246,7 +268,10 @@
                 try {
                     const res = await fetch(`/api/procurement/${draftId}/items/${itemId}`, {
                         method: 'DELETE',
-                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                        }
                     });
                     const data = await res.json();
                     if (data.status === 'success') location.reload();
@@ -257,5 +282,6 @@
             }
         </script>
     </div>
+@endpush
 @endif
 @endsection
