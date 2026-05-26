@@ -121,9 +121,9 @@
                         <th>Aksi</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody x-data="{ moveId: null, editId: null }">
                     @forelse($stocks as $stock)
-                        <tr x-data="{ move:false, edit:false }">
+                        <tr>
                             <td>
                                 <div class="font-semibold text-slate-800">{{ $stock['item_name'] }}</div>
                                 <a href="{{ route('bhp', array_merge(request()->query(), ['stock_id' => $stock['id']])) }}" class="text-xs text-indigo-600 font-semibold">lihat riwayat</a>
@@ -135,11 +135,11 @@
                             <td><span class="badge {{ $statusClass[$stock['stock_status']] ?? 'badge-draft' }} text-xs">{{ ucfirst($stock['stock_status']) }}</span></td>
                             <td class="text-slate-500">{{ $stock['laboratory_name'] }}</td>
                             <td class="space-x-2 whitespace-nowrap">
-                                <button type="button" @click="move = !move; edit = false" class="text-xs font-semibold text-indigo-600">Stok</button>
-                                <button type="button" @click="edit = !edit; move = false" class="text-xs font-semibold text-slate-600">Edit</button>
+                                <button type="button" @click="moveId = (moveId === {{ $stock['id'] }} ? null : {{ $stock['id'] }}); editId = null" class="text-xs font-semibold text-indigo-600">Stok</button>
+                                <button type="button" @click="editId = (editId === {{ $stock['id'] }} ? null : {{ $stock['id'] }}); moveId = null" class="text-xs font-semibold text-slate-600">Edit</button>
                             </td>
                         </tr>
-                        <tr x-show="move" x-cloak>
+                        <tr x-show="moveId === {{ $stock['id'] }}" x-cloak>
                             <td colspan="5" class="bg-slate-50">
                                 <form action="{{ route('bhp.movement', $stock['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-3 p-3">
                                     @csrf
@@ -154,7 +154,7 @@
                                 </form>
                             </td>
                         </tr>
-                        <tr x-show="edit" x-cloak>
+                        <tr x-show="editId === {{ $stock['id'] }}" x-cloak>
                             <td colspan="5" class="bg-slate-50">
                                 <form action="{{ route('bhp.update', $stock['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-3 p-3">
                                     @csrf @method('PUT')
