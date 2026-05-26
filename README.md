@@ -12,7 +12,8 @@ Labventory is a full-stack system for digitizing laboratory inventory, managing 
 2. [Tech Stack](#2-tech-stack)
 3. [Role-Based Access Control](#3-role-based-access-control)
 4. [Workflow and Environment](#4-workflow-and-environment)
-5. [Team Information](#5-team-information)
+5. [End-to-End Testing Workflow](#5-alur-testing-aplikasi-end-to-end-workflow)
+6. [Team Information](#6-team-information)
 
 ---
 
@@ -271,7 +272,46 @@ VITE_API_URL=http://localhost:3000/api
 
 ---
 
-## 5. Team Information
+## 5. End-to-End Testing Workflow
+
+To test all the features of the **Labventory** system sequentially from start to finish, you can follow this cross-role testing workflow scenario:
+
+### 1. Phase 1: Creating Procurement Drafts (Role: Head of Laboratory)
+* **Login:** `kalab@example.com` / `password123`
+* **Testing Steps:**
+  1. Go to the **Draf Pengadaan** (Procurement Draft) menu.
+  2. Create a new procurement draft by filling in details such as draft name, budget year, and description.
+  3. Enter the detail page of the newly created draft, and add some items (fill in item name, quantity, unit, estimated price, reference purchase link, and urgency).
+  4. Once all items are added, click the **Ajukan Draf** (Submit Draft) button to submit the draft to the Head of Study Program. The draft status will change to `submitted`.
+
+### 2. Phase 2: Reviewing & Approving Drafts (Role: Head of Study Program)
+* **Login:** `kaprodi@example.com` / `password123`
+* **Testing Steps:**
+  1. Go to the **Draf Pengadaan** (Procurement Draft) menu. You will see the draft submitted by the Head of Laboratory with status `submitted`.
+  2. Click the **Tinjau** (Review) button on that draft.
+  3. Check each item in the table. You can choose whether the item is **Approved** or **Rejected** along with the reasons on the review form.
+  4. Once all items have been reviewed, click the **Finalisasi Draf** (Finalize Draft) button. The draft status will change to `finalized` and the draft will be locked (cannot be edited again).
+
+### 3. Phase 3: Receiving Goods & Labeling Assets (Role: Administrative Staff)
+* **Login:** `stafadmin@example.com` / `password123`
+* **Testing Steps:**
+  1. Go to the **Penerimaan Barang** (Goods Receipt) menu. The draft with status `finalized` will appear here.
+  2. When the physical items arrive, click **Terima Barang** (Receive Goods). Enter the receipt number, item arrival date, and upload a receipt invoice photo.
+  3. Go to the **Update Label & Foto** (Update Label & Photo) menu.
+  4. The system will automatically split the received procurement items into individual asset units. Enter the **Label Number** of the physical asset and upload a **QR/Barcode Photo** for each unit of the asset to officially register it into the system. Once saved, the asset status will automatically be updated to `active`.
+
+### 4. Phase 4: Asset Maintenance & Consumables Usage (Role: Laboratory Staff)
+* **Login:** `staflab@example.com` / `password123`
+* **Testing Steps:**
+  1. First check the **Kelola Stok BHP** (Manage Consumables Stock) menu to see the current list of consumables and their stock.
+  2. Go to the **Log Maintenance** (Maintenance Log) menu.
+  3. Register a new maintenance entry if an active asset is broken or needs maintenance. Select the problematic asset, and write the maintenance action details.
+  4. On the maintenance form, select the type and quantity of **BHP (Bahan Habis Pakai / Consumables)** used for the repair process (e.g. thermal paste, rubbing alcohol, etc.).
+  5. Save the maintenance log. Go back to the **Kelola Stok BHP** menu: the system will automatically deduct the consumables stock quantity based on the amount used in the maintenance log.
+
+---
+
+## 6. Team Information
 - Febrian Timotius Sugiarto - 2472039 - Project Leader
 - Miracle Steven Gerrald - 2472019 - Team Member
 - Felicia Ivanna Widian - 2472030 - Team Member
