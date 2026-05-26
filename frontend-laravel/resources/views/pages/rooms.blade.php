@@ -85,22 +85,22 @@
                         <th>Aksi</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody x-data="{ editId: null }">
                     @forelse($rooms as $room)
-                        <tr x-data="{ edit: false }">
+                        <tr>
                             <td><span class="font-mono text-xs font-bold bg-slate-100 px-2 py-0.5 rounded-md">{{ $room['code'] }}</span></td>
                             <td class="font-semibold text-slate-800">{{ $room['name'] }}</td>
                             <td><span class="badge {{ $room['room_type'] === 'laboratory' ? 'badge-active' : 'badge-draft' }} text-xs">{{ ucfirst($room['room_type']) }}</span></td>
                             <td class="text-slate-500">{{ $room['building_name'] }} · {{ $room['floor_name'] }}</td>
                             <td class="whitespace-nowrap space-x-2">
-                                <button type="button" @click="edit = !edit" class="text-xs font-semibold text-indigo-600">Edit</button>
+                                <button type="button" @click="editId = (editId === {{ $room['id'] }} ? null : {{ $room['id'] }})" class="text-xs font-semibold text-indigo-600">Edit</button>
                                 <form action="{{ route('rooms.destroy', $room['id']) }}" method="POST" class="inline" onsubmit="return confirm('Hapus ruangan ini?')">
                                     @csrf @method('DELETE')
                                     <button class="text-xs font-semibold text-red-600">Hapus</button>
                                 </form>
                             </td>
                         </tr>
-                        <tr x-show="edit" x-cloak>
+                        <tr x-show="editId === {{ $room['id'] }}" x-cloak>
                             <td colspan="5" class="bg-slate-50">
                                 <form action="{{ route('rooms.update', $room['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-3 p-3">
                                     @csrf @method('PUT')

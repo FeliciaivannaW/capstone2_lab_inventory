@@ -16,7 +16,7 @@
     ];
     $greeting = $roleGreetings[$role] ?? 'Selamat datang di Labventory System.';
 
-    $backendOk = isset($health['status']) && $health['status'] === 'ok';
+    $backendOk = isset($health['status']) && ($health['status'] === 'ok' || $health['status'] === 'success');
 @endphp
 
 {{-- Page heading --}}

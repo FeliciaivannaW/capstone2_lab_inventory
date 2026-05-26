@@ -95,9 +95,9 @@
                         <th>Aksi</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody x-data="{ editId: null }">
                     @forelse($users as $user)
-                        <tr x-data="{ edit: false }">
+                        <tr>
                             <td>
                                 <div class="font-semibold text-slate-800">{{ $user['name'] }}</div>
                                 <div class="text-xs text-slate-400">{{ $user['email'] }} · {{ $user['nrp_nip'] ?? '-' }}</div>
@@ -108,14 +108,14 @@
                                 <span class="badge {{ $user['status'] === 'active' ? 'badge-approved' : 'badge-rejected' }} text-xs">{{ $user['status'] }}</span>
                             </td>
                             <td class="space-x-2 whitespace-nowrap">
-                                <button type="button" @click="edit = !edit" class="text-xs font-semibold text-indigo-600">Edit</button>
+                                <button type="button" @click="editId = (editId === {{ $user['id'] }} ? null : {{ $user['id'] }})" class="text-xs font-semibold text-indigo-600">Edit</button>
                                 <form action="{{ route('users.destroy', $user['id']) }}" method="POST" class="inline" onsubmit="return confirm('Hapus user ini?')">
                                     @csrf @method('DELETE')
                                     <button class="text-xs font-semibold text-red-600">Hapus</button>
                                 </form>
                             </td>
                         </tr>
-                        <tr x-show="edit" x-cloak>
+                        <tr x-show="editId === {{ $user['id'] }}" x-cloak>
                             <td colspan="5" class="bg-slate-50">
                                 <form action="{{ route('users.update', $user['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-3 p-3">
                                     @csrf @method('PUT')

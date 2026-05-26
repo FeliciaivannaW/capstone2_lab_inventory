@@ -29,6 +29,19 @@
     <style>
         * { font-family: 'Inter', system-ui, sans-serif; }
 
+        /* Fix missing border, padding, and focus states on inputs using border-slate-200 */
+        input.border-slate-200, select.border-slate-200, textarea.border-slate-200 {
+            border-width: 1px;
+            border-style: solid;
+            padding: 0.55rem 0.875rem;
+            outline: none;
+            transition: all 0.15s ease-in-out;
+        }
+        input.border-slate-200:focus, select.border-slate-200:focus, textarea.border-slate-200:focus {
+            border-color: #6366F1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
         [x-cloak] {
         display: none !important;
         }
@@ -66,7 +79,15 @@
         .nav-section {
             font-size: 0.625rem; font-weight: 700; letter-spacing: 0.08em;
             text-transform: uppercase; color: #475569;
-            padding: 0 12px; margin: 16px 0 4px;
+            padding: 0 12px;
+        }
+        .nav-section.sidebar-label {
+            margin-top: 16px !important;
+            margin-bottom: 4px !important;
+        }
+        .nav-section.sidebar-label:first-of-type {
+            margin-top: 32px !important;
+            margin-bottom: 8px !important;
         }
 
         /* Sidebar collapse transition */
