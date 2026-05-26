@@ -1,4 +1,4 @@
-const db = require("../config/database");
+const UserModel = require("../models/UserModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
@@ -17,31 +17,14 @@ const login = async (req, res, next) => {
       throw new Error("JWT_SECRET tidak dikonfigurasi di environment variables");
     }
 
-    const [users] = await db.query(`
-      SELECT 
-        users.id,
-        users.name,
-        users.email,
-        users.password,
-        users.status,
-        users.lab_id,
-        roles.name AS role,
-        laboratories.name AS laboratory_name
-      FROM users
-      JOIN roles ON users.role_id = roles.id
-      LEFT JOIN laboratories ON users.lab_id = laboratories.id
-      WHERE users.email = ?
-      LIMIT 1
-    `, [email]);
+    const user = await UserModel.findByEmailForAuth(email);
 
-    if (users.length === 0) {
+    if (!user) {
       return res.status(401).json({
         status: "error",
         message: "Email atau password salah"
       });
     }
-
-    const user = users[0];
 
     if (user.status !== "active") {
       return res.status(403).json({
@@ -103,22 +86,9 @@ const profile = async (req, res, next) => {
       });
     }
 
-    const [users] = await db.query(`
-      SELECT 
-        users.id,
-        users.name,
-        users.email,
-        users.status,
-        roles.name AS role,
-        laboratories.name AS laboratory_name
-      FROM users
-      JOIN roles ON users.role_id = roles.id
-      LEFT JOIN laboratories ON users.lab_id = laboratories.id
-      WHERE users.id = ?
-      LIMIT 1
-    `, [req.user.id]);
+    const user = await UserModel.findByIdForAuth(req.user.id);
 
-    if (users.length === 0) {
+    if (!user) {
       return res.status(404).json({
         status: "error",
         message: "User tidak ditemukan"
@@ -127,7 +97,7 @@ const profile = async (req, res, next) => {
 
     res.json({
       status: "success",
-      data: users[0]
+      data: user
     });
   } catch (error) {
     console.error("[PROFILE ERROR]", error);
