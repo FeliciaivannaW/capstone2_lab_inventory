@@ -29,7 +29,7 @@
     <style>
         * { font-family: 'Inter', system-ui, sans-serif; }
 
-        /* Fix missing border, padding, and focus states on inputs using border-slate-200 */
+        /* Fix missing border, padding, and focus states on inputs using border-slate-200 and border-amber-200 */
         input.border-slate-200, select.border-slate-200, textarea.border-slate-200 {
             border-width: 1px;
             border-style: solid;
@@ -40,6 +40,17 @@
         input.border-slate-200:focus, select.border-slate-200:focus, textarea.border-slate-200:focus {
             border-color: #6366F1;
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+        input.border-amber-200, select.border-amber-200, textarea.border-amber-200 {
+            border-width: 1px;
+            border-style: solid;
+            padding: 0.45rem 0.75rem;
+            outline: none;
+            transition: all 0.15s ease-in-out;
+        }
+        input.border-amber-200:focus, select.border-amber-200:focus, textarea.border-amber-200:focus {
+            border-color: #D97706;
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
         }
 
         [x-cloak] {
