@@ -153,7 +153,7 @@
 </div>
 
 {{-- ───── APPROVED ITEMS — with per-item progress ───── --}}
-<div class="glass-card rounded-2xl overflow-hidden mb-5">
+<div class="glass-card rounded-2xl overflow-hidden mb-5" x-data="tablePagination({{ count($approvedItems) }})">
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
         <div class="flex items-center gap-3">
             <span class="badge badge-approved text-xs">✓ Disetujui</span>
@@ -195,7 +195,7 @@
                                 default    => ['Belum',            'bg-amber-100 text-amber-700',   'bg-amber-400'],
                             };
                         @endphp
-                        <tr>
+                        <tr x-show="showRow({{ $i }})" x-cloak>
                             <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $item['item_name'] }}</td>
                             <td>
@@ -230,6 +230,11 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($approvedItems) > 0)
+            <x-pagination :total="count($approvedItems)" />
+        @endif
+        
         {{-- Total row --}}
         <div class="px-6 py-3 bg-emerald-50 border-t border-emerald-100 flex justify-end items-center gap-3">
             <span class="text-sm text-slate-600 font-semibold">Total Estimasi:</span>
@@ -240,7 +245,7 @@
 
 {{-- Rejected items --}}
 @if(!empty($rejectedItems))
-    <div class="glass-card rounded-2xl overflow-hidden mb-5">
+    <div class="glass-card rounded-2xl overflow-hidden mb-5" x-data="tablePagination({{ count($rejectedItems) }})">
         <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
             <span class="badge badge-rejected text-xs">✗ Ditolak</span>
             <span class="text-sm font-bold text-slate-900">{{ count($rejectedItems) }} Item</span>
@@ -259,7 +264,7 @@
                 </thead>
                 <tbody>
                     @foreach($rejectedItems as $i => $item)
-                        <tr class="opacity-60">
+                        <tr class="opacity-60" x-show="showRow({{ $i }})" x-cloak>
                             <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
                             <td class="line-through text-slate-600">{{ $item['item_name'] }}</td>
                             <td class="text-slate-500 text-xs">{{ ucfirst($item['item_type']) }}</td>
@@ -271,6 +276,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($rejectedItems) > 0)
+            <x-pagination :total="count($rejectedItems)" />
+        @endif
     </div>
 @endif
 

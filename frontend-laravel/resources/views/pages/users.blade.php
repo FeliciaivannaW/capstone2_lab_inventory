@@ -73,7 +73,7 @@
         </form>
     </div>
 
-    <div class="glass-card rounded-2xl overflow-hidden xl:col-span-2">
+    <div class="glass-card rounded-2xl overflow-hidden xl:col-span-2 self-start" x-data="tablePagination({{ count($users) }})">
         <div class="px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
             <div>
                 <p class="text-sm font-bold text-slate-800">Daftar User</p>
@@ -96,8 +96,8 @@
                     </tr>
                 </thead>
                 <tbody x-data="{ editId: null }">
-                    @forelse($users as $user)
-                        <tr>
+                    @forelse($users as $index => $user)
+                        <tr x-show="showRow({{ $index }})" x-cloak>
                             <td>
                                 <div class="font-semibold text-slate-800">{{ $user['name'] }}</div>
                                 <div class="text-xs text-slate-400">{{ $user['email'] }} · {{ $user['nrp_nip'] ?? '-' }}</div>
@@ -115,8 +115,8 @@
                                 </form>
                             </td>
                         </tr>
-                        <tr x-show="editId === {{ $user['id'] }}" x-cloak>
-                            <td colspan="5" class="bg-slate-50">
+                        <tr x-show="showRow({{ $index }}) && editId === {{ $user['id'] }}" x-cloak class="bg-slate-50">
+                            <td colspan="5">
                                 <form action="{{ route('users.update', $user['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-3 p-3">
                                     @csrf @method('PUT')
                                     <input name="name" value="{{ $user['name'] }}" class="rounded-xl border-slate-200 text-sm" required>
@@ -148,6 +148,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($users) > 0)
+            <x-pagination :total="count($users)" />
+        @endif
     </div>
 </div>
 @endsection

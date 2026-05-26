@@ -25,6 +25,23 @@
         }
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.1/dist/cdn.min.js"></script>
+    <script>
+        window.tablePaginationData = (totalItems) => ({
+            currentPage: 1,
+            perPage: 10,
+            totalItems: totalItems,
+            get totalPages() { return Math.ceil(this.totalItems / this.perPage); },
+            getPages() { return Array.from({length: this.totalPages}, (_, i) => i + 1); },
+            showRow(index) {
+                const start = (this.currentPage - 1) * this.perPage;
+                const end = start + parseInt(this.perPage);
+                return index >= start && index < end;
+            }
+        });
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('tablePagination', (totalItems) => window.tablePaginationData(totalItems));
+        });
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
     <style>
         * { font-family: 'Inter', system-ui, sans-serif; }

@@ -153,7 +153,7 @@
                                     'asset_condition'=> $asset['asset_condition'] ?? 'baik',
                                 ]), ENT_QUOTES, 'UTF-8');
                             @endphp
-                            <tr>
+                            <tr x-show="showRow({{ $i }})" x-cloak>
                                 <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
                                 <td>
                                     <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
@@ -219,6 +219,10 @@
                     </tbody>
                 </table>
             </div>
+            
+            @if(count($assets ?? []) > 0)
+                <x-pagination :total="count($assets)" />
+            @endif
         @endif
     </div>
 
@@ -384,6 +388,7 @@
 <script>
 function labelDrawerApp() {
     return {
+        ...window.tablePaginationData({{ count($assets) }}),
         drawerOpen: false,
         loading: false,
         dragging: false,

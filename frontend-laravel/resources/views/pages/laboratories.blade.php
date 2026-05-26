@@ -9,7 +9,7 @@
     <p class="text-sm text-slate-500 mt-1">Daftar laboratorium dari denah Gedung GWM lantai 8.</p>
 </div>
 
-<div class="glass-card rounded-2xl overflow-hidden">
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($laboratories) }})">
     <div class="px-6 py-4 border-b border-slate-100">
         <p class="text-sm font-semibold text-slate-700">{{ count($laboratories) }} laboratorium</p>
     </div>
@@ -35,8 +35,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($laboratories as $lab)
-                        <tr>
+                    @foreach($laboratories as $index => $lab)
+                        <tr x-show="showRow({{ $index }})" x-cloak>
                             <td>
                                 <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
                                     {{ $lab['code'] }}
@@ -64,6 +64,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($laboratories) > 0)
+            <x-pagination :total="count($laboratories)" />
+        @endif
     @endif
 </div>
 @endsection

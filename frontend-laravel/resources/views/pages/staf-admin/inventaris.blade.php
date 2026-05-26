@@ -135,7 +135,7 @@
 </form>
 
 {{-- ─── Table ───────────────────────────────────────────── --}}
-<div class="glass-card rounded-2xl overflow-hidden">
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($assets) }})">
     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <p class="text-sm font-semibold text-slate-700">
             {{ count($assets) }} aset ditemukan
@@ -192,7 +192,7 @@
                             $steps    = ['received', 'labeled', 'available', 'in_use', 'maintenance'];
                             $stepIdx  = array_search($st, $steps);
                         @endphp
-                        <tr>
+                        <tr x-show="showRow({{ $i }})" x-cloak>
                             <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
 
                             <td>
@@ -288,6 +288,10 @@
                 </tbody>
             </table>
         </div>
+
+        @if(count($assets) > 0)
+            <x-pagination :total="count($assets)" />
+        @endif
     @endif
 </div>
 @endsection

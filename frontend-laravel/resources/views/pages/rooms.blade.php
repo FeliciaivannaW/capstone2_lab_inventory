@@ -63,7 +63,7 @@
         </form>
     </div>
 
-    <div class="glass-card rounded-2xl overflow-hidden xl:col-span-2">
+    <div class="glass-card rounded-2xl overflow-hidden xl:col-span-2 self-start" x-data="tablePagination({{ count($rooms) }})">
         <div class="px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
             <div>
                 <p class="text-sm font-bold text-slate-800">Daftar Ruangan</p>
@@ -86,8 +86,8 @@
                     </tr>
                 </thead>
                 <tbody x-data="{ editId: null }">
-                    @forelse($rooms as $room)
-                        <tr>
+                    @forelse($rooms as $index => $room)
+                        <tr x-show="showRow({{ $index }})" x-cloak>
                             <td><span class="font-mono text-xs font-bold bg-slate-100 px-2 py-0.5 rounded-md">{{ $room['code'] }}</span></td>
                             <td class="font-semibold text-slate-800">{{ $room['name'] }}</td>
                             <td><span class="badge {{ $room['room_type'] === 'laboratory' ? 'badge-active' : 'badge-draft' }} text-xs">{{ ucfirst($room['room_type']) }}</span></td>
@@ -100,8 +100,8 @@
                                 </form>
                             </td>
                         </tr>
-                        <tr x-show="editId === {{ $room['id'] }}" x-cloak>
-                            <td colspan="5" class="bg-slate-50">
+                        <tr x-show="showRow({{ $index }}) && editId === {{ $room['id'] }}" x-cloak class="bg-slate-50">
+                            <td colspan="5">
                                 <form action="{{ route('rooms.update', $room['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-3 p-3">
                                     @csrf @method('PUT')
                                     <input name="code" value="{{ $room['code'] }}" class="rounded-xl border-slate-200 text-sm" required>
@@ -128,6 +128,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($rooms) > 0)
+            <x-pagination :total="count($rooms)" />
+        @endif
     </div>
 </div>
 @endsection

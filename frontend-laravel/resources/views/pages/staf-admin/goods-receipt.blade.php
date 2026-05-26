@@ -60,7 +60,7 @@
                             $pct = $ordered > 0 ? round(($totalReceived / $ordered) * 100) : 0;
                             $isDone = $totalReceived >= $ordered;
                         @endphp
-                        <tr>
+                        <tr x-show="showRow({{ $i }})" x-cloak>
                             <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $item['item_name'] }}</td>
                             <td>
@@ -114,7 +114,7 @@
                             </td>
                         </tr>
                         @if(!empty($receipts))
-                            <tr x-show="openHistories.includes({{ $item['id'] }})" style="display:none;">
+                            <tr x-show="showRow({{ $i }}) && openHistories.includes({{ $item['id'] }})" x-cloak>
                                 <td colspan="8" class="bg-slate-50 px-6 py-3">
                                     <p class="text-xs font-bold text-slate-600 mb-2">Riwayat Penerimaan</p>
                                     <table class="lv-table text-xs">
@@ -144,6 +144,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($approvedItems) > 0)
+            <x-pagination :total="count($approvedItems)" />
+        @endif
 
         {{-- Receipt Modal --}}
         <div x-show="modalOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
@@ -186,6 +190,7 @@
 <script>
 function receiptApp() {
     return {
+        ...window.tablePaginationData({{ count($approvedItems) }}),
         modalOpen: false,
         modalItemId: null,
         modalItemName: '',

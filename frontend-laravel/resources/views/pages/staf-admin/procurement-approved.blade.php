@@ -67,7 +67,7 @@
 </form>
 
 {{-- Table --}}
-<div class="glass-card rounded-2xl overflow-hidden">
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($drafts) }})">
     <div class="px-6 py-4 border-b border-slate-100">
         <p class="text-sm font-semibold text-slate-700">{{ count($drafts) }} draf difinalisasi</p>
     </div>
@@ -108,12 +108,12 @@
                                 default    => ['Menunggu Penerimaan','bg-amber-100 text-amber-700',   'bg-amber-400'],
                             };
                         @endphp
-                        <tr>
+                        <tr x-show="showRow({{ $index }})" x-cloak>
                             <td class="text-slate-400 font-mono text-xs">{{ $index + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $draft['title'] }}</td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <span class="badge badge-active text-xs">{{ $draft['lab_code'] ?? '' }}</span>
+                                    <span class="badge badge-active text-xs">{{ $draft['counter'] ?? $draft['lab_code'] ?? '' }}</span>
                                     <span class="text-slate-600 text-xs">{{ $draft['lab_name'] }}</span>
                                 </div>
                             </td>
@@ -157,6 +157,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($drafts) > 0)
+            <x-pagination :total="count($drafts)" />
+        @endif
     @endif
 </div>
 @endsection

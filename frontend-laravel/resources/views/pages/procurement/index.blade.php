@@ -34,7 +34,7 @@
 </div>
 
 {{-- Table card --}}
-<div class="glass-card rounded-2xl overflow-hidden">
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($drafts) }})">
     <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <p class="text-sm font-semibold text-slate-700">{{ count($drafts) }} draf ditemukan</p>
     </div>
@@ -73,7 +73,7 @@
                         @php
                             $st = $statusMap[$draft['status']] ?? ['label' => ucfirst($draft['status']), 'class' => 'badge-draft'];
                         @endphp
-                        <tr>
+                        <tr x-show="showRow({{ $index }})" x-cloak>
                             <td class="text-slate-400 font-mono text-xs">{{ $index + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $draft['title'] }}</td>
                             <td>
@@ -132,6 +132,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($drafts) > 0)
+            <x-pagination :total="count($drafts)" />
+        @endif
     @endif
 </div>
 @endsection

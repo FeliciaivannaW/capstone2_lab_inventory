@@ -45,7 +45,7 @@
 </form>
 
 {{-- Table --}}
-<div class="glass-card rounded-2xl overflow-hidden">
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($assets ?? []) }})">
     <div class="px-6 py-4 border-b border-slate-100">
         <p class="text-sm font-semibold text-slate-700">{{ count($assets ?? []) }} aset ditemukan</p>
     </div>
@@ -103,7 +103,7 @@
                                 default               => in_array($asset['asset_condition'] ?? '', ['dihapus','diganti']) ? 4 : 2,
                             };
                         @endphp
-                        <tr>
+                        <tr x-show="showRow({{ $i }})" x-cloak>
                             <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
                             <td>
                                 <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
@@ -157,6 +157,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($assets ?? []) > 0)
+            <x-pagination :total="count($assets)" />
+        @endif
     @endif
 </div>
 @endsection

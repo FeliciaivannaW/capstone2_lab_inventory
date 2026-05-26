@@ -95,7 +95,7 @@
         </div>
     </div>
 
-    <div class="glass-card rounded-2xl overflow-hidden xl:col-span-2">
+    <div class="glass-card rounded-2xl overflow-hidden xl:col-span-2 self-start" x-data="tablePagination({{ count($stocks) }})">
         <div class="px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
             <div>
                 <p class="text-sm font-bold text-slate-800">Daftar Stok BHP</p>
@@ -122,8 +122,8 @@
                     </tr>
                 </thead>
                 <tbody x-data="{ moveId: null, editId: null }">
-                    @forelse($stocks as $stock)
-                        <tr>
+                    @forelse($stocks as $index => $stock)
+                        <tr x-show="showRow({{ $index }})" x-cloak>
                             <td>
                                 <div class="font-semibold text-slate-800">{{ $stock['item_name'] }}</div>
                                 <a href="{{ route('bhp', array_merge(request()->query(), ['stock_id' => $stock['id']])) }}" class="text-xs text-indigo-600 font-semibold">lihat riwayat</a>
@@ -139,8 +139,8 @@
                                 <button type="button" @click="editId = (editId === {{ $stock['id'] }} ? null : {{ $stock['id'] }}); moveId = null" class="text-xs font-semibold text-slate-600">Edit</button>
                             </td>
                         </tr>
-                        <tr x-show="moveId === {{ $stock['id'] }}" x-cloak>
-                            <td colspan="5" class="bg-slate-50">
+                        <tr x-show="showRow({{ $index }}) && moveId === {{ $stock['id'] }}" x-cloak class="bg-slate-50">
+                            <td colspan="5">
                                 <form action="{{ route('bhp.movement', $stock['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-3 p-3">
                                     @csrf
                                     <select name="movement_type" class="rounded-xl border-slate-200 text-sm" required>
@@ -154,8 +154,8 @@
                                 </form>
                             </td>
                         </tr>
-                        <tr x-show="editId === {{ $stock['id'] }}" x-cloak>
-                            <td colspan="5" class="bg-slate-50">
+                        <tr x-show="showRow({{ $index }}) && editId === {{ $stock['id'] }}" x-cloak class="bg-slate-50">
+                            <td colspan="5">
                                 <form action="{{ route('bhp.update', $stock['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-3 p-3">
                                     @csrf @method('PUT')
                                     <input name="unit" value="{{ $stock['unit'] }}" class="rounded-xl border-slate-200 text-sm" required>
@@ -170,6 +170,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($stocks) > 0)
+            <x-pagination :total="count($stocks)" />
+        @endif
     </div>
 </div>
 @endsection
