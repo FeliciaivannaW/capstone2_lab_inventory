@@ -124,23 +124,39 @@
 </div>
 
 {{-- Items table --}}
-<div class="glass-card rounded-2xl overflow-hidden">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-        <div>
-            <h2 class="text-sm font-bold text-slate-900">Daftar Item Pengadaan</h2>
-            <p class="text-xs text-slate-400 mt-0.5">{{ count($draft['items'] ?? []) }} item dalam draf ini</p>
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($draft['items'] ?? []) }})">
+    <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900">Daftar Item Pengadaan</h2>
+                <p class="text-xs text-slate-400 mt-0.5">{{ count($draft['items'] ?? []) }} item dalam draf ini</p>
+            </div>
+            {{-- Item count badges --}}
+            <div class="flex items-center gap-2">
+                <span class="badge badge-pending text-xs">
+                    {{ collect($draft['items'] ?? [])->where('review_status','pending')->count() }} pending
+                </span>
+                <span class="badge badge-approved text-xs">
+                    {{ collect($draft['items'] ?? [])->where('review_status','approved')->count() }} disetujui
+                </span>
+                <span class="badge badge-rejected text-xs">
+                    {{ collect($draft['items'] ?? [])->where('review_status','rejected')->count() }} ditolak
+                </span>
+            </div>
         </div>
-        {{-- Item count badges --}}
-        <div class="flex items-center gap-2">
-            <span class="badge badge-pending text-xs">
-                {{ collect($draft['items'] ?? [])->where('review_status','pending')->count() }} pending
-            </span>
-            <span class="badge badge-approved text-xs">
-                {{ collect($draft['items'] ?? [])->where('review_status','approved')->count() }} disetujui
-            </span>
-            <span class="badge badge-rejected text-xs">
-                {{ collect($draft['items'] ?? [])->where('review_status','rejected')->count() }} ditolak
-            </span>
+        <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+            <x-table-filter column="status" label="Status Review" :options="[
+                'pending' => 'Pending',
+                'approved' => 'Approved',
+                'rejected' => 'Rejected'
+            ]" />
+            <x-table-filter column="type" label="Tipe Barang" :options="[
+                'inventory' => 'Inventaris',
+                'bhp' => 'BHP'
+            ]" />
+            <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                Reset Filter
+            </button>
         </div>
     </div>
 
@@ -156,15 +172,15 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Nama Barang</th>
-                        <th>Tipe</th>
-                        <th>Qty</th>
-                        <th>Harga Perkiraan</th>
-                        <th>Status Review</th>
-                        <th>Reviewer</th>
-                        <th>Catatan</th>
-                        <th>Link</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="item_name">Nama Barang</x-sort-header>
+                        <x-sort-header field="item_type">Tipe</x-sort-header>
+                        <x-sort-header field="qty">Qty</x-sort-header>
+                        <x-sort-header field="price">Harga Perkiraan</x-sort-header>
+                        <x-sort-header field="status">Status Review</x-sort-header>
+                        <x-sort-header field="reviewer">Reviewer</x-sort-header>
+                        <x-sort-header field="note">Catatan</x-sort-header>
+                        <x-sort-header field="link">Link</x-sort-header>
                         @if($canEdit ?? false)
                             <th>Aksi</th>
                         @endif
@@ -172,7 +188,7 @@
                 </thead>
                 <tbody>
                     @foreach($draft['items'] as $index => $item)
-                        <tr>
+                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-status="{{ $item['review_status'] }}" data-filter-type="{{ $item['item_type'] }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $index + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $item['item_name'] }}</td>
                             <td>
@@ -210,7 +226,7 @@
                                     <a href="{{ $item['purchase_link'] }}" target="_blank"
                                        class="inline-flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 font-semibold transition-colors">
                                         Lihat
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                         </svg>
                                     </a>
@@ -231,6 +247,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($draft['items'] ?? []) > 0)
+            <x-pagination :total="count($draft['items'])" />
+        @endif
     @endif
 </div>
 

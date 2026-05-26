@@ -96,7 +96,7 @@
 </div>
 
 {{-- ── Lab table ── --}}
-<div class="glass-card rounded-2xl overflow-hidden">
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($laboratories) }})">
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
         <div>
             <h2 class="text-sm font-bold text-slate-900">Daftar Laboratorium</h2>
@@ -125,17 +125,17 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>Kode Lab</th>
-                        <th>Nama Lab</th>
-                        <th>Ruangan</th>
-                        <th>Gedung</th>
-                        <th>Lantai</th>
-                        <th>Kepala Lab</th>
+                        <x-sort-header field="code">Kode Lab</x-sort-header>
+                        <x-sort-header field="name">Nama Lab</x-sort-header>
+                        <x-sort-header field="room">Ruangan</x-sort-header>
+                        <x-sort-header field="building">Gedung</x-sort-header>
+                        <x-sort-header field="floor">Lantai</x-sort-header>
+                        <x-sort-header field="head">Kepala Lab</x-sort-header>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($laboratories as $lab)
-                        <tr>
+                    @foreach($laboratories as $index => $lab)
+                        <tr x-show="showRow({{ $index }})" x-cloak>
                             <td>
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-semibold bg-slate-100 text-slate-700">
                                     {{ $lab['code'] }}
@@ -162,6 +162,8 @@
                 </tbody>
             </table>
         </div>
+        
+        <x-pagination :total="count($laboratories)" />
     @endif
 </div>
 @endsection

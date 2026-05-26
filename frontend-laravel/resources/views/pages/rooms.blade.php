@@ -63,31 +63,39 @@
         </form>
     </div>
 
-    <div class="glass-card rounded-2xl overflow-hidden xl:col-span-2">
-        <div class="px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
-            <div>
-                <p class="text-sm font-bold text-slate-800">Daftar Ruangan</p>
-                <p class="text-xs text-slate-400">{{ count($rooms) }} ruangan</p>
+    <div class="glass-card rounded-2xl overflow-hidden xl:col-span-2 self-start" x-data="tablePagination({{ count($rooms) }})">
+        <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+            <div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-sm font-bold text-slate-800">Daftar Ruangan</p>
+                    <p class="text-xs text-slate-400">{{ count($rooms) }} ruangan</p>
+                </div>
+                <form method="GET" class="flex gap-2">
+                    <input name="search" value="{{ request('search') }}" placeholder="Cari ruangan" class="rounded-xl border-slate-200 text-sm">
+                    <button class="rounded-xl bg-slate-900 text-white text-sm font-semibold px-4">Cari</button>
+                </form>
             </div>
-            <form method="GET" class="flex gap-2">
-                <input name="search" value="{{ request('search') }}" placeholder="Cari ruangan" class="rounded-xl border-slate-200 text-sm">
-                <button class="rounded-xl bg-slate-900 text-white text-sm font-semibold px-4">Cari</button>
-            </form>
+            <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+                <x-table-filter column="type" label="Tipe Ruangan" :options="['laboratory' => 'Laboratory', 'classroom' => 'Classroom']" />
+                <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                    Reset Filter
+                </button>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>Kode</th>
-                        <th>Nama</th>
-                        <th>Tipe</th>
-                        <th>Lokasi</th>
+                        <x-sort-header field="code">Kode</x-sort-header>
+                        <x-sort-header field="name">Nama</x-sort-header>
+                        <x-sort-header field="type">Tipe</x-sort-header>
+                        <x-sort-header field="location">Lokasi</x-sort-header>
                         <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody x-data="{ editId: null }">
-                    @forelse($rooms as $room)
-                        <tr>
+                    @forelse($rooms as $index => $room)
+                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-type="{{ $room['room_type'] }}">
                             <td><span class="font-mono text-xs font-bold bg-slate-100 px-2 py-0.5 rounded-md">{{ $room['code'] }}</span></td>
                             <td class="font-semibold text-slate-800">{{ $room['name'] }}</td>
                             <td><span class="badge {{ $room['room_type'] === 'laboratory' ? 'badge-active' : 'badge-draft' }} text-xs">{{ ucfirst($room['room_type']) }}</span></td>
@@ -100,8 +108,8 @@
                                 </form>
                             </td>
                         </tr>
-                        <tr x-show="editId === {{ $room['id'] }}" x-cloak>
-                            <td colspan="5" class="bg-slate-50">
+                        <tr x-show="showRow({{ $index }}) && editId === {{ $room['id'] }}" x-cloak class="bg-slate-50" data-filter-type="{{ $room['room_type'] }}">
+                            <td colspan="5">
                                 <form action="{{ route('rooms.update', $room['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-3 p-3">
                                     @csrf @method('PUT')
                                     <input name="code" value="{{ $room['code'] }}" class="rounded-xl border-slate-200 text-sm" required>
@@ -128,6 +136,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($rooms) > 0)
+            <x-pagination :total="count($rooms)" />
+        @endif
     </div>
 </div>
 @endsection

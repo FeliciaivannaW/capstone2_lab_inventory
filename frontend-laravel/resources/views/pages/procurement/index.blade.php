@@ -34,9 +34,31 @@
 </div>
 
 {{-- Table card --}}
-<div class="glass-card rounded-2xl overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <p class="text-sm font-semibold text-slate-700">{{ count($drafts) }} draf ditemukan</p>
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($drafts) }})">
+    @php
+        $years = collect($drafts)->pluck('year')->unique()->filter()->values()->toArray();
+        $yearOptions = count($years) ? array_combine($years, $years) : [];
+        $labs = collect($drafts)->pluck('lab_name')->unique()->filter()->values()->toArray();
+        $labOptions = count($labs) ? array_combine($labs, $labs) : [];
+    @endphp
+    <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+        <div class="flex items-center justify-between">
+            <p class="text-sm font-semibold text-slate-700">{{ count($drafts) }} draf ditemukan</p>
+        </div>
+        <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+            <x-table-filter column="status" label="Status" :options="[
+                'draft' => 'Draft',
+                'submitted' => 'Submitted',
+                'approved' => 'Approved',
+                'rejected' => 'Rejected',
+                'finalized' => 'Finalized'
+            ]" />
+            <x-table-filter column="lab" label="Lab" :options="$labOptions" />
+            <x-table-filter column="year" label="Tahun" :options="$yearOptions" />
+            <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                Reset Filter
+            </button>
+        </div>
     </div>
 
     @if(empty($drafts))
@@ -56,15 +78,15 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Judul Draf</th>
-                        <th>Lab</th>
-                        <th>Tahun</th>
-                        <th>Pembuat</th>
-                        <th>Status</th>
-                        <th>Item (P/S/T)</th>
-                        <th>Kunci</th>
-                        <th>Dibuat</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="title">Judul Draf</x-sort-header>
+                        <x-sort-header field="lab">Lab</x-sort-header>
+                        <x-sort-header field="year">Tahun</x-sort-header>
+                        <x-sort-header field="creator">Pembuat</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
+                        <x-sort-header field="items">Item (P/S/T)</x-sort-header>
+                        <x-sort-header field="locked">Kunci</x-sort-header>
+                        <x-sort-header field="created">Dibuat</x-sort-header>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -73,7 +95,7 @@
                         @php
                             $st = $statusMap[$draft['status']] ?? ['label' => ucfirst($draft['status']), 'class' => 'badge-draft'];
                         @endphp
-                        <tr>
+                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-status="{{ $draft['status'] }}" data-filter-lab="{{ $draft['lab_name'] }}" data-filter-year="{{ $draft['year'] }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $index + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $draft['title'] }}</td>
                             <td>
@@ -132,6 +154,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($drafts) > 0)
+            <x-pagination :total="count($drafts)" />
+        @endif
     @endif
 </div>
 @endsection

@@ -25,6 +25,245 @@
         }
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.1/dist/cdn.min.js"></script>
+    <script>
+        window.tablePaginationData = (totalItems) => ({
+            currentPage: 1,
+            perPage: 10,
+            totalItems: totalItems,
+            filteredTotalItems: totalItems,
+            sortField: '',
+            sortAsc: true,
+            indexMap: {},
+            updateCounter: 0,
+            filters: {},
+            get totalPages() { return Math.ceil(this.filteredTotalItems / this.perPage); },
+            getPages() { return Array.from({length: this.totalPages}, (_, i) => i + 1); },
+            showRow(index) {
+                const _ = this.updateCounter;
+                let finalIndex = index;
+                if (this.indexMap && this.indexMap[index] !== undefined) {
+                    finalIndex = this.indexMap[index];
+                }
+                if (finalIndex === -1) return false;
+                const start = (this.currentPage - 1) * this.perPage;
+                const end = start + parseInt(this.perPage);
+                return finalIndex >= start && finalIndex < end;
+            },
+            sortBy(field, thEl) {
+                const table = thEl.closest('table');
+                
+                if (this.sortField === field) {
+                    this.sortAsc = !this.sortAsc;
+                } else {
+                    this.sortField = field;
+                    this.sortAsc = true;
+                }
+                
+                this.applyFiltersAndSorting(table);
+            },
+            setFilter(column, value) {
+                this.filters[column] = value;
+                this.currentPage = 1;
+                this.applyFiltersAndSorting();
+            },
+            resetFilters() {
+                Object.keys(this.filters).forEach(k => this.filters[k] = '');
+                this.currentPage = 1;
+                this.applyFiltersAndSorting();
+            },
+            applyFiltersAndSorting(targetTable = null) {
+                let table = targetTable;
+                if (!table) {
+                    const container = this.$el.closest('[x-data]') || this.$el;
+                    table = container.querySelector('table.lv-table');
+                }
+                if (table) {
+                    window.applyTableFiltersAndSorting(table, this);
+                }
+            }
+        });
+
+        window.getSortValue = (cell) => {
+            if (!cell) return '';
+            if (cell.dataset.sortValue) return cell.dataset.sortValue;
+            
+            const text = cell.innerText.trim();
+            if (!text) return '';
+            
+            // Try date parse
+            if (text.match(/^[0-9]{1,2}[-\/\s][A-Za-z0-9]{3,}[-\/\s][0-9]{2,4}/) || text.match(/^[0-9]{4}[-\/\s][0-9]{2}[-\/\s][0-9]{2}/)) {
+                const parsedDate = Date.parse(text);
+                if (!isNaN(parsedDate)) {
+                    return parsedDate;
+                }
+            }
+            
+            // Numeric check
+            const cleaned = text.replace(/[^0-9.,-]/g, '').replace(',', '.');
+            if (cleaned !== '' && !isNaN(cleaned) && text.match(/^\s*[-+]?[0-9]/)) {
+                return parseFloat(cleaned);
+            }
+            
+            return text.toLowerCase();
+        };
+
+        window.applyTableFiltersAndSorting = (table, alpineData) => {
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const groups = [];
+            let currentGroup = null;
+            
+            rows.forEach(row => {
+                if (row.querySelector('td[colspan]') && (row.innerText.includes('Belum ada') || row.innerText.includes('Tidak ada') || row.innerText.includes('No data') || row.innerText.includes('Belum memilih'))) {
+                    return;
+                }
+                const isDetail = row.querySelector('td[colspan]');
+                if (!isDetail) {
+                    currentGroup = { main: row, details: [], matches: true };
+                    groups.push(currentGroup);
+                } else {
+                    if (currentGroup) {
+                        currentGroup.details.push(row);
+                    } else {
+                        groups.push({ main: row, details: [], matches: true });
+                    }
+                }
+            });
+            
+            // Filter step using AND logic on data attributes
+            let visibleCount = 0;
+            groups.forEach(group => {
+                let matches = true;
+                for (const [key, filterValue] of Object.entries(alpineData.filters)) {
+                    if (filterValue !== undefined && filterValue !== '') {
+                        const attrName = 'filter' + key.charAt(0).toUpperCase() + key.slice(1);
+                        const rowValue = group.main.dataset[attrName];
+                        if (rowValue !== undefined && rowValue !== filterValue) {
+                            matches = false;
+                            break;
+                        }
+                    }
+                }
+                group.matches = matches;
+                if (matches) visibleCount++;
+            });
+            
+            const visibleGroups = groups.filter(g => g.matches);
+            const hiddenGroups = groups.filter(g => !g.matches);
+            
+            // Sort step on visible subset
+            if (alpineData.sortField) {
+                const ths = Array.from(table.querySelectorAll('thead th'));
+                let actualColIndex = ths.findIndex(th => th.getAttribute('field') === alpineData.sortField || th.dataset.sortField === alpineData.sortField);
+                
+                if (actualColIndex === -1) {
+                    ths.forEach((th, idx) => {
+                        const clickAttr = th.getAttribute('@click') || th.getAttribute('x-on:click') || '';
+                        if (clickAttr.includes(alpineData.sortField)) {
+                            actualColIndex = idx;
+                        }
+                    });
+                }
+                
+                if (actualColIndex !== -1) {
+                    const direction = alpineData.sortAsc ? 'asc' : 'desc';
+                    visibleGroups.sort((a, b) => {
+                        const cellA = a.main.cells[actualColIndex];
+                        const cellB = b.main.cells[actualColIndex];
+                        
+                        const valA = window.getSortValue(cellA);
+                        const valB = window.getSortValue(cellB);
+                        
+                        if (valA === valB) return 0;
+                        
+                        if (direction === 'asc') {
+                            if (typeof valA === 'number' && typeof valB === 'number') {
+                                return valA - valB;
+                            }
+                            return valA.toString().localeCompare(valB.toString(), undefined, {numeric: true, sensitivity: 'base'});
+                        } else {
+                            if (typeof valA === 'number' && typeof valB === 'number') {
+                                return valB - valA;
+                            }
+                            return valB.toString().localeCompare(valA.toString(), undefined, {numeric: true, sensitivity: 'base'});
+                        }
+                    });
+                }
+            }
+            
+            // Re-append to DOM in order
+            visibleGroups.forEach(group => {
+                tbody.appendChild(group.main);
+                group.details.forEach(detail => tbody.appendChild(detail));
+            });
+            hiddenGroups.forEach(group => {
+                tbody.appendChild(group.main);
+                group.details.forEach(detail => tbody.appendChild(detail));
+            });
+            
+            // Re-map the indices
+            const newIndexMap = {};
+            hiddenGroups.forEach(group => {
+                const origIndex = parseInt(group.main.dataset.originalIndex);
+                if (!isNaN(origIndex)) {
+                    newIndexMap[origIndex] = -1;
+                }
+            });
+            visibleGroups.forEach((group, newIndex) => {
+                const origIndex = parseInt(group.main.dataset.originalIndex);
+                if (!isNaN(origIndex)) {
+                    newIndexMap[origIndex] = newIndex;
+                }
+            });
+            
+            alpineData.indexMap = newIndexMap;
+            alpineData.filteredTotalItems = visibleGroups.length;
+            alpineData.updateCounter = (alpineData.updateCounter || 0) + 1;
+        };
+
+        // Initialize original index markings on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            const initOriginalIndices = () => {
+                const tables = document.querySelectorAll('table.lv-table');
+                tables.forEach(table => {
+                    const tbody = table.querySelector('tbody');
+                    if (!tbody) return;
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                    
+                    let mainIndex = 0;
+                    let currentMainIndex = 0;
+                    
+                    rows.forEach(row => {
+                        if (row.querySelector('td[colspan]') && (row.innerText.includes('Belum ada') || row.innerText.includes('Tidak ada') || row.innerText.includes('No data') || row.innerText.includes('Belum memilih'))) {
+                            return;
+                        }
+                        const isDetail = row.querySelector('td[colspan]');
+                        if (!isDetail) {
+                            currentMainIndex = mainIndex;
+                            row.dataset.originalIndex = currentMainIndex;
+                            mainIndex++;
+                        } else {
+                            row.dataset.originalIndex = currentMainIndex;
+                        }
+                    });
+                });
+            };
+            initOriginalIndices();
+            
+            // Re-run index init when Alpine updates
+            if (window.Alpine) {
+                window.Alpine.nextTick(() => {
+                    initOriginalIndices();
+                });
+            }
+        });
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('tablePagination', (totalItems) => window.tablePaginationData(totalItems));
+        });
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
     <style>
         * { font-family: 'Inter', system-ui, sans-serif; }

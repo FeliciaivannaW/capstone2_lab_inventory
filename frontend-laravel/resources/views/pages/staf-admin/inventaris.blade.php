@@ -135,22 +135,48 @@
 </form>
 
 {{-- ─── Table ───────────────────────────────────────────── --}}
-<div class="glass-card rounded-2xl overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <p class="text-sm font-semibold text-slate-700">
-            {{ count($assets) }} aset ditemukan
-            @if(array_filter($filters))
-                <span class="text-slate-400 font-normal">dari {{ $totalAssets }} total</span>
-            @endif
-        </p>
-        {{-- Lifecycle legend --}}
-        <div class="hidden sm:flex items-center gap-3">
-            @foreach(['received' => 'Terima','labeled' => 'Label','available' => 'Siap','in_use' => 'Pakai'] as $s => $l)
-                <span class="inline-flex items-center gap-1 text-[0.6rem] font-semibold text-slate-500">
-                    <span class="w-2 h-2 rounded-full {{ $statusMeta[$s]['dot'] }}"></span>{{ $l }}
-                </span>
-                @if($s !== 'in_use')<svg class="w-3 h-3 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>@endif
-            @endforeach
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($assets) }})">
+    @php
+        $labs = collect($assets)->pluck('laboratory_name')->unique()->filter()->values()->toArray();
+        $labOptions = count($labs) ? array_combine($labs, $labs) : [];
+        $roomsList = collect($assets)->pluck('room_name')->unique()->filter()->values()->toArray();
+        $roomOptions = count($roomsList) ? array_combine($roomsList, $roomsList) : [];
+        
+        $statusOptions = [];
+        foreach($statusMeta as $val => $m) {
+            $statusOptions[$val] = $m['label'];
+        }
+        $condOptions = [];
+        foreach($condMeta as $val => $cm) {
+            $condOptions[$val] = $cm['label'];
+        }
+    @endphp
+    <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p class="text-sm font-semibold text-slate-700">
+                {{ count($assets) }} aset terdaftar
+                @if(array_filter($filters))
+                    <span class="text-slate-400 font-normal">dari {{ $totalAssets }} total</span>
+                @endif
+            </p>
+            {{-- Lifecycle legend --}}
+            <div class="hidden sm:flex items-center gap-3">
+                @foreach(['received' => 'Terima','labeled' => 'Label','available' => 'Siap','in_use' => 'Pakai'] as $s => $l)
+                    <span class="inline-flex items-center gap-1 text-[0.6rem] font-semibold text-slate-500">
+                        <span class="w-2 h-2 rounded-full {{ $statusMeta[$s]['dot'] }}"></span>{{ $l }}
+                    </span>
+                    @if($s !== 'in_use')<svg class="w-3 h-3 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>@endif
+                @endforeach
+            </div>
+        </div>
+        <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+            <x-table-filter column="lab" label="Laboratorium" :options="$labOptions" />
+            <x-table-filter column="room" label="Ruangan" :options="$roomOptions" />
+            <x-table-filter column="status" label="Status" :options="$statusOptions" />
+            <x-table-filter column="condition" label="Kondisi" :options="$condOptions" />
+            <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                Reset Filter
+            </button>
         </div>
     </div>
 
@@ -167,16 +193,16 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Kode Aset</th>
-                        <th>Nama Barang</th>
-                        <th>Lab</th>
-                        <th>Ruangan</th>
-                        <th>Label</th>
-                        <th>Status</th>
-                        <th>Kondisi</th>
-                        <th>Tgl Terima</th>
-                        <th>Lifecycle</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="code">Kode Aset</x-sort-header>
+                        <x-sort-header field="name">Nama Barang</x-sort-header>
+                        <x-sort-header field="lab">Lab</x-sort-header>
+                        <x-sort-header field="room">Ruangan</x-sort-header>
+                        <x-sort-header field="label">Label</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
+                        <x-sort-header field="condition">Kondisi</x-sort-header>
+                        <x-sort-header field="date">Tgl Terima</x-sort-header>
+                        <x-sort-header field="lifecycle">Lifecycle</x-sort-header>
                         <th>Timeline</th>
                     </tr>
                 </thead>
@@ -192,7 +218,7 @@
                             $steps    = ['received', 'labeled', 'available', 'in_use', 'maintenance'];
                             $stepIdx  = array_search($st, $steps);
                         @endphp
-                        <tr>
+                        <tr x-show="showRow({{ $i }})" x-cloak data-filter-lab="{{ $asset['laboratory_name'] ?? '—' }}" data-filter-room="{{ $asset['room_name'] ?? '—' }}" data-filter-status="{{ $st }}" data-filter-condition="{{ $cond }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
 
                             <td>
@@ -288,6 +314,10 @@
                 </tbody>
             </table>
         </div>
+
+        @if(count($assets) > 0)
+            <x-pagination :total="count($assets)" />
+        @endif
     @endif
 </div>
 @endsection

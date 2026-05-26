@@ -9,9 +9,24 @@
     <p class="text-sm text-slate-500 mt-1">Daftar laboratorium dari denah Gedung GWM lantai 8.</p>
 </div>
 
-<div class="glass-card rounded-2xl overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-100">
-        <p class="text-sm font-semibold text-slate-700">{{ count($laboratories) }} laboratorium</p>
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($laboratories) }})">
+    @php
+        $buildings = collect($laboratories)->pluck('building_name')->unique()->filter()->values()->toArray();
+        $floors = collect($laboratories)->pluck('floor_name')->unique()->filter()->values()->toArray();
+        $buildingOptions = count($buildings) ? array_combine($buildings, $buildings) : [];
+        $floorOptions = count($floors) ? array_combine($floors, $floors) : [];
+    @endphp
+    <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+        <div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+            <p class="text-sm font-semibold text-slate-700">{{ count($laboratories) }} laboratorium</p>
+        </div>
+        <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+            <x-table-filter column="building" label="Gedung" :options="$buildingOptions" />
+            <x-table-filter column="floor" label="Lantai" :options="$floorOptions" />
+            <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                Reset Filter
+            </button>
+        </div>
     </div>
     @if(empty($laboratories))
         <div class="flex flex-col items-center justify-center py-16 text-center">
@@ -25,18 +40,18 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>Kode Lab</th>
-                        <th>Nama Lab</th>
-                        <th>Kode Ruangan</th>
-                        <th>Nama Ruangan</th>
-                        <th>Gedung</th>
-                        <th>Lantai</th>
-                        <th>Kepala Lab</th>
+                        <x-sort-header field="code">Kode Lab</x-sort-header>
+                        <x-sort-header field="name">Nama Lab</x-sort-header>
+                        <x-sort-header field="room_code">Kode Ruangan</x-sort-header>
+                        <x-sort-header field="room_name">Nama Ruangan</x-sort-header>
+                        <x-sort-header field="building">Gedung</x-sort-header>
+                        <x-sort-header field="floor">Lantai</x-sort-header>
+                        <x-sort-header field="head">Kepala Lab</x-sort-header>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($laboratories as $lab)
-                        <tr>
+                    @foreach($laboratories as $index => $lab)
+                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-building="{{ $lab['building_name'] }}" data-filter-floor="{{ $lab['floor_name'] }}">
                             <td>
                                 <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
                                     {{ $lab['code'] }}
@@ -64,6 +79,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($laboratories) > 0)
+            <x-pagination :total="count($laboratories)" />
+        @endif
     @endif
 </div>
 @endsection

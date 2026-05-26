@@ -153,16 +153,29 @@
 </div>
 
 {{-- ───── APPROVED ITEMS — with per-item progress ───── --}}
-<div class="glass-card rounded-2xl overflow-hidden mb-5">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-        <div class="flex items-center gap-3">
-            <span class="badge badge-approved text-xs">✓ Disetujui</span>
-            <span class="text-sm font-bold text-slate-900">{{ count($approvedItems) }} Item</span>
+<div class="glass-card rounded-2xl overflow-hidden mb-5" x-data="tablePagination({{ count($approvedItems) }})">
+    <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="badge badge-approved text-xs">✓ Disetujui</span>
+                <span class="text-sm font-bold text-slate-900">{{ count($approvedItems) }} Item</span>
+            </div>
+            @php $total = array_sum(array_map(fn($i) => $i['estimated_price'] * $i['quantity'], $approvedItems)); @endphp
+            <div class="text-right">
+                <p class="text-[0.68rem] text-slate-400 uppercase tracking-wider">Total Estimasi</p>
+                <p class="text-base font-bold text-emerald-600">Rp {{ number_format($total, 0, ',', '.') }}</p>
+            </div>
         </div>
-        @php $total = array_sum(array_map(fn($i) => $i['estimated_price'] * $i['quantity'], $approvedItems)); @endphp
-        <div class="text-right">
-            <p class="text-[0.68rem] text-slate-400 uppercase tracking-wider">Total Estimasi</p>
-            <p class="text-base font-bold text-emerald-600">Rp {{ number_format($total, 0, ',', '.') }}</p>
+        <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+            <x-table-filter column="type" label="Tipe Barang" :options="['inventory' => 'Inventaris', 'bhp' => 'BHP']" />
+            <x-table-filter column="status" label="Status" :options="[
+                'selesai' => 'Diterima Lengkap',
+                'sebagian' => 'Sebagian',
+                'belum' => 'Belum'
+            ]" />
+            <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                Reset Filter
+            </button>
         </div>
     </div>
 
@@ -175,14 +188,14 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Nama Barang</th>
-                        <th>Tipe</th>
-                        <th class="text-center">Qty</th>
-                        <th class="text-center">Diterima</th>
-                        <th class="text-center">Berlabel</th>
-                        <th>Progress</th>
-                        <th>Status</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="name">Nama Barang</x-sort-header>
+                        <x-sort-header field="type">Tipe</x-sort-header>
+                        <x-sort-header field="qty" class="text-center">Qty</x-sort-header>
+                        <x-sort-header field="received" class="text-center">Diterima</x-sort-header>
+                        <x-sort-header field="labeled" class="text-center">Berlabel</x-sort-header>
+                        <x-sort-header field="progress">Progress</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
                     </tr>
                 </thead>
                 <tbody>
@@ -195,7 +208,7 @@
                                 default    => ['Belum',            'bg-amber-100 text-amber-700',   'bg-amber-400'],
                             };
                         @endphp
-                        <tr>
+                        <tr x-show="showRow({{ $i }})" x-cloak data-filter-type="{{ $item['item_type'] }}" data-filter-status="{{ $rs }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $item['item_name'] }}</td>
                             <td>
@@ -230,6 +243,11 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($approvedItems) > 0)
+            <x-pagination :total="count($approvedItems)" />
+        @endif
+        
         {{-- Total row --}}
         <div class="px-6 py-3 bg-emerald-50 border-t border-emerald-100 flex justify-end items-center gap-3">
             <span class="text-sm text-slate-600 font-semibold">Total Estimasi:</span>
@@ -240,26 +258,34 @@
 
 {{-- Rejected items --}}
 @if(!empty($rejectedItems))
-    <div class="glass-card rounded-2xl overflow-hidden mb-5">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-            <span class="badge badge-rejected text-xs">✗ Ditolak</span>
-            <span class="text-sm font-bold text-slate-900">{{ count($rejectedItems) }} Item</span>
+    <div class="glass-card rounded-2xl overflow-hidden mb-5" x-data="tablePagination({{ count($rejectedItems) }})">
+        <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+            <div class="flex items-center gap-3">
+                <span class="badge badge-rejected text-xs">✗ Ditolak</span>
+                <span class="text-sm font-bold text-slate-900">{{ count($rejectedItems) }} Item</span>
+            </div>
+            <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+                <x-table-filter column="type" label="Tipe Barang" :options="['inventory' => 'Inventaris', 'bhp' => 'BHP']" />
+                <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                    Reset Filter
+                </button>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Nama Barang</th>
-                        <th>Tipe</th>
-                        <th>Qty</th>
-                        <th>Harga</th>
-                        <th>Alasan Penolakan</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="name">Nama Barang</x-sort-header>
+                        <x-sort-header field="type">Tipe</x-sort-header>
+                        <x-sort-header field="qty">Qty</x-sort-header>
+                        <x-sort-header field="price">Harga</x-sort-header>
+                        <x-sort-header field="reason">Alasan Penolakan</x-sort-header>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($rejectedItems as $i => $item)
-                        <tr class="opacity-60">
+                        <tr class="opacity-60" x-show="showRow({{ $i }})" x-cloak data-filter-type="{{ $item['item_type'] }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
                             <td class="line-through text-slate-600">{{ $item['item_name'] }}</td>
                             <td class="text-slate-500 text-xs">{{ ucfirst($item['item_type']) }}</td>
@@ -271,6 +297,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($rejectedItems) > 0)
+            <x-pagination :total="count($rejectedItems)" />
+        @endif
     </div>
 @endif
 

@@ -45,9 +45,27 @@
 </form>
 
 {{-- Table --}}
-<div class="glass-card rounded-2xl overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-100">
-        <p class="text-sm font-semibold text-slate-700">{{ count($assets ?? []) }} aset ditemukan</p>
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($assets ?? []) }})">
+    @php
+        $categories = collect($assets)->pluck('category_name')->unique()->filter()->values()->toArray();
+        $categoryOptions = count($categories) ? array_combine($categories, $categories) : [];
+        $conditions = collect($assets)->pluck('asset_condition')->unique()->filter()->values()->toArray();
+        $conditionOptions = count($conditions) ? array_combine($conditions, collect($conditions)->map(fn($c) => str_replace('_', ' ', ucfirst($c)))->toArray()) : [];
+        $statuses = collect($assets)->pluck('status')->unique()->filter()->values()->toArray();
+        $statusOptions = count($statuses) ? array_combine($statuses, collect($statuses)->map(fn($s) => str_replace('_', ' ', ucfirst($s)))->toArray()) : [];
+    @endphp
+    <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+        <div class="flex items-center justify-between">
+            <p class="text-sm font-semibold text-slate-700">{{ count($assets ?? []) }} aset ditemukan</p>
+        </div>
+        <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+            <x-table-filter column="category" label="Kategori" :options="$categoryOptions" />
+            <x-table-filter column="condition" label="Kondisi" :options="$conditionOptions" />
+            <x-table-filter column="status" label="Status" :options="$statusOptions" />
+            <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                Reset Filter
+            </button>
+        </div>
     </div>
 
     @if(empty($assets))
@@ -63,14 +81,14 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Kode Aset</th>
-                        <th>Nama</th>
-                        <th>Kategori</th>
-                        <th>Kondisi</th>
-                        <th>Status</th>
-                        <th>Tgl Terima</th>
-                        <th>Siklus</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="code">Kode Aset</x-sort-header>
+                        <x-sort-header field="name">Nama</x-sort-header>
+                        <x-sort-header field="category">Kategori</x-sort-header>
+                        <x-sort-header field="condition">Kondisi</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
+                        <x-sort-header field="date">Tgl Terima</x-sort-header>
+                        <x-sort-header field="cycle">Siklus</x-sort-header>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -103,7 +121,7 @@
                                 default               => in_array($asset['asset_condition'] ?? '', ['dihapus','diganti']) ? 4 : 2,
                             };
                         @endphp
-                        <tr>
+                        <tr x-show="showRow({{ $i }})" x-cloak data-filter-category="{{ $asset['category_name'] ?? '—' }}" data-filter-condition="{{ $asset['asset_condition'] }}" data-filter-status="{{ $asset['status'] ?? '—' }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
                             <td>
                                 <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
@@ -157,6 +175,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($assets ?? []) > 0)
+            <x-pagination :total="count($assets)" />
+        @endif
     @endif
 </div>
 @endsection

@@ -67,9 +67,27 @@
 </form>
 
 {{-- Table --}}
-<div class="glass-card rounded-2xl overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-100">
-        <p class="text-sm font-semibold text-slate-700">{{ count($drafts) }} draf difinalisasi</p>
+<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($drafts) }})">
+    @php
+        $labs = collect($drafts)->pluck('lab_name')->unique()->filter()->values()->toArray();
+        $labOptions = count($labs) ? array_combine($labs, $labs) : [];
+    @endphp
+    <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+        <div class="flex items-center justify-between">
+            <p class="text-sm font-semibold text-slate-700">{{ count($drafts) }} draf difinalisasi</p>
+        </div>
+        <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+            <x-table-filter column="lab" label="Laboratorium" :options="$labOptions" />
+            <x-table-filter column="status" label="Status" :options="[
+                'selesai' => 'Semua Diterima',
+                'sebagian' => 'Sebagian Diterima',
+                'kosong' => 'Tidak Ada Item',
+                'belum' => 'Menunggu Penerimaan'
+            ]" />
+            <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                Reset Filter
+            </button>
+        </div>
     </div>
 
     @if(empty($drafts))
@@ -85,15 +103,15 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Judul Draf</th>
-                        <th>Laboratorium</th>
-                        <th>Tgl Finalisasi</th>
-                        <th class="text-center">Total Item</th>
-                        <th class="text-center">Diterima</th>
-                        <th class="text-center">Belum</th>
-                        <th>Progress</th>
-                        <th>Status</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="title">Judul Draf</x-sort-header>
+                        <x-sort-header field="lab">Laboratorium</x-sort-header>
+                        <x-sort-header field="date">Tgl Finalisasi</x-sort-header>
+                        <x-sort-header field="total" class="text-center">Total Item</x-sort-header>
+                        <x-sort-header field="received" class="text-center">Diterima</x-sort-header>
+                        <x-sort-header field="pending" class="text-center">Belum</x-sort-header>
+                        <x-sort-header field="progress">Progress</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -108,12 +126,12 @@
                                 default    => ['Menunggu Penerimaan','bg-amber-100 text-amber-700',   'bg-amber-400'],
                             };
                         @endphp
-                        <tr>
+                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-lab="{{ $draft['lab_name'] }}" data-filter-status="{{ $rs }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $index + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $draft['title'] }}</td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <span class="badge badge-active text-xs">{{ $draft['lab_code'] ?? '' }}</span>
+                                    <span class="badge badge-active text-xs">{{ $draft['counter'] ?? $draft['lab_code'] ?? '' }}</span>
                                     <span class="text-slate-600 text-xs">{{ $draft['lab_name'] }}</span>
                                 </div>
                             </td>
@@ -157,6 +175,10 @@
                 </tbody>
             </table>
         </div>
+        
+        @if(count($drafts) > 0)
+            <x-pagination :total="count($drafts)" />
+        @endif
     @endif
 </div>
 @endsection
