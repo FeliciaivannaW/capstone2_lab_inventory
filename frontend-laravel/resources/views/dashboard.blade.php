@@ -125,12 +125,12 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>Kode Lab</th>
-                        <th>Nama Lab</th>
-                        <th>Ruangan</th>
-                        <th>Gedung</th>
-                        <th>Lantai</th>
-                        <th>Kepala Lab</th>
+                        <x-sort-header field="code">Kode Lab</x-sort-header>
+                        <x-sort-header field="name">Nama Lab</x-sort-header>
+                        <x-sort-header field="room">Ruangan</x-sort-header>
+                        <x-sort-header field="building">Gedung</x-sort-header>
+                        <x-sort-header field="floor">Lantai</x-sort-header>
+                        <x-sort-header field="head">Kepala Lab</x-sort-header>
                     </tr>
                 </thead>
                 <tbody>

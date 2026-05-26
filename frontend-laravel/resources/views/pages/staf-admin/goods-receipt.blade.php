@@ -41,13 +41,13 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Nama Barang</th>
-                        <th>Tipe</th>
-                        <th>Dipesan</th>
-                        <th>Diterima</th>
-                        <th>Progress</th>
-                        <th>Status</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="name">Nama Barang</x-sort-header>
+                        <x-sort-header field="type">Tipe</x-sort-header>
+                        <x-sort-header field="ordered">Dipesan</x-sort-header>
+                        <x-sort-header field="received">Diterima</x-sort-header>
+                        <x-sort-header field="progress">Progress</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
                         <th>Aksi</th>
                     </tr>
                 </thead>

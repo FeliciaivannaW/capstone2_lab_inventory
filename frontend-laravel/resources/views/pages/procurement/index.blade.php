@@ -56,15 +56,15 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Judul Draf</th>
-                        <th>Lab</th>
-                        <th>Tahun</th>
-                        <th>Pembuat</th>
-                        <th>Status</th>
-                        <th>Item (P/S/T)</th>
-                        <th>Kunci</th>
-                        <th>Dibuat</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="title">Judul Draf</x-sort-header>
+                        <x-sort-header field="lab">Lab</x-sort-header>
+                        <x-sort-header field="year">Tahun</x-sort-header>
+                        <x-sort-header field="creator">Pembuat</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
+                        <x-sort-header field="items">Item (P/S/T)</x-sort-header>
+                        <x-sort-header field="locked">Kunci</x-sort-header>
+                        <x-sort-header field="created">Dibuat</x-sort-header>
                         <th>Aksi</th>
                     </tr>
                 </thead>

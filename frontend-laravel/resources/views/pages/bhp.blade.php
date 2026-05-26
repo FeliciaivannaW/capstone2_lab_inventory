@@ -114,10 +114,10 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>Item</th>
-                        <th>Stok</th>
-                        <th>Status</th>
-                        <th>Lab</th>
+                        <x-sort-header field="item">Item</x-sort-header>
+                        <x-sort-header field="stock">Stok</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
+                        <x-sort-header field="lab">Lab</x-sort-header>
                         <th>Aksi</th>
                     </tr>
                 </thead>

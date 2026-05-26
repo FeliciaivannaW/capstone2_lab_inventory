@@ -85,15 +85,15 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Judul Draf</th>
-                        <th>Laboratorium</th>
-                        <th>Tgl Finalisasi</th>
-                        <th class="text-center">Total Item</th>
-                        <th class="text-center">Diterima</th>
-                        <th class="text-center">Belum</th>
-                        <th>Progress</th>
-                        <th>Status</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="title">Judul Draf</x-sort-header>
+                        <x-sort-header field="lab">Laboratorium</x-sort-header>
+                        <x-sort-header field="date">Tgl Finalisasi</x-sort-header>
+                        <x-sort-header field="total" class="text-center">Total Item</x-sort-header>
+                        <x-sort-header field="received" class="text-center">Diterima</x-sort-header>
+                        <x-sort-header field="pending" class="text-center">Belum</x-sort-header>
+                        <x-sort-header field="progress">Progress</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
                         <th>Aksi</th>
                     </tr>
                 </thead>

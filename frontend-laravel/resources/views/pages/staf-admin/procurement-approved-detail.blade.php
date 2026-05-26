@@ -175,14 +175,14 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Nama Barang</th>
-                        <th>Tipe</th>
-                        <th class="text-center">Qty</th>
-                        <th class="text-center">Diterima</th>
-                        <th class="text-center">Berlabel</th>
-                        <th>Progress</th>
-                        <th>Status</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="name">Nama Barang</x-sort-header>
+                        <x-sort-header field="type">Tipe</x-sort-header>
+                        <x-sort-header field="qty" class="text-center">Qty</x-sort-header>
+                        <x-sort-header field="received" class="text-center">Diterima</x-sort-header>
+                        <x-sort-header field="labeled" class="text-center">Berlabel</x-sort-header>
+                        <x-sort-header field="progress">Progress</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
                     </tr>
                 </thead>
                 <tbody>
@@ -254,12 +254,12 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Nama Barang</th>
-                        <th>Tipe</th>
-                        <th>Qty</th>
-                        <th>Harga</th>
-                        <th>Alasan Penolakan</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="name">Nama Barang</x-sort-header>
+                        <x-sort-header field="type">Tipe</x-sort-header>
+                        <x-sort-header field="qty">Qty</x-sort-header>
+                        <x-sort-header field="price">Harga</x-sort-header>
+                        <x-sort-header field="reason">Alasan Penolakan</x-sort-header>
                     </tr>
                 </thead>
                 <tbody>

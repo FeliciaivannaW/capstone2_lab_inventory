@@ -25,13 +25,13 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>Kode Lab</th>
-                        <th>Nama Lab</th>
-                        <th>Kode Ruangan</th>
-                        <th>Nama Ruangan</th>
-                        <th>Gedung</th>
-                        <th>Lantai</th>
-                        <th>Kepala Lab</th>
+                        <x-sort-header field="code">Kode Lab</x-sort-header>
+                        <x-sort-header field="name">Nama Lab</x-sort-header>
+                        <x-sort-header field="room_code">Kode Ruangan</x-sort-header>
+                        <x-sort-header field="room_name">Nama Ruangan</x-sort-header>
+                        <x-sort-header field="building">Gedung</x-sort-header>
+                        <x-sort-header field="floor">Lantai</x-sort-header>
+                        <x-sort-header field="head">Kepala Lab</x-sort-header>
                     </tr>
                 </thead>
                 <tbody>

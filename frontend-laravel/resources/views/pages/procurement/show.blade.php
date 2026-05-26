@@ -156,15 +156,15 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Nama Barang</th>
-                        <th>Tipe</th>
-                        <th>Qty</th>
-                        <th>Harga Perkiraan</th>
-                        <th>Status Review</th>
-                        <th>Reviewer</th>
-                        <th>Catatan</th>
-                        <th>Link</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="item_name">Nama Barang</x-sort-header>
+                        <x-sort-header field="item_type">Tipe</x-sort-header>
+                        <x-sort-header field="qty">Qty</x-sort-header>
+                        <x-sort-header field="price">Harga Perkiraan</x-sort-header>
+                        <x-sort-header field="status">Status Review</x-sort-header>
+                        <x-sort-header field="reviewer">Reviewer</x-sort-header>
+                        <x-sort-header field="note">Catatan</x-sort-header>
+                        <x-sort-header field="link">Link</x-sort-header>
                         @if($canEdit ?? false)
                             <th>Aksi</th>
                         @endif

@@ -167,16 +167,16 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Kode Aset</th>
-                        <th>Nama Barang</th>
-                        <th>Lab</th>
-                        <th>Ruangan</th>
-                        <th>Label</th>
-                        <th>Status</th>
-                        <th>Kondisi</th>
-                        <th>Tgl Terima</th>
-                        <th>Lifecycle</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="code">Kode Aset</x-sort-header>
+                        <x-sort-header field="name">Nama Barang</x-sort-header>
+                        <x-sort-header field="lab">Lab</x-sort-header>
+                        <x-sort-header field="room">Ruangan</x-sort-header>
+                        <x-sort-header field="label">Label</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
+                        <x-sort-header field="condition">Kondisi</x-sort-header>
+                        <x-sort-header field="date">Tgl Terima</x-sort-header>
+                        <x-sort-header field="lifecycle">Lifecycle</x-sort-header>
                         <th>Timeline</th>
                     </tr>
                 </thead>

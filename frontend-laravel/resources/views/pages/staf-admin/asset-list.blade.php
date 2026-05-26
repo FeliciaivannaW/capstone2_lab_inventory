@@ -63,14 +63,14 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Kode Aset</th>
-                        <th>Nama</th>
-                        <th>Kategori</th>
-                        <th>Kondisi</th>
-                        <th>Status</th>
-                        <th>Tgl Terima</th>
-                        <th>Siklus</th>
+                        <x-sort-header field="num">#</x-sort-header>
+                        <x-sort-header field="code">Kode Aset</x-sort-header>
+                        <x-sort-header field="name">Nama</x-sort-header>
+                        <x-sort-header field="category">Kategori</x-sort-header>
+                        <x-sort-header field="condition">Kondisi</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
+                        <x-sort-header field="date">Tgl Terima</x-sort-header>
+                        <x-sort-header field="cycle">Siklus</x-sort-header>
                         <th>Aksi</th>
                     </tr>
                 </thead>

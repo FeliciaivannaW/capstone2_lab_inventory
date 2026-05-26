@@ -119,14 +119,14 @@
                 <table class="lv-table">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>Kode Aset</th>
-                            <th>Nama</th>
-                            <th>Asal Draf</th>
-                            <th>Ruangan</th>
-                            <th>Label</th>
+                            <x-sort-header field="num">#</x-sort-header>
+                            <x-sort-header field="code">Kode Aset</x-sort-header>
+                            <x-sort-header field="name">Nama</x-sort-header>
+                            <x-sort-header field="source">Asal Draf</x-sort-header>
+                            <x-sort-header field="room">Ruangan</x-sort-header>
+                            <x-sort-header field="label">Label</x-sort-header>
                             <th>QR/Foto</th>
-                            <th>Kondisi</th>
+                            <x-sort-header field="condition">Kondisi</x-sort-header>
                             <th>Aksi</th>
                         </tr>
                     </thead>

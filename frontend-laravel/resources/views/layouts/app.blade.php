@@ -30,14 +30,166 @@
             currentPage: 1,
             perPage: 10,
             totalItems: totalItems,
+            sortField: '',
+            sortAsc: true,
+            indexMap: {},
+            updateCounter: 0,
             get totalPages() { return Math.ceil(this.totalItems / this.perPage); },
             getPages() { return Array.from({length: this.totalPages}, (_, i) => i + 1); },
             showRow(index) {
+                const _ = this.updateCounter;
+                let finalIndex = index;
+                if (this.indexMap && this.indexMap[index] !== undefined) {
+                    finalIndex = this.indexMap[index];
+                }
                 const start = (this.currentPage - 1) * this.perPage;
                 const end = start + parseInt(this.perPage);
-                return index >= start && index < end;
+                return finalIndex >= start && finalIndex < end;
+            },
+            sortBy(field, thEl) {
+                const table = thEl.closest('table');
+                const colIndex = Array.from(thEl.parentNode.children).indexOf(thEl);
+                
+                if (this.sortField === field) {
+                    this.sortAsc = !this.sortAsc;
+                } else {
+                    this.sortField = field;
+                    this.sortAsc = true;
+                }
+                
+                window.sortDOMTable(table, colIndex, this.sortAsc ? 'asc' : 'desc', this);
             }
         });
+
+        window.getSortValue = (cell) => {
+            if (!cell) return '';
+            if (cell.dataset.sortValue) return cell.dataset.sortValue;
+            
+            const text = cell.innerText.trim();
+            if (!text) return '';
+            
+            // Try date parse
+            if (text.match(/^[0-9]{1,2}[-\/\s][A-Za-z0-9]{3,}[-\/\s][0-9]{2,4}/) || text.match(/^[0-9]{4}[-\/\s][0-9]{2}[-\/\s][0-9]{2}/)) {
+                const parsedDate = Date.parse(text);
+                if (!isNaN(parsedDate)) {
+                    return parsedDate;
+                }
+            }
+            
+            // Numeric check
+            const cleaned = text.replace(/[^0-9.,-]/g, '').replace(',', '.');
+            if (cleaned !== '' && !isNaN(cleaned) && text.match(/^\s*[-+]?[0-9]/)) {
+                return parseFloat(cleaned);
+            }
+            
+            return text.toLowerCase();
+        };
+
+        window.sortDOMTable = (table, colIndex, direction, alpineData) => {
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const groups = [];
+            let currentGroup = null;
+            
+            rows.forEach(row => {
+                if (row.querySelector('td[colspan]') && (row.innerText.includes('Belum ada') || row.innerText.includes('Tidak ada') || row.innerText.includes('No data') || row.innerText.includes('Belum memilih'))) {
+                    return;
+                }
+                const isDetail = row.querySelector('td[colspan]');
+                if (!isDetail) {
+                    currentGroup = { main: row, details: [] };
+                    groups.push(currentGroup);
+                } else {
+                    if (currentGroup) {
+                        currentGroup.details.push(row);
+                    } else {
+                        groups.push({ main: row, details: [] });
+                    }
+                }
+            });
+            
+            groups.sort((a, b) => {
+                const cellA = a.main.cells[colIndex];
+                const cellB = b.main.cells[colIndex];
+                
+                const valA = window.getSortValue(cellA);
+                const valB = window.getSortValue(cellB);
+                
+                if (valA === valB) return 0;
+                
+                if (direction === 'asc') {
+                    if (typeof valA === 'number' && typeof valB === 'number') {
+                        return valA - valB;
+                    }
+                    return valA.toString().localeCompare(valB.toString(), undefined, {numeric: true, sensitivity: 'base'});
+                } else {
+                    if (typeof valA === 'number' && typeof valB === 'number') {
+                        return valB - valA;
+                    }
+                    return valB.toString().localeCompare(valA.toString(), undefined, {numeric: true, sensitivity: 'base'});
+                }
+            });
+            
+            // Re-append to DOM in order
+            groups.forEach(group => {
+                tbody.appendChild(group.main);
+                group.details.forEach(detail => tbody.appendChild(detail));
+            });
+            
+            // Re-map the indices
+            const newIndexMap = {};
+            groups.forEach((group, newIndex) => {
+                const origIndex = parseInt(group.main.dataset.originalIndex);
+                if (!isNaN(origIndex)) {
+                    newIndexMap[origIndex] = newIndex;
+                }
+            });
+            
+            if (alpineData) {
+                alpineData.indexMap = newIndexMap;
+                alpineData.updateCounter = (alpineData.updateCounter || 0) + 1;
+            }
+        };
+
+        // Initialize original index markings on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            const initOriginalIndices = () => {
+                const tables = document.querySelectorAll('table.lv-table');
+                tables.forEach(table => {
+                    const tbody = table.querySelector('tbody');
+                    if (!tbody) return;
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                    
+                    let mainIndex = 0;
+                    let currentMainIndex = 0;
+                    
+                    rows.forEach(row => {
+                        if (row.querySelector('td[colspan]') && (row.innerText.includes('Belum ada') || row.innerText.includes('Tidak ada') || row.innerText.includes('No data') || row.innerText.includes('Belum memilih'))) {
+                            return;
+                        }
+                        const isDetail = row.querySelector('td[colspan]');
+                        if (!isDetail) {
+                            currentMainIndex = mainIndex;
+                            row.dataset.originalIndex = currentMainIndex;
+                            mainIndex++;
+                        } else {
+                            row.dataset.originalIndex = currentMainIndex;
+                        }
+                    });
+                });
+            };
+            initOriginalIndices();
+            
+            // Re-run index init when Alpine updates
+            if (window.Alpine) {
+                window.Alpine.nextTick(() => {
+                    initOriginalIndices();
+                });
+            }
+        });
+
         document.addEventListener('alpine:init', () => {
             Alpine.data('tablePagination', (totalItems) => window.tablePaginationData(totalItems));
         });

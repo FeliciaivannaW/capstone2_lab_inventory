@@ -78,10 +78,10 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>Kode</th>
-                        <th>Nama</th>
-                        <th>Tipe</th>
-                        <th>Lokasi</th>
+                        <x-sort-header field="code">Kode</x-sort-header>
+                        <x-sort-header field="name">Nama</x-sort-header>
+                        <x-sort-header field="type">Tipe</x-sort-header>
+                        <x-sort-header field="location">Lokasi</x-sort-header>
                         <th>Aksi</th>
                     </tr>
                 </thead>

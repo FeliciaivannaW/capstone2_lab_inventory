@@ -88,10 +88,10 @@
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>User</th>
-                        <th>Role</th>
-                        <th>Lab</th>
-                        <th>Status</th>
+                        <x-sort-header field="user">User</x-sort-header>
+                        <x-sort-header field="role">Role</x-sort-header>
+                        <x-sort-header field="lab">Lab</x-sort-header>
+                        <x-sort-header field="status">Status</x-sort-header>
                         <th>Aksi</th>
                     </tr>
                 </thead>
