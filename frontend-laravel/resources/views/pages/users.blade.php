@@ -74,15 +74,32 @@
     </div>
 
     <div class="glass-card rounded-2xl overflow-hidden xl:col-span-2 self-start" x-data="tablePagination({{ count($users) }})">
-        <div class="px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
-            <div>
-                <p class="text-sm font-bold text-slate-800">Daftar User</p>
-                <p class="text-xs text-slate-400">{{ count($users) }} user terdaftar</p>
+        <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+            <div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-sm font-bold text-slate-800">Daftar User</p>
+                    <p class="text-xs text-slate-400">{{ count($users) }} user terdaftar</p>
+                </div>
+                <form method="GET" class="flex gap-2">
+                    <input name="search" value="{{ request('search') }}" placeholder="Cari nama/email" class="rounded-xl border-slate-200 text-sm">
+                    <button class="rounded-xl bg-slate-900 text-white text-sm font-semibold px-4">Cari</button>
+                </form>
             </div>
-            <form method="GET" class="flex gap-2">
-                <input name="search" value="{{ request('search') }}" placeholder="Cari nama/email" class="rounded-xl border-slate-200 text-sm">
-                <button class="rounded-xl bg-slate-900 text-white text-sm font-semibold px-4">Cari</button>
-            </form>
+            <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+                <x-table-filter column="role" label="Role" :options="[
+                    'administrator' => 'Administrator',
+                    'admin' => 'Admin',
+                    'staf_laboratorium' => 'Staf Laboratorium',
+                    'kepala_laboratorium' => 'Kepala Laboratorium',
+                    'staf_administrasi' => 'Staf Administrasi',
+                    'ketua_program_studi' => 'Ketua Program Studi',
+                ]" />
+                <x-table-filter column="status" label="Status" :options="['active' => 'Active', 'inactive' => 'Inactive']" />
+                <x-table-filter column="lab" label="Laboratorium" :options="collect($laboratories)->pluck('name', 'id')->toArray()" />
+                <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                    Reset Filter
+                </button>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="lv-table">
@@ -97,7 +114,7 @@
                 </thead>
                 <tbody x-data="{ editId: null }">
                     @forelse($users as $index => $user)
-                        <tr x-show="showRow({{ $index }})" x-cloak>
+                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-role="{{ $user['role'] }}" data-filter-status="{{ $user['status'] }}" data-filter-lab="{{ $user['lab_id'] ?? '' }}">
                             <td>
                                 <div class="font-semibold text-slate-800">{{ $user['name'] }}</div>
                                 <div class="text-xs text-slate-400">{{ $user['email'] }} · {{ $user['nrp_nip'] ?? '-' }}</div>
@@ -115,7 +132,7 @@
                                 </form>
                             </td>
                         </tr>
-                        <tr x-show="showRow({{ $index }}) && editId === {{ $user['id'] }}" x-cloak class="bg-slate-50">
+                        <tr x-show="showRow({{ $index }}) && editId === {{ $user['id'] }}" x-cloak class="bg-slate-50" data-filter-role="{{ $user['role'] }}" data-filter-status="{{ $user['status'] }}" data-filter-lab="{{ $user['lab_id'] ?? '' }}">
                             <td colspan="5">
                                 <form action="{{ route('users.update', $user['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-3 p-3">
                                     @csrf @method('PUT')

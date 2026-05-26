@@ -27,9 +27,20 @@
 </div>
 
 <div class="glass-card rounded-2xl overflow-hidden" x-data="receiptApp()">
-    <div class="px-6 py-4 border-b border-slate-100">
-        <h2 class="text-sm font-bold text-slate-900">Item Disetujui — Input Tanggal Terima</h2>
-        <p class="text-xs text-slate-400 mt-0.5">Item dapat diterima secara bertahap</p>
+    <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+        <div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900">Item Disetujui — Input Tanggal Terima</h2>
+                <p class="text-xs text-slate-400 mt-0.5">Item dapat diterima secara bertahap</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+            <x-table-filter column="type" label="Tipe Barang" :options="['inventory' => 'Inventaris', 'bhp' => 'BHP']" />
+            <x-table-filter column="status" label="Status" :options="['lengkap' => 'Lengkap', 'belum' => 'Belum Lengkap']" />
+            <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                Reset Filter
+            </button>
+        </div>
     </div>
 
     @if(empty($approvedItems))
@@ -60,7 +71,7 @@
                             $pct = $ordered > 0 ? round(($totalReceived / $ordered) * 100) : 0;
                             $isDone = $totalReceived >= $ordered;
                         @endphp
-                        <tr x-show="showRow({{ $i }})" x-cloak>
+                        <tr x-show="showRow({{ $i }})" x-cloak data-filter-type="{{ $item['item_type'] }}" data-filter-status="{{ $isDone ? 'lengkap' : 'belum' }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $item['item_name'] }}</td>
                             <td>
@@ -114,7 +125,7 @@
                             </td>
                         </tr>
                         @if(!empty($receipts))
-                            <tr x-show="showRow({{ $i }}) && openHistories.includes({{ $item['id'] }})" x-cloak>
+                            <tr x-show="showRow({{ $i }}) && openHistories.includes({{ $item['id'] }})" x-cloak data-filter-type="{{ $item['item_type'] }}" data-filter-status="{{ $isDone ? 'lengkap' : 'belum' }}">
                                 <td colspan="8" class="bg-slate-50 px-6 py-3">
                                     <p class="text-xs font-bold text-slate-600 mb-2">Riwayat Penerimaan</p>
                                     <table class="lv-table text-xs">

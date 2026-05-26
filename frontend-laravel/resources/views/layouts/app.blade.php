@@ -30,11 +30,13 @@
             currentPage: 1,
             perPage: 10,
             totalItems: totalItems,
+            filteredTotalItems: totalItems,
             sortField: '',
             sortAsc: true,
             indexMap: {},
             updateCounter: 0,
-            get totalPages() { return Math.ceil(this.totalItems / this.perPage); },
+            filters: {},
+            get totalPages() { return Math.ceil(this.filteredTotalItems / this.perPage); },
             getPages() { return Array.from({length: this.totalPages}, (_, i) => i + 1); },
             showRow(index) {
                 const _ = this.updateCounter;
@@ -42,13 +44,13 @@
                 if (this.indexMap && this.indexMap[index] !== undefined) {
                     finalIndex = this.indexMap[index];
                 }
+                if (finalIndex === -1) return false;
                 const start = (this.currentPage - 1) * this.perPage;
                 const end = start + parseInt(this.perPage);
                 return finalIndex >= start && finalIndex < end;
             },
             sortBy(field, thEl) {
                 const table = thEl.closest('table');
-                const colIndex = Array.from(thEl.parentNode.children).indexOf(thEl);
                 
                 if (this.sortField === field) {
                     this.sortAsc = !this.sortAsc;
@@ -57,7 +59,27 @@
                     this.sortAsc = true;
                 }
                 
-                window.sortDOMTable(table, colIndex, this.sortAsc ? 'asc' : 'desc', this);
+                this.applyFiltersAndSorting(table);
+            },
+            setFilter(column, value) {
+                this.filters[column] = value;
+                this.currentPage = 1;
+                this.applyFiltersAndSorting();
+            },
+            resetFilters() {
+                Object.keys(this.filters).forEach(k => this.filters[k] = '');
+                this.currentPage = 1;
+                this.applyFiltersAndSorting();
+            },
+            applyFiltersAndSorting(targetTable = null) {
+                let table = targetTable;
+                if (!table) {
+                    const container = this.$el.closest('[x-data]') || this.$el;
+                    table = container.querySelector('table.lv-table');
+                }
+                if (table) {
+                    window.applyTableFiltersAndSorting(table, this);
+                }
             }
         });
 
@@ -85,7 +107,7 @@
             return text.toLowerCase();
         };
 
-        window.sortDOMTable = (table, colIndex, direction, alpineData) => {
+        window.applyTableFiltersAndSorting = (table, alpineData) => {
             const tbody = table.querySelector('tbody');
             if (!tbody) return;
             
@@ -99,58 +121,106 @@
                 }
                 const isDetail = row.querySelector('td[colspan]');
                 if (!isDetail) {
-                    currentGroup = { main: row, details: [] };
+                    currentGroup = { main: row, details: [], matches: true };
                     groups.push(currentGroup);
                 } else {
                     if (currentGroup) {
                         currentGroup.details.push(row);
                     } else {
-                        groups.push({ main: row, details: [] });
+                        groups.push({ main: row, details: [], matches: true });
                     }
                 }
             });
             
-            groups.sort((a, b) => {
-                const cellA = a.main.cells[colIndex];
-                const cellB = b.main.cells[colIndex];
-                
-                const valA = window.getSortValue(cellA);
-                const valB = window.getSortValue(cellB);
-                
-                if (valA === valB) return 0;
-                
-                if (direction === 'asc') {
-                    if (typeof valA === 'number' && typeof valB === 'number') {
-                        return valA - valB;
+            // Filter step using AND logic on data attributes
+            let visibleCount = 0;
+            groups.forEach(group => {
+                let matches = true;
+                for (const [key, filterValue] of Object.entries(alpineData.filters)) {
+                    if (filterValue !== undefined && filterValue !== '') {
+                        const attrName = 'filter' + key.charAt(0).toUpperCase() + key.slice(1);
+                        const rowValue = group.main.dataset[attrName];
+                        if (rowValue !== undefined && rowValue !== filterValue) {
+                            matches = false;
+                            break;
+                        }
                     }
-                    return valA.toString().localeCompare(valB.toString(), undefined, {numeric: true, sensitivity: 'base'});
-                } else {
-                    if (typeof valA === 'number' && typeof valB === 'number') {
-                        return valB - valA;
-                    }
-                    return valB.toString().localeCompare(valA.toString(), undefined, {numeric: true, sensitivity: 'base'});
                 }
+                group.matches = matches;
+                if (matches) visibleCount++;
             });
+            
+            const visibleGroups = groups.filter(g => g.matches);
+            const hiddenGroups = groups.filter(g => !g.matches);
+            
+            // Sort step on visible subset
+            if (alpineData.sortField) {
+                const ths = Array.from(table.querySelectorAll('thead th'));
+                let actualColIndex = ths.findIndex(th => th.getAttribute('field') === alpineData.sortField || th.dataset.sortField === alpineData.sortField);
+                
+                if (actualColIndex === -1) {
+                    ths.forEach((th, idx) => {
+                        const clickAttr = th.getAttribute('@click') || th.getAttribute('x-on:click') || '';
+                        if (clickAttr.includes(alpineData.sortField)) {
+                            actualColIndex = idx;
+                        }
+                    });
+                }
+                
+                if (actualColIndex !== -1) {
+                    const direction = alpineData.sortAsc ? 'asc' : 'desc';
+                    visibleGroups.sort((a, b) => {
+                        const cellA = a.main.cells[actualColIndex];
+                        const cellB = b.main.cells[actualColIndex];
+                        
+                        const valA = window.getSortValue(cellA);
+                        const valB = window.getSortValue(cellB);
+                        
+                        if (valA === valB) return 0;
+                        
+                        if (direction === 'asc') {
+                            if (typeof valA === 'number' && typeof valB === 'number') {
+                                return valA - valB;
+                            }
+                            return valA.toString().localeCompare(valB.toString(), undefined, {numeric: true, sensitivity: 'base'});
+                        } else {
+                            if (typeof valA === 'number' && typeof valB === 'number') {
+                                return valB - valA;
+                            }
+                            return valB.toString().localeCompare(valA.toString(), undefined, {numeric: true, sensitivity: 'base'});
+                        }
+                    });
+                }
+            }
             
             // Re-append to DOM in order
-            groups.forEach(group => {
+            visibleGroups.forEach(group => {
+                tbody.appendChild(group.main);
+                group.details.forEach(detail => tbody.appendChild(detail));
+            });
+            hiddenGroups.forEach(group => {
                 tbody.appendChild(group.main);
                 group.details.forEach(detail => tbody.appendChild(detail));
             });
             
             // Re-map the indices
             const newIndexMap = {};
-            groups.forEach((group, newIndex) => {
+            hiddenGroups.forEach(group => {
+                const origIndex = parseInt(group.main.dataset.originalIndex);
+                if (!isNaN(origIndex)) {
+                    newIndexMap[origIndex] = -1;
+                }
+            });
+            visibleGroups.forEach((group, newIndex) => {
                 const origIndex = parseInt(group.main.dataset.originalIndex);
                 if (!isNaN(origIndex)) {
                     newIndexMap[origIndex] = newIndex;
                 }
             });
             
-            if (alpineData) {
-                alpineData.indexMap = newIndexMap;
-                alpineData.updateCounter = (alpineData.updateCounter || 0) + 1;
-            }
+            alpineData.indexMap = newIndexMap;
+            alpineData.filteredTotalItems = visibleGroups.length;
+            alpineData.updateCounter = (alpineData.updateCounter || 0) + 1;
         };
 
         // Initialize original index markings on DOM load

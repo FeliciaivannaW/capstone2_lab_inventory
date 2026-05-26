@@ -35,8 +35,30 @@
 
 {{-- Table card --}}
 <div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($drafts) }})">
-    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <p class="text-sm font-semibold text-slate-700">{{ count($drafts) }} draf ditemukan</p>
+    @php
+        $years = collect($drafts)->pluck('year')->unique()->filter()->values()->toArray();
+        $yearOptions = count($years) ? array_combine($years, $years) : [];
+        $labs = collect($drafts)->pluck('lab_name')->unique()->filter()->values()->toArray();
+        $labOptions = count($labs) ? array_combine($labs, $labs) : [];
+    @endphp
+    <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+        <div class="flex items-center justify-between">
+            <p class="text-sm font-semibold text-slate-700">{{ count($drafts) }} draf ditemukan</p>
+        </div>
+        <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+            <x-table-filter column="status" label="Status" :options="[
+                'draft' => 'Draft',
+                'submitted' => 'Submitted',
+                'approved' => 'Approved',
+                'rejected' => 'Rejected',
+                'finalized' => 'Finalized'
+            ]" />
+            <x-table-filter column="lab" label="Lab" :options="$labOptions" />
+            <x-table-filter column="year" label="Tahun" :options="$yearOptions" />
+            <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                Reset Filter
+            </button>
+        </div>
     </div>
 
     @if(empty($drafts))
@@ -73,7 +95,7 @@
                         @php
                             $st = $statusMap[$draft['status']] ?? ['label' => ucfirst($draft['status']), 'class' => 'badge-draft'];
                         @endphp
-                        <tr x-show="showRow({{ $index }})" x-cloak>
+                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-status="{{ $draft['status'] }}" data-filter-lab="{{ $draft['lab_name'] }}" data-filter-year="{{ $draft['year'] }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $index + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $draft['title'] }}</td>
                             <td>

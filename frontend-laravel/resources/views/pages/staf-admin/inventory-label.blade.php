@@ -101,9 +101,33 @@
     </form>
 
     {{-- Table --}}
+    @php
+        $rooms = collect($assets)->pluck('room_name')->unique()->filter()->values()->toArray();
+        $roomOptions = count($rooms) ? array_combine($rooms, $rooms) : [];
+        $draftsList = collect($assets)->pluck('source_draft')->unique('id')->filter()->values()->toArray();
+        $draftOptionsArr = [];
+        foreach($draftsList as $d) {
+            $draftOptionsArr[$d['id']] = \Illuminate\Support\Str::limit($d['title'], 30);
+        }
+    @endphp
     <div class="glass-card rounded-2xl overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100">
-            <p class="text-sm font-semibold text-slate-700">{{ count($assets ?? []) }} aset ditemukan</p>
+        <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+            <div class="flex items-center justify-between">
+                <p class="text-sm font-semibold text-slate-700">{{ count($assets ?? []) }} aset ditemukan</p>
+            </div>
+            <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+                <x-table-filter column="room" label="Ruangan" :options="$roomOptions" />
+                <x-table-filter column="draft" label="Asal Draf" :options="$draftOptionsArr" />
+                <x-table-filter column="condition" label="Kondisi" :options="[
+                    'baik' => 'Baik',
+                    'rusak_ringan' => 'Rusak Ringan',
+                    'rusak_berat' => 'Rusak Berat',
+                    'maintenance' => 'Maintenance'
+                ]" />
+                <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                    Reset Filter
+                </button>
+            </div>
         </div>
 
         @if(empty($assets))
@@ -153,7 +177,7 @@
                                     'asset_condition'=> $asset['asset_condition'] ?? 'baik',
                                 ]), ENT_QUOTES, 'UTF-8');
                             @endphp
-                            <tr x-show="showRow({{ $i }})" x-cloak>
+                            <tr x-show="showRow({{ $i }})" x-cloak data-filter-room="{{ $asset['room_name'] ?? '—' }}" data-filter-draft="{{ $asset['source_draft']['id'] ?? '' }}" data-filter-condition="{{ $asset['asset_condition'] }}">
                                 <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
                                 <td>
                                     <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">

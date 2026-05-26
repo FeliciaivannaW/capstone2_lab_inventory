@@ -1,6 +1,7 @@
 @props(['field' => ''])
 
-<th {{ $attributes->merge(['class' => 'sortable group border-b border-slate-200 bg-slate-50/50']) }}
+<th field="{{ $field }}"
+    {{ $attributes->merge(['class' => 'sortable group border-b border-slate-200 bg-slate-50/50']) }}
     @click="sortBy('{{ $field }}', $el)"
     :class="{ 
         'asc': sortField === '{{ $field }}' && sortAsc, 

@@ -96,19 +96,33 @@
     </div>
 
     <div class="glass-card rounded-2xl overflow-hidden xl:col-span-2 self-start" x-data="tablePagination({{ count($stocks) }})">
-        <div class="px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
-            <div>
-                <p class="text-sm font-bold text-slate-800">Daftar Stok BHP</p>
-                <p class="text-xs text-slate-400">{{ count($stocks) }} item stok</p>
+        <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+            <div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-sm font-bold text-slate-800">Daftar Stok BHP</p>
+                    <p class="text-xs text-slate-400">{{ count($stocks) }} item stok</p>
+                </div>
+                <form method="GET" class="flex gap-2">
+                    <input name="search" value="{{ request('search') }}" placeholder="Cari BHP" class="rounded-xl border-slate-200 text-sm">
+                    <label class="flex items-center gap-1 text-xs text-slate-500">
+                        <input type="checkbox" name="low_stock" value="1" {{ request('low_stock') ? 'checked' : '' }}>
+                        stok rendah
+                    </label>
+                    <button class="rounded-xl bg-slate-900 text-white text-sm font-semibold px-4">Filter</button>
+                </form>
             </div>
-            <form method="GET" class="flex gap-2">
-                <input name="search" value="{{ request('search') }}" placeholder="Cari BHP" class="rounded-xl border-slate-200 text-sm">
-                <label class="flex items-center gap-1 text-xs text-slate-500">
-                    <input type="checkbox" name="low_stock" value="1" {{ request('low_stock') ? 'checked' : '' }}>
-                    stok rendah
-                </label>
-                <button class="rounded-xl bg-slate-900 text-white text-sm font-semibold px-4">Filter</button>
-            </form>
+            <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+                <x-table-filter column="status" label="Status Stok" :options="[
+                    'safe' => 'Safe',
+                    'warning' => 'Warning',
+                    'critical' => 'Critical',
+                    'out_of_stock' => 'Out of Stock'
+                ]" />
+                <x-table-filter column="lab" label="Laboratorium" :options="collect($laboratories)->pluck('name', 'id')->toArray()" />
+                <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                    Reset Filter
+                </button>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="lv-table">
@@ -123,7 +137,7 @@
                 </thead>
                 <tbody x-data="{ moveId: null, editId: null }">
                     @forelse($stocks as $index => $stock)
-                        <tr x-show="showRow({{ $index }})" x-cloak>
+                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-status="{{ $stock['stock_status'] }}" data-filter-lab="{{ $stock['lab_id'] }}">
                             <td>
                                 <div class="font-semibold text-slate-800">{{ $stock['item_name'] }}</div>
                                 <a href="{{ route('bhp', array_merge(request()->query(), ['stock_id' => $stock['id']])) }}" class="text-xs text-indigo-600 font-semibold">lihat riwayat</a>
@@ -139,7 +153,7 @@
                                 <button type="button" @click="editId = (editId === {{ $stock['id'] }} ? null : {{ $stock['id'] }}); moveId = null" class="text-xs font-semibold text-slate-600">Edit</button>
                             </td>
                         </tr>
-                        <tr x-show="showRow({{ $index }}) && moveId === {{ $stock['id'] }}" x-cloak class="bg-slate-50">
+                        <tr x-show="showRow({{ $index }}) && moveId === {{ $stock['id'] }}" x-cloak class="bg-slate-50" data-filter-status="{{ $stock['stock_status'] }}" data-filter-lab="{{ $stock['lab_id'] }}">
                             <td colspan="5">
                                 <form action="{{ route('bhp.movement', $stock['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-3 p-3">
                                     @csrf
@@ -154,7 +168,7 @@
                                 </form>
                             </td>
                         </tr>
-                        <tr x-show="showRow({{ $index }}) && editId === {{ $stock['id'] }}" x-cloak class="bg-slate-50">
+                        <tr x-show="showRow({{ $index }}) && editId === {{ $stock['id'] }}" x-cloak class="bg-slate-50" data-filter-status="{{ $stock['stock_status'] }}" data-filter-lab="{{ $stock['lab_id'] }}">
                             <td colspan="5">
                                 <form action="{{ route('bhp.update', $stock['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-3 p-3">
                                     @csrf @method('PUT')

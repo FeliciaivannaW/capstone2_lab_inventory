@@ -125,22 +125,38 @@
 
 {{-- Items table --}}
 <div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($draft['items'] ?? []) }})">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-        <div>
-            <h2 class="text-sm font-bold text-slate-900">Daftar Item Pengadaan</h2>
-            <p class="text-xs text-slate-400 mt-0.5">{{ count($draft['items'] ?? []) }} item dalam draf ini</p>
+    <div class="px-6 py-4 border-b border-slate-100 space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900">Daftar Item Pengadaan</h2>
+                <p class="text-xs text-slate-400 mt-0.5">{{ count($draft['items'] ?? []) }} item dalam draf ini</p>
+            </div>
+            {{-- Item count badges --}}
+            <div class="flex items-center gap-2">
+                <span class="badge badge-pending text-xs">
+                    {{ collect($draft['items'] ?? [])->where('review_status','pending')->count() }} pending
+                </span>
+                <span class="badge badge-approved text-xs">
+                    {{ collect($draft['items'] ?? [])->where('review_status','approved')->count() }} disetujui
+                </span>
+                <span class="badge badge-rejected text-xs">
+                    {{ collect($draft['items'] ?? [])->where('review_status','rejected')->count() }} ditolak
+                </span>
+            </div>
         </div>
-        {{-- Item count badges --}}
-        <div class="flex items-center gap-2">
-            <span class="badge badge-pending text-xs">
-                {{ collect($draft['items'] ?? [])->where('review_status','pending')->count() }} pending
-            </span>
-            <span class="badge badge-approved text-xs">
-                {{ collect($draft['items'] ?? [])->where('review_status','approved')->count() }} disetujui
-            </span>
-            <span class="badge badge-rejected text-xs">
-                {{ collect($draft['items'] ?? [])->where('review_status','rejected')->count() }} ditolak
-            </span>
+        <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
+            <x-table-filter column="status" label="Status Review" :options="[
+                'pending' => 'Pending',
+                'approved' => 'Approved',
+                'rejected' => 'Rejected'
+            ]" />
+            <x-table-filter column="type" label="Tipe Barang" :options="[
+                'inventory' => 'Inventaris',
+                'bhp' => 'BHP'
+            ]" />
+            <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
+                Reset Filter
+            </button>
         </div>
     </div>
 
@@ -172,7 +188,7 @@
                 </thead>
                 <tbody>
                     @foreach($draft['items'] as $index => $item)
-                        <tr x-show="showRow({{ $index }})" x-cloak>
+                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-status="{{ $item['review_status'] }}" data-filter-type="{{ $item['item_type'] }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $index + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $item['item_name'] }}</td>
                             <td>
