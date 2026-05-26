@@ -187,7 +187,7 @@ const createProcurementDraft = async (req, res, next) => {
     }
 
     const createdAt = new Date();
-    await ProcurementModel.createDraft({
+    const result = await ProcurementModel.createDraft({
       labId: lab_id,
       createdBy: userId,
       title,
@@ -201,6 +201,7 @@ const createProcurementDraft = async (req, res, next) => {
       status: "success",
       message: "Draf pengadaan berhasil dibuat",
       data: {
+        id: result.insertId,
         title,
         lab_id,
         budget_year,
