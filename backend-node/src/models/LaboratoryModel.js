@@ -15,7 +15,18 @@ const LaboratoryModel = {
         floors.floor_number,
         buildings.name AS building_name,
         users.name AS head_name,
-        laboratories.head_user_id
+        laboratories.head_user_id,
+        COALESCE(
+          users.name,
+          (
+            SELECT GROUP_CONCAT(DISTINCT u2.name ORDER BY u2.name SEPARATOR ', ')
+            FROM lab_groups lg
+            JOIN lab_group_users lgu ON lgu.group_id = lg.id
+            JOIN users u2 ON u2.id = lgu.user_id
+            WHERE lg.laboratory_id = laboratories.id
+          ),
+          'Belum ditentukan'
+        ) AS responsible_name
       FROM laboratories
       JOIN rooms ON laboratories.room_id = rooms.id
       JOIN floors ON rooms.floor_id = floors.id
@@ -149,7 +160,49 @@ const LaboratoryModel = {
       ON DUPLICATE KEY UPDATE room_id = VALUES(room_id)
     `, [group_id, room_id]);
     return result;
-  }
+  },
+
+  async getOptions() {
+    const [availableRooms] = await db.query(`
+      SELECT
+        rooms.id,
+        rooms.code,
+        rooms.name,
+        room_types.name AS room_type,
+        floors.name AS floor_name,
+        floors.floor_number,
+        buildings.name AS building_name,
+        buildings.code AS building_code
+      FROM rooms
+      JOIN room_types ON rooms.room_type_id = room_types.id
+      JOIN floors ON rooms.floor_id = floors.id
+      JOIN buildings ON floors.building_id = buildings.id
+      LEFT JOIN laboratories ON laboratories.room_id = rooms.id
+      WHERE room_types.name = 'laboratory'
+        AND laboratories.id IS NULL
+      ORDER BY buildings.name ASC, floors.floor_number ASC, rooms.code ASC
+    `);
+
+    const [heads] = await db.query(`
+      SELECT
+        users.id,
+        users.name,
+        users.email,
+        roles.name AS role_name
+      FROM users
+      JOIN roles ON users.role_id = roles.id
+      WHERE users.status = 'active'
+        AND roles.name IN ('kepala_laboratorium', 'staf_laboratorium')
+      ORDER BY
+        FIELD(roles.name, 'kepala_laboratorium', 'staf_laboratorium'),
+        users.name ASC
+    `);
+
+    return {
+      available_rooms: availableRooms,
+      heads
+    };
+  },
 };
 
 module.exports = LaboratoryModel;

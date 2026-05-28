@@ -130,7 +130,7 @@
                         <x-sort-header field="room">Ruangan</x-sort-header>
                         <x-sort-header field="building">Gedung</x-sort-header>
                         <x-sort-header field="floor">Lantai</x-sort-header>
-                        <x-sort-header field="head">Kepala Lab</x-sort-header>
+                        <x-sort-header field="head">Penanggung Jawab</x-sort-header>
                     </tr>
                 </thead>
                 <tbody>
@@ -151,7 +151,7 @@
                                         <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[0.6rem] font-bold text-indigo-600">
                                             {{ strtoupper(substr($lab['head_name'], 0, 1)) }}
                                         </div>
-                                        <span class="text-slate-700">{{ $lab['head_name'] }}</span>
+                                        <span class="text-slate-700">{{ $lab['responsible_name'] ?? $lab['head_name'] ?? 'Belum ditentukan' }}</span>
                                     </div>
                                 @else
                                     <span class="text-slate-400">—</span>

@@ -7,6 +7,7 @@ use App\Http\Controllers\ProcurementController;
 use App\Http\Controllers\StafAdminController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RoomManagementController;
+use App\Http\Controllers\LaboratoryManagementController;
 use App\Http\Controllers\BhpController;
 use App\Http\Controllers\MaintenanceController;
 
@@ -20,9 +21,6 @@ Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->n
 Route::middleware('frontend.auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/laboratories', [DashboardController::class, 'laboratories'])
-        ->name('laboratories');
-
     Route::middleware('frontend.role:administrator')->group(function () {
         Route::get('/users', [UserManagementController::class, 'index'])->name('users');
         Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
@@ -33,6 +31,17 @@ Route::middleware('frontend.auth')->group(function () {
         Route::post('/rooms', [RoomManagementController::class, 'store'])->name('rooms.store');
         Route::put('/rooms/{id}', [RoomManagementController::class, 'update'])->name('rooms.update');
         Route::delete('/rooms/{id}', [RoomManagementController::class, 'destroy'])->name('rooms.destroy');
+
+        Route::post('/buildings', [RoomManagementController::class, 'storeBuilding'])->name('buildings.store');
+        Route::post('/floors', [RoomManagementController::class, 'storeFloor'])->name('floors.store');
+        Route::post('/room-types', [RoomManagementController::class, 'storeRoomType'])->name('room-types.store');
+
+        Route::delete('/buildings/{id}', [RoomManagementController::class, 'destroyBuilding'])->name('buildings.destroy');
+        Route::delete('/floors/{id}', [RoomManagementController::class, 'destroyFloor'])->name('floors.destroy');
+        Route::delete('/room-types/{id}', [RoomManagementController::class, 'destroyRoomType'])->name('room-types.destroy');
+
+        Route::get('/laboratories', [LaboratoryManagementController::class, 'index'])->name('laboratories');
+        Route::post('/laboratories', [LaboratoryManagementController::class, 'store'])->name('laboratories.store');
     });
 
     Route::get('/inventory', [DashboardController::class, 'inventory'])
@@ -95,34 +104,21 @@ Route::middleware('frontend.auth')->group(function () {
     Route::post('/api/procurement/{id}/submit', [ProcurementController::class, 'submit']);
 
     Route::prefix('staf-admin')->middleware('frontend.role:staf_administrasi')->group(function () {
-        Route::get('/procurement-approved', [StafAdminController::class, 'procurementApproved'])
-            ->name('staf-admin.procurement-approved');
-        Route::get('/procurement-approved/{id}', [StafAdminController::class, 'procurementApprovedDetail'])
-            ->name('staf-admin.procurement-approved.detail');
+        Route::get('/procurement-approved', [StafAdminController::class, 'procurementApproved'])->name('staf-admin.procurement-approved');
+        Route::get('/procurement-approved/{id}', [StafAdminController::class, 'procurementApprovedDetail'])->name('staf-admin.procurement-approved.detail');
 
-        Route::get('/goods-receipt', [StafAdminController::class, 'goodsReceiptIndex'])
-            ->name('staf-admin.goods-receipt-index');
-        Route::get('/goods-receipt/{draftId}', [StafAdminController::class, 'goodsReceipt'])
-            ->name('staf-admin.goods-receipt');
-        Route::post('/api/goods-receipt', [StafAdminController::class, 'storeGoodsReceipt'])
-            ->name('staf-admin.goods-receipt.store');
+        Route::get('/goods-receipt', [StafAdminController::class, 'goodsReceiptIndex'])->name('staf-admin.goods-receipt-index');
+        Route::get('/goods-receipt/{draftId}', [StafAdminController::class, 'goodsReceipt'])->name('staf-admin.goods-receipt');
+        Route::post('/api/goods-receipt', [StafAdminController::class, 'storeGoodsReceipt'])->name('staf-admin.goods-receipt.store');
 
-        Route::get('/inventory-label', [StafAdminController::class, 'inventoryLabel'])
-            ->name('staf-admin.inventory-label');
-        Route::get('/inventory-label/{id}/edit', [StafAdminController::class, 'inventoryLabelEdit'])
-            ->name('staf-admin.inventory-label.edit');
-        Route::put('/inventory-label/{id}', [StafAdminController::class, 'inventoryLabelUpdate'])
-            ->name('staf-admin.inventory-label.update');
-        Route::post('/api/inventory-label/{id}', [StafAdminController::class, 'inventoryLabelUpdateAjax'])
-            ->name('staf-admin.inventory-label.ajax');
+        Route::get('/inventory-label', [StafAdminController::class, 'inventoryLabel'])->name('staf-admin.inventory-label');
+        Route::get('/inventory-label/{id}/edit', [StafAdminController::class, 'inventoryLabelEdit'])->name('staf-admin.inventory-label.edit');
+        Route::put('/inventory-label/{id}', [StafAdminController::class, 'inventoryLabelUpdate'])->name('staf-admin.inventory-label.update');
+        Route::post('/api/inventory-label/{id}', [StafAdminController::class, 'inventoryLabelUpdateAjax'])->name('staf-admin.inventory-label.ajax');
 
-        Route::get('/dashboard', [StafAdminController::class, 'dashboard'])
-            ->name('staf-admin.dashboard');
-        Route::get('/asset-list', [StafAdminController::class, 'assetList'])
-            ->name('staf-admin.asset-list');
-        Route::get('/asset-timeline/{id}', [StafAdminController::class, 'assetTimeline'])
-            ->name('staf-admin.asset-timeline');
-        Route::get('/inventaris', [StafAdminController::class, 'inventaris'])
-            ->name('staf-admin.inventaris');
+        Route::get('/dashboard', [StafAdminController::class, 'dashboard'])->name('staf-admin.dashboard');
+        Route::get('/asset-list', [StafAdminController::class, 'assetList'])->name('staf-admin.asset-list');
+        Route::get('/asset-timeline/{id}', [StafAdminController::class, 'assetTimeline'])->name('staf-admin.asset-timeline');
+        Route::get('/inventaris', [StafAdminController::class, 'inventaris'])->name('staf-admin.inventaris');
     });
 });

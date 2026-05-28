@@ -26,6 +26,7 @@ class RoomManagementController extends Controller
     {
         try {
             $request = Http::withToken(session('auth_token'));
+
             $response = match ($method) {
                 'PUT' => $request->put($this->apiUrl() . $endpoint, $data),
                 'DELETE' => $request->delete($this->apiUrl() . $endpoint),
@@ -41,15 +42,89 @@ class RoomManagementController extends Controller
         }
     }
 
+    public function destroyBuilding($id)
+    {
+        $result = $this->sendApiData("/buildings/{$id}", [], 'DELETE');
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->with('error', $result['message']);
+    }
+
+    public function destroyFloor($id)
+    {
+        $result = $this->sendApiData("/floors/{$id}", [], 'DELETE');
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->with('error', $result['message']);
+    }
+
+    public function destroyRoomType($id)
+    {
+        $result = $this->sendApiData("/room-types/{$id}", [], 'DELETE');
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->with('error', $result['message']);
+    }
+
     public function index(Request $request)
     {
-        $rooms = $this->getApiData('/rooms', $request->only(['search', 'room_type_id', 'floor_id', 'building_id']));
+        $rooms = $this->getApiData('/rooms', $request->only(['search', 'room_type_id', 'building_id']));
         $options = $this->getApiData('/rooms/options');
+
         $buildings = $options['buildings'] ?? [];
         $floors = $options['floors'] ?? [];
         $roomTypes = $options['room_types'] ?? [];
 
         return view('pages.rooms', compact('rooms', 'buildings', 'floors', 'roomTypes'));
+    }
+
+    public function storeBuilding(Request $request)
+    {
+        $validated = $request->validate([
+            'code' => 'required|string|max:50',
+            'name' => 'required|string|max:150',
+            'address' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+
+        $result = $this->sendApiData('/buildings', $validated);
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function storeFloor(Request $request)
+    {
+        $validated = $request->validate([
+            'building_id' => 'required|integer',
+            'floor_number' => 'required|integer',
+            'name' => 'nullable|string|max:100',
+            'description' => 'nullable|string',
+        ]);
+
+        $result = $this->sendApiData('/floors', $validated);
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function storeRoomType(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'description' => 'nullable|string',
+        ]);
+
+        $result = $this->sendApiData('/room-types', $validated);
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
     }
 
     public function store(Request $request)

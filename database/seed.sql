@@ -92,7 +92,7 @@ INSERT INTO users (role_id, lab_id, name, nrp_nip, email, password, status) VALU
 
 UPDATE laboratories
 SET head_user_id = (SELECT id FROM users WHERE email = 'kalab@example.com')
-WHERE code IN ('LAB-PROG-1', 'LAB-PROG-2', 'LAB-ADVPROG-1', 'LAB-ADVPROG-2', 'LAB-ADVPROG-3', 'LAB-ADVPROG-4');
+WHERE head_user_id IS NULL;
 
 INSERT INTO lab_groups (laboratory_id, name, description) VALUES
 ((SELECT id FROM laboratories WHERE code = 'LAB-PROG-1'), 'Grup Staff Programming', 'Grup staf lab untuk Programming Lab 1 dan Programming Lab 2'),
@@ -167,6 +167,27 @@ INSERT INTO inventory_assets (item_catalog_id, room_id, asset_code, label_number
 ((SELECT id FROM item_catalogs WHERE name = 'Router'), (SELECT id FROM rooms WHERE code = 'H08-A02'), 'INV-RTR-NET-001', 'LBL-NET-001', 'RTR1001', 2500000, '2025-02-10', '2025-02-15', 'baik', 'available', NULL, 'Router praktikum jaringan'),
 ((SELECT id FROM item_catalogs WHERE name = 'Switch'), (SELECT id FROM rooms WHERE code = 'H08-A02'), 'INV-SW-NET-001', 'LBL-NET-002', 'SW1001', 3200000, '2025-02-10', '2025-02-15', 'rusak_ringan', 'available', NULL, 'Switch perlu pengecekan port'),
 ((SELECT id FROM item_catalogs WHERE name = 'Access Point'), (SELECT id FROM rooms WHERE code = 'H08-B06'), 'INV-AP-SRV-001', 'LBL-SRV-001', 'AP1001', 1200000, '2025-03-05', '2025-03-09', 'baik', 'available', NULL, 'Access point cadangan server room');
+INSERT INTO inventory_assets (
+    item_catalog_id,
+    room_id,
+    asset_code,
+    label_number,
+    serial_number,
+    purchase_price,
+    purchase_date,
+    received_date,
+    asset_condition,
+    status,
+    photo_url,
+    notes
+) VALUES
+((SELECT id FROM item_catalogs WHERE name = 'Keyboard'), (SELECT id FROM rooms WHERE code = 'H08-A04'), 'INV-KB-PROG2-001', 'LBL-PROG2-KB-001', 'KBP2001', 250000, '2025-02-01', '2025-02-08', 'baik', 'available', NULL, 'Keyboard untuk Programming Lab 2'),
+((SELECT id FROM item_catalogs WHERE name = 'Mouse'), (SELECT id FROM rooms WHERE code = 'H08-A04'), 'INV-MS-PROG2-001', 'LBL-PROG2-MS-001', 'MSP2001', 150000, '2025-02-01', '2025-02-08', 'baik', 'available', NULL, 'Mouse untuk Programming Lab 2'),
+((SELECT id FROM item_catalogs WHERE name = 'Monitor'), (SELECT id FROM rooms WHERE code = 'H08-A04'), 'INV-MON-PROG2-001', NULL, 'MON2001', 1750000, '2025-02-01', '2025-02-08', 'baik', 'received', NULL, 'Monitor baru belum diberi label'),
+((SELECT id FROM item_catalogs WHERE name = 'Meja Komputer'), (SELECT id FROM rooms WHERE code = 'H08-C03'), 'INV-DESK-DB-001', 'LBL-DB-DSK-001', 'DSK3001', 1200000, '2025-01-12', '2025-01-18', 'baik', 'available', NULL, 'Meja komputer untuk Database Lab'),
+((SELECT id FROM item_catalogs WHERE name = 'Kursi Laboratorium'), (SELECT id FROM rooms WHERE code = 'H08-C04'), 'INV-CHR-MM-001', NULL, 'CHR4001', 450000, '2025-03-01', '2025-03-06', 'baik', 'labeled', NULL, 'Kursi laboratorium multimedia'),
+((SELECT id FROM item_catalogs WHERE name = 'PC Desktop'), (SELECT id FROM rooms WHERE code = 'FTI-201'), 'INV-PC-AI-001', 'LBL-AI-001', 'PCAI001', 9200000, '2025-03-15', '2025-03-21', 'baik', 'available', NULL, 'PC untuk AI Lab'),
+((SELECT id FROM item_catalogs WHERE name = 'Monitor'), (SELECT id FROM rooms WHERE code = 'FTI-201'), 'INV-MON-AI-001', 'LBL-AI-MON-001', 'MONAI001', 1800000, '2025-03-15', '2025-03-21', 'rusak_ringan', 'maintenance', NULL, 'Monitor AI Lab sedang dicek');
 
 INSERT INTO maintenance_logs (inventory_asset_id, performed_by, maintenance_date, issue_description, action_taken, condition_before, condition_after, status, cost, notes) VALUES
 ((SELECT id FROM inventory_assets WHERE asset_code = 'INV-PC-PROG1-002'), (SELECT id FROM users WHERE email = 'staflab@example.com'), '2025-05-20', 'PC lambat dan suhu cepat panas', 'Membersihkan debu dan mengganti thermal paste', 'maintenance', 'baik', 'done', 50000, 'Maintenance selesai dan stok thermal paste berkurang'),

@@ -124,6 +124,33 @@ const RoomModel = {
     return roomTypes;
   },
 
+  async createBuilding({ code, name, address, description }, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(`
+      INSERT INTO buildings (code, name, address, description)
+      VALUES (?, ?, ?, ?)
+    `, [code, name, address || null, description || null]);
+    return result;
+  },
+
+  async createFloor({ building_id, floor_number, name, description }, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(`
+      INSERT INTO floors (building_id, floor_number, name, description)
+      VALUES (?, ?, ?, ?)
+    `, [building_id, floor_number, name, description || null]);
+    return result;
+  },
+
+  async createRoomType({ name, description }, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(`
+      INSERT INTO room_types (name, description)
+      VALUES (?, ?)
+    `, [name, description || null]);
+    return result;
+  },
+
   async create({ floor_id, room_type_id, code, name, capacity, description }, tx = null) {
     const conn = tx || db;
     const [result] = await conn.query(`
@@ -165,7 +192,67 @@ const RoomModel = {
     const conn = tx || db;
     const [result] = await conn.query("DELETE FROM rooms WHERE id = ?", [id]);
     return result;
-  }
+  },
+
+  async getOptions() {
+    const [buildings] = await db.query(`
+      SELECT id, code, name
+      FROM buildings
+      ORDER BY name ASC
+    `);
+
+    const [floors] = await db.query(`
+      SELECT
+        floors.id,
+        floors.building_id,
+        floors.floor_number,
+        floors.name,
+        buildings.code AS building_code,
+        buildings.name AS building_name
+      FROM floors
+      JOIN buildings ON floors.building_id = buildings.id
+      ORDER BY buildings.name ASC, floors.floor_number ASC
+    `);
+
+    const [roomTypes] = await db.query(`
+      SELECT id, name, description
+      FROM room_types
+      ORDER BY name ASC
+    `);
+
+    return {
+      buildings,
+      floors,
+      room_types: roomTypes
+    };
+  },
+
+  async deleteBuilding(id) {
+    const [result] = await db.query(
+      "DELETE FROM buildings WHERE id = ?",
+      [id]
+    );
+
+    return result;
+  },
+
+  async deleteFloor(id) {
+    const [result] = await db.query(
+      "DELETE FROM floors WHERE id = ?",
+      [id]
+    );
+
+    return result;
+  },
+
+  async deleteRoomType(id) {
+    const [result] = await db.query(
+      "DELETE FROM room_types WHERE id = ?",
+      [id]
+    );
+
+    return result;
+  },
 };
 
 module.exports = RoomModel;

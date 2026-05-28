@@ -80,9 +80,38 @@
                     <p class="text-sm font-bold text-slate-800">Daftar User</p>
                     <p class="text-xs text-slate-400">{{ count($users) }} user terdaftar</p>
                 </div>
-                <form method="GET" class="flex gap-2">
-                    <input name="search" value="{{ request('search') }}" placeholder="Cari nama/email" class="rounded-xl border-slate-200 text-sm">
-                    <button class="rounded-xl bg-slate-900 text-white text-sm font-semibold px-4">Cari</button>
+                <form method="GET" action="{{ route('users') }}" class="flex gap-2 items-center">
+                    <div class="relative">
+                        <input
+                            name="search"
+                            value="{{ request('search') }}"
+                            placeholder="Cari nama/email"
+                            class="rounded-xl border-slate-200 text-sm pr-10"
+                        >
+
+                        @if(request()->filled('search'))
+                            <a
+                                href="{{ route('users') }}"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-200 text-slate-600 hover:bg-red-100 hover:text-red-600 flex items-center justify-center text-sm font-bold"
+                                title="Reset pencarian"
+                            >
+                                ×
+                            </a>
+                        @endif
+                    </div>
+
+                    <button class="rounded-xl bg-slate-900 text-white text-sm font-semibold px-4">
+                        Cari
+                    </button>
+
+                    @if(request()->filled('search'))
+                        <a
+                            href="{{ route('users') }}"
+                            class="rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-200"
+                        >
+                            Reset
+                        </a>
+                    @endif
                 </form>
             </div>
             <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
