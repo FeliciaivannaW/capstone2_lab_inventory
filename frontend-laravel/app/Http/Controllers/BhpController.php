@@ -55,6 +55,24 @@ class BhpController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'lab_id' => 'required|integer',
+            'item_catalog_id' => 'nullable|integer',
+            'item_name' => 'nullable|string|max:150',
+            'unit' => 'required|string|max:50',
+            'minimum_stock' => 'required|integer|min:0',
+            'initial_stock' => 'required|integer|min:0',
+        ]);
+
+        $result = $this->sendApiData('/bhp/stocks', $validated);
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
             'lab_id' => 'nullable|integer',
             'item_catalog_id' => 'nullable|integer',
             'item_name' => 'nullable|string|max:150',

@@ -42,6 +42,17 @@
                     </div>
                 @endif
                 <div>
+                    <label class="text-xs font-semibold text-slate-500">Laboratorium</label>
+                    <select name="lab_id" class="w-full mt-1 rounded-xl border-slate-200 text-sm" required>
+                        <option value="">Pilih laboratorium</option>
+                        @foreach($laboratories ?? [] as $lab)
+                            <option value="{{ $lab['id'] }}" {{ old('lab_id') == $lab['id'] ? 'selected' : '' }}>
+                                {{ $lab['name'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
                     <label class="text-xs font-semibold text-slate-500">Katalog BHP</label>
                     <select name="item_catalog_id" class="w-full mt-1 rounded-xl border-slate-200 text-sm">
                         <option value="">Item baru manual</option>
