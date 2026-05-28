@@ -4,6 +4,9 @@ USE lab_inventory_db;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS bhp_stock_movements;
+DROP TABLE IF EXISTS lab_group_users;
+DROP TABLE IF EXISTS lab_group_rooms;
+DROP TABLE IF EXISTS lab_groups;
 DROP TABLE IF EXISTS bhp_stocks;
 DROP TABLE IF EXISTS maintenance_logs;
 DROP TABLE IF EXISTS asset_disposals;
@@ -118,6 +121,55 @@ CREATE TABLE users (
 ALTER TABLE laboratories
 ADD CONSTRAINT fk_laboratories_head_user
 FOREIGN KEY (head_user_id) REFERENCES users(id);
+
+
+CREATE TABLE lab_groups (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    laboratory_id INT NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_lab_groups_laboratory
+        FOREIGN KEY (laboratory_id) REFERENCES laboratories(id),
+
+    CONSTRAINT unique_lab_group_name_per_lab
+        UNIQUE (laboratory_id, name)
+);
+
+CREATE TABLE lab_group_users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    group_id INT NOT NULL,
+    user_id INT NOT NULL,
+    role_in_group ENUM('kepala_lab', 'staf_lab') NOT NULL DEFAULT 'staf_lab',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_lab_group_users_group
+        FOREIGN KEY (group_id) REFERENCES lab_groups(id),
+
+    CONSTRAINT fk_lab_group_users_user
+        FOREIGN KEY (user_id) REFERENCES users(id),
+
+    CONSTRAINT unique_lab_group_user
+        UNIQUE (group_id, user_id)
+);
+
+CREATE TABLE lab_group_rooms (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    group_id INT NOT NULL,
+    room_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_lab_group_rooms_group
+        FOREIGN KEY (group_id) REFERENCES lab_groups(id),
+
+    CONSTRAINT fk_lab_group_rooms_room
+        FOREIGN KEY (room_id) REFERENCES rooms(id),
+
+    CONSTRAINT unique_lab_group_room
+        UNIQUE (group_id, room_id)
+);
 
 CREATE TABLE item_categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
