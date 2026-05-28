@@ -48,18 +48,37 @@ Route::middleware('frontend.auth')->group(function () {
         ->middleware('frontend.role:administrator,staf_administrasi,staf_laboratorium')
         ->name('inventory');
 
+    Route::get('/inventory/history', [DashboardController::class, 'inventoryHistory'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('inventory.history');
+
+    Route::match(['put', 'patch'], '/inventory/{id}/condition', [DashboardController::class, 'updateInventoryCondition'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('inventory.condition.update');
+
     Route::get('/bhp', [BhpController::class, 'index'])
         ->middleware('frontend.role:staf_laboratorium')
         ->name('bhp');
+
     Route::post('/bhp', [BhpController::class, 'store'])
         ->middleware('frontend.role:staf_laboratorium')
         ->name('bhp.store');
+
     Route::put('/bhp/{id}', [BhpController::class, 'update'])
         ->middleware('frontend.role:staf_laboratorium')
         ->name('bhp.update');
+
     Route::post('/bhp/{id}/movement', [BhpController::class, 'movement'])
         ->middleware('frontend.role:staf_laboratorium')
         ->name('bhp.movement');
+
+    Route::get('/maintenance', [MaintenanceController::class, 'index'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('maintenance');
+
+    Route::post('/maintenance', [MaintenanceController::class, 'store'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('maintenance.store');
 
     Route::get('/procurement', [DashboardController::class, 'procurement'])
         ->middleware('frontend.role:administrator,kepala_laboratorium,ketua_program_studi,staf_administrasi')
@@ -88,29 +107,6 @@ Route::middleware('frontend.auth')->group(function () {
     Route::delete('/procurement/{id}', [ProcurementController::class, 'destroy'])
         ->middleware('frontend.role:kepala_laboratorium,staf_administrasi')
         ->name('procurement.destroy');
-
-    Route::get('/maintenance', [MaintenanceController::class, 'index'])
-        ->middleware('frontend.role:staf_laboratorium')
-        ->name('maintenance');
-    Route::post('/maintenance', [MaintenanceController::class, 'store'])
-        ->middleware('frontend.role:staf_laboratorium')
-        ->name('maintenance.store');
-
-    Route::get('/inventory', [DashboardController::class, 'inventory'])
-            ->middleware('frontend.role:administrator,staf_administrasi,staf_laboratorium')
-            ->name('inventory');
-
-        Route::get('/inventory/history', [DashboardController::class, 'inventoryHistory'])
-            ->middleware('frontend.role:staf_laboratorium')
-            ->name('inventory.history');
-
-        Route::match(['put', 'patch'], '/inventory/{id}/condition', [DashboardController::class, 'updateInventoryCondition'])
-            ->middleware('frontend.role:staf_laboratorium')
-            ->name('inventory.condition.update');
-
-        Route::get('/bhp', [BhpController::class, 'index'])
-            ->middleware('frontend.role:staf_laboratorium')
-            ->name('bhp');
 
     Route::post('/api/procurement/{draftId}/items', [ProcurementController::class, 'addItem']);
     Route::delete('/api/procurement/{draftId}/items/{itemId}', [ProcurementController::class, 'deleteItem']);

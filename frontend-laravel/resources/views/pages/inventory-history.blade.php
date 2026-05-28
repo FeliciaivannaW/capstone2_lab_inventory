@@ -3,109 +3,190 @@
 @section('title', 'History Kondisi Aset')
 
 @section('content')
-@php
-    $conditionMeta = [
-        'baik' => ['label' => 'Baik', 'class' => 'badge-approved'],
-        'rusak_ringan' => ['label' => 'Rusak Ringan', 'class' => 'badge-pending'],
-        'rusak_berat' => ['label' => 'Rusak Berat', 'class' => 'badge-rejected'],
-        'maintenance' => ['label' => 'Maintenance', 'class' => 'badge-active'],
-        'dihapus' => ['label' => 'Dihapus', 'class' => 'badge-rejected'],
-        'diganti' => ['label' => 'Diganti', 'class' => 'badge-draft'],
-    ];
-@endphp
-
-<div class="mb-6 flex items-start justify-between flex-wrap gap-3">
-    <div>
-        <h1 class="text-2xl font-bold text-slate-900">History Kondisi Aset</h1>
-        <p class="text-sm text-slate-500 mt-1">Riwayat perubahan kondisi aset, termasuk aset yang dihapus atau diganti.</p>
-    </div>
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-slate-900">History Kondisi Aset</h1>
+    <p class="text-sm text-slate-500 mt-1">
+        Riwayat perubahan kondisi aset, termasuk aset yang dihapus atau diganti.
+    </p>
 </div>
 
-<form method="GET" action="{{ route('inventory.history') }}" class="glass-card rounded-2xl px-5 py-4 mb-5 flex flex-wrap items-end gap-4">
-    <div class="flex-[2] min-w-[220px]">
-        <label class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Cari History</label>
-        <input
-            name="search"
-            value="{{ $filters['search'] ?? '' }}"
-            placeholder="Kode aset, label, nama barang, catatan..."
-            class="w-full rounded-xl border-slate-200 text-sm"
-        >
-    </div>
+@php
+    $history = $history ?? [];
 
-    <div class="flex-1 min-w-[160px]">
-        <label class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Kondisi Baru</label>
-        <select name="condition" class="w-full rounded-xl border-slate-200 text-sm">
-            <option value="">Semua Kondisi</option>
-            @foreach($conditionMeta as $value => $meta)
-                <option value="{{ $value }}" {{ ($filters['condition'] ?? '') === $value ? 'selected' : '' }}>
-                    {{ $meta['label'] }}
-                </option>
-            @endforeach
-        </select>
-    </div>
+    $conditionLabels = [
+        'baik' => 'Baik',
+        'rusak_ringan' => 'Rusak Ringan',
+        'rusak_berat' => 'Rusak Berat',
+        'maintenance' => 'Maintenance',
+        'dihapus' => 'Dihapus',
+        'diganti' => 'Diganti',
+    ];
 
-    <button class="rounded-xl bg-indigo-600 text-white text-sm font-semibold px-4 py-2.5 hover:bg-indigo-700">
-        Filter
-    </button>
+    $conditionClasses = [
+        'baik' => 'badge-approved',
+        'rusak_ringan' => 'badge-pending',
+        'rusak_berat' => 'badge-rejected',
+        'maintenance' => 'badge-active',
+        'dihapus' => 'badge-rejected',
+        'diganti' => 'badge-draft',
+    ];
 
-    <a href="{{ route('inventory.history') }}" class="rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold px-4 py-2.5 hover:bg-slate-200">
-        Reset
-    </a>
-</form>
+    $formatCondition = function ($condition) use ($conditionLabels) {
+        return $conditionLabels[$condition] ?? ucfirst(str_replace('_', ' ', $condition ?? '-'));
+    };
+@endphp
+
+<div class="glass-card rounded-2xl p-5 mb-6">
+    <form method="GET" action="{{ route('inventory.history') }}" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+        <div class="lg:col-span-7">
+            <label class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">
+                Cari History
+            </label>
+            <div class="relative">
+                <input
+                    name="search"
+                    value="{{ request('search') }}"
+                    placeholder="Kode aset, label, nama barang, catatan..."
+                    class="w-full rounded-xl border-slate-200 text-sm pr-9"
+                >
+
+                @if(request()->filled('search'))
+                    <a
+                        href="{{ route('inventory.history', request()->except('search')) }}"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 text-lg leading-none"
+                        title="Hapus pencarian"
+                    >
+                        ×
+                    </a>
+                @endif
+            </div>
+        </div>
+
+        <div class="lg:col-span-3">
+            <label class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">
+                Kondisi Baru
+            </label>
+            <select
+                name="condition"
+                class="w-full rounded-xl border-slate-200 text-sm"
+                onchange="this.form.submit()"
+            >
+                <option value="">Semua Kondisi</option>
+                <option value="baik" {{ request('condition') === 'baik' ? 'selected' : '' }}>Baik</option>
+                <option value="rusak_ringan" {{ request('condition') === 'rusak_ringan' ? 'selected' : '' }}>Rusak Ringan</option>
+                <option value="rusak_berat" {{ request('condition') === 'rusak_berat' ? 'selected' : '' }}>Rusak Berat</option>
+                <option value="maintenance" {{ request('condition') === 'maintenance' ? 'selected' : '' }}>Maintenance</option>
+                <option value="dihapus" {{ request('condition') === 'dihapus' ? 'selected' : '' }}>Dihapus</option>
+                <option value="diganti" {{ request('condition') === 'diganti' ? 'selected' : '' }}>Diganti</option>
+            </select>
+        </div>
+
+        <div class="lg:col-span-2 flex gap-2">
+            <button class="flex-1 rounded-xl bg-indigo-600 text-white text-sm font-semibold px-4 py-2.5 hover:bg-indigo-700">
+                Filter
+            </button>
+
+            <a href="{{ route('inventory.history') }}"
+               class="rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold px-4 py-2.5 hover:bg-slate-200">
+                Reset
+            </a>
+        </div>
+    </form>
+</div>
 
 <div class="glass-card rounded-2xl overflow-hidden">
     <div class="px-6 py-4 border-b border-slate-100">
-        <p class="text-sm font-semibold text-slate-700">{{ count($history ?? []) }} history ditemukan</p>
+        <p class="text-sm font-bold text-slate-800">{{ count($history) }} history ditemukan</p>
     </div>
 
-    @if(empty($history))
-        <div class="py-16 text-center text-sm text-slate-400">Belum ada history kondisi aset.</div>
-    @else
-        <div class="overflow-x-auto">
-            <table class="lv-table">
-                <thead>
+    <div class="overflow-x-auto">
+        <table class="lv-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Aset</th>
+                    <th>Ruangan</th>
+                    <th>Kondisi Lama</th>
+                    <th>Kondisi Baru</th>
+                    <th>Catatan</th>
+                    <th>Diubah Oleh</th>
+                    <th>Tanggal</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @forelse($history as $index => $row)
+                    @php
+                        $oldCondition = $row['old_condition'] ?? '-';
+                        $newCondition = $row['new_condition'] ?? '-';
+
+                        $oldClass = $conditionClasses[$oldCondition] ?? 'badge-draft';
+                        $newClass = $conditionClasses[$newCondition] ?? 'badge-draft';
+                    @endphp
+
                     <tr>
-                        <th>#</th>
-                        <th>Aset</th>
-                        <th>Ruangan</th>
-                        <th>Kondisi Lama</th>
-                        <th>Kondisi Baru</th>
-                        <th>Catatan</th>
-                        <th>Diupdate Oleh</th>
-                        <th>Tanggal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($history as $i => $row)
-                        @php
-                            $old = $conditionMeta[$row['old_condition'] ?? ''] ?? ['label' => $row['old_condition'] ?? '-', 'class' => 'badge-draft'];
-                            $new = $conditionMeta[$row['new_condition'] ?? ''] ?? ['label' => $row['new_condition'] ?? '-', 'class' => 'badge-draft'];
-                        @endphp
-                        <tr>
-                            <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
-                            <td>
-                                <div class="font-mono text-xs font-bold bg-slate-100 px-2 py-0.5 rounded-md inline-block">
-                                    {{ $row['asset_code'] }}
+                        <td class="text-slate-500">{{ $index + 1 }}</td>
+
+                        <td>
+                            <div class="font-mono text-xs font-bold bg-slate-100 px-2 py-1 rounded-md inline-block mb-1">
+                                {{ $row['asset_code'] ?? '-' }}
+                            </div>
+
+                            <div class="font-semibold text-slate-800">
+                                {{ $row['item_name'] ?? '-' }}
+                            </div>
+
+                            @if(!empty($row['label_number']))
+                                <div class="text-xs text-slate-400">
+                                    {{ $row['label_number'] }}
                                 </div>
-                                <div class="text-sm font-semibold text-slate-800 mt-1">{{ $row['item_name'] }}</div>
-                                <div class="text-xs text-slate-400">{{ $row['label_number'] ?? 'Belum berlabel' }}</div>
-                            </td>
-                            <td class="text-xs text-slate-500">
-                                {{ $row['room_name'] ?? '-' }}
-                                <div class="font-mono text-[11px] text-slate-400">{{ $row['room_code'] ?? '-' }}</div>
-                            </td>
-                            <td><span class="badge {{ $old['class'] }} text-xs">{{ $old['label'] }}</span></td>
-                            <td><span class="badge {{ $new['class'] }} text-xs">{{ $new['label'] }}</span></td>
-                            <td class="text-sm text-slate-600">{{ $row['note'] ?? '-' }}</td>
-                            <td class="text-sm text-slate-600">{{ $row['updated_by_name'] ?? '-' }}</td>
-                            <td class="text-xs text-slate-500">
-                                {{ !empty($row['updated_at']) ? \Carbon\Carbon::parse($row['updated_at'])->format('d M Y H:i') : '-' }}
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    @endif
+                            @endif
+                        </td>
+
+                        <td class="text-slate-500">
+                            <div>{{ $row['room_name'] ?? '-' }}</div>
+                            @if(!empty($row['room_code']))
+                                <div class="text-xs text-slate-400 font-mono">{{ $row['room_code'] }}</div>
+                            @endif
+                        </td>
+
+                        <td>
+                            <span class="badge {{ $oldClass }} text-xs">
+                                {{ $formatCondition($oldCondition) }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="badge {{ $newClass }} text-xs">
+                                {{ $formatCondition($newCondition) }}
+                            </span>
+                        </td>
+
+                        <td class="text-slate-600">
+                            {{ $row['note'] ?? '-' }}
+                        </td>
+
+                        <td class="text-slate-600">
+                            {{ $row['updated_by_name'] ?? '-' }}
+                        </td>
+
+                        <td class="text-slate-500">
+                            @if(!empty($row['updated_at']))
+                                {{ \Carbon\Carbon::parse($row['updated_at'])->format('d M Y H:i') }}
+                            @else
+                                -
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="8" class="text-center text-slate-400 py-10">
+                            Belum ada history kondisi aset.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 </div>
 @endsection
