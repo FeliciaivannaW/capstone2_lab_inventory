@@ -47,8 +47,9 @@ class UserManagementController extends Controller
         $users = $this->getApiData('/users', $request->only(['search', 'role', 'status']));
         $roles = $this->getApiData('/roles');
         $laboratories = $this->getApiData('/laboratories');
+        $labGroups = $this->getApiData('/lab-groups');
 
-        return view('pages.users', compact('users', 'roles', 'laboratories'));
+        return view('pages.users', compact('users', 'roles', 'laboratories', 'labGroups'));
     }
 
     public function store(Request $request)
@@ -57,13 +58,18 @@ class UserManagementController extends Controller
             'name' => 'required|string|max:150',
             'nrp_nip' => 'nullable|string|max:50',
             'email' => 'required|email|max:150',
-            'password' => 'required|string|min:4',
+            'password' => 'required|string|min:6',
             'role_id' => 'required|integer',
             'lab_id' => 'nullable|integer',
+            'lab_group_ids' => 'nullable|array',
+            'lab_group_ids.*' => 'integer',
             'status' => 'required|in:active,inactive',
         ]);
 
+        $validated['lab_group_ids'] = $validated['lab_group_ids'] ?? [];
+
         $result = $this->sendApiData('/users', $validated);
+
         return $result['ok']
             ? back()->with('success', $result['message'])
             : back()->withInput()->with('error', $result['message']);
@@ -75,9 +81,11 @@ class UserManagementController extends Controller
             'name' => 'required|string|max:150',
             'nrp_nip' => 'nullable|string|max:50',
             'email' => 'required|email|max:150',
-            'password' => 'nullable|string|min:4',
+            'password' => 'nullable|string|min:6',
             'role_id' => 'required|integer',
             'lab_id' => 'nullable|integer',
+            'lab_group_ids' => 'nullable|array',
+            'lab_group_ids.*' => 'integer',
             'status' => 'required|in:active,inactive',
         ]);
 
@@ -85,7 +93,10 @@ class UserManagementController extends Controller
             unset($validated['password']);
         }
 
+        $validated['lab_group_ids'] = $validated['lab_group_ids'] ?? [];
+
         $result = $this->sendApiData("/users/{$id}", $validated, 'PUT');
+
         return $result['ok']
             ? back()->with('success', $result['message'])
             : back()->withInput()->with('error', $result['message']);
@@ -94,6 +105,7 @@ class UserManagementController extends Controller
     public function destroy($id)
     {
         $result = $this->sendApiData("/users/{$id}", [], 'DELETE');
+
         return $result['ok']
             ? back()->with('success', $result['message'])
             : back()->with('error', $result['message']);

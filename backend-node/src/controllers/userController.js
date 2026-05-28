@@ -1,3 +1,4 @@
+const db = require("../config/database");
 const UserModel = require("../models/UserModel");
 const bcrypt = require("bcrypt");
 
@@ -5,6 +6,19 @@ const normalizeNullableInt = (value) => {
   if (value === undefined || value === null || value === "") return null;
   const parsed = Number(value);
   return Number.isInteger(parsed) ? parsed : NaN;
+};
+
+const normalizeIdArray = (value) => {
+  if (!value) return [];
+
+  const raw = Array.isArray(value) ? value : [value];
+
+  return [...new Set(
+    raw
+      .flatMap((item) => String(item).split(","))
+      .map((item) => Number(item))
+      .filter((item) => Number.isInteger(item) && item > 0)
+  )];
 };
 
 const getUsers = async (req, res) => {
@@ -34,9 +48,12 @@ const getUser = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
+  const connection = await db.getConnection();
+
   try {
     const { name, nrp_nip, email, password, role_id, status = "active" } = req.body;
     const lab_id = normalizeNullableInt(req.body.lab_id);
+    const labGroupIds = normalizeIdArray(req.body.lab_group_ids);
 
     if (!name || !email || !password || !role_id) {
       return res.status(400).json({ status: "error", message: "Nama, email, password, dan role wajib diisi" });
@@ -56,6 +73,9 @@ const createUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    await connection.beginTransaction();
+
     const result = await UserModel.create({
       role_id: Number(role_id),
       lab_id,
@@ -64,7 +84,11 @@ const createUser = async (req, res) => {
       email,
       password: hashedPassword,
       status
-    });
+    }, connection);
+
+    await UserModel.syncLabGroups(result.insertId, labGroupIds, connection);
+
+    await connection.commit();
 
     res.status(201).json({
       status: "success",
@@ -72,15 +96,32 @@ const createUser = async (req, res) => {
       data: { id: result.insertId }
     });
   } catch (error) {
+    try {
+      await connection.rollback();
+    } catch (_) {}
+
     console.error("[CREATE USER ERROR]", error);
+
+    if (error.code === "ER_NO_REFERENCED_ROW_2") {
+      return res.status(400).json({
+        status: "error",
+        message: "Role, lab, atau grup lab tidak valid"
+      });
+    }
+
     res.status(500).json({ status: "error", message: "Gagal menambahkan user" });
+  } finally {
+    connection.release();
   }
 };
 
 const updateUser = async (req, res) => {
+  const connection = await db.getConnection();
+
   try {
     const { name, nrp_nip, email, password, role_id, status = "active" } = req.body;
     const lab_id = normalizeNullableInt(req.body.lab_id);
+    const labGroupIds = normalizeIdArray(req.body.lab_group_ids);
     const userId = Number(req.params.id);
 
     if (!Number.isInteger(userId) || userId <= 0) {
@@ -114,6 +155,8 @@ const updateUser = async (req, res) => {
       hashedPassword = await bcrypt.hash(password, 10);
     }
 
+    await connection.beginTransaction();
+
     await UserModel.update(userId, {
       role_id: Number(role_id),
       lab_id,
@@ -122,16 +165,36 @@ const updateUser = async (req, res) => {
       email,
       password: hashedPassword,
       status
-    });
+    }, connection);
+
+    await UserModel.syncLabGroups(userId, labGroupIds, connection);
+
+    await connection.commit();
 
     res.json({ status: "success", message: "User berhasil diperbarui" });
   } catch (error) {
+    try {
+      await connection.rollback();
+    } catch (_) {}
+
     console.error("[UPDATE USER ERROR]", error);
+
+    if (error.code === "ER_NO_REFERENCED_ROW_2") {
+      return res.status(400).json({
+        status: "error",
+        message: "Role, lab, atau grup lab tidak valid"
+      });
+    }
+
     res.status(500).json({ status: "error", message: "Gagal memperbarui user" });
+  } finally {
+    connection.release();
   }
 };
 
 const deleteUser = async (req, res) => {
+  const connection = await db.getConnection();
+
   try {
     const userId = Number(req.params.id);
 
@@ -143,18 +206,36 @@ const deleteUser = async (req, res) => {
       return res.status(400).json({ status: "error", message: "User yang sedang login tidak boleh menghapus akunnya sendiri" });
     }
 
-    const result = await UserModel.delete(userId);
+    await connection.beginTransaction();
+
+    await UserModel.deleteLabGroupAccess(userId, connection);
+    const result = await UserModel.delete(userId, connection);
+
     if (result.affectedRows === 0) {
+      await connection.rollback();
       return res.status(404).json({ status: "error", message: "User tidak ditemukan" });
     }
 
+    await connection.commit();
+
     res.json({ status: "success", message: "User berhasil dihapus" });
   } catch (error) {
+    try {
+      await connection.rollback();
+    } catch (_) {}
+
     console.error("[DELETE USER ERROR]", error);
+
     if (error.code === "ER_ROW_IS_REFERENCED_2") {
-      return res.status(409).json({ status: "error", message: "User tidak bisa dihapus karena sudah dipakai pada data lain. Ubah status menjadi inactive saja." });
+      return res.status(409).json({
+        status: "error",
+        message: "User tidak bisa dihapus karena masih dipakai sebagai penanggung jawab atau data lain"
+      });
     }
+
     res.status(500).json({ status: "error", message: "Gagal menghapus user" });
+  } finally {
+    connection.release();
   }
 };
 

@@ -45,10 +45,21 @@ class LaboratoryManagementController extends Controller
     {
         $laboratories = $this->getApiData('/laboratories');
         $options = $this->getApiData('/laboratories/options');
+        $rooms = $this->getApiData('/rooms');
+
         $availableRooms = $options['available_rooms'] ?? [];
         $heads = $options['heads'] ?? [];
+        $staffLabUsers = $options['staff_lab_users'] ?? [];
+        $labGroups = $options['lab_groups'] ?? [];
 
-        return view('pages.laboratories', compact('laboratories', 'availableRooms', 'heads'));
+        return view('pages.laboratories', compact(
+            'laboratories',
+            'availableRooms',
+            'heads',
+            'staffLabUsers',
+            'labGroups',
+            'rooms'
+        ));
     }
 
     public function store(Request $request)
@@ -62,6 +73,48 @@ class LaboratoryManagementController extends Controller
         ]);
 
         $result = $this->sendApiData('/laboratories', $validated);
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function storeGroup(Request $request)
+    {
+        $validated = $request->validate([
+            'laboratory_id' => 'required|integer',
+            'name' => 'required|string|max:150',
+            'description' => 'nullable|string',
+        ]);
+
+        $result = $this->sendApiData('/lab-groups', $validated);
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function addGroupUser(Request $request, $groupId)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|integer',
+            'role_in_group' => 'required|in:kepala_lab,staf_lab',
+        ]);
+
+        $result = $this->sendApiData("/lab-groups/{$groupId}/users", $validated);
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function addGroupRoom(Request $request, $groupId)
+    {
+        $validated = $request->validate([
+            'room_id' => 'required|integer',
+        ]);
+
+        $result = $this->sendApiData("/lab-groups/{$groupId}/rooms", $validated);
 
         return $result['ok']
             ? back()->with('success', $result['message'])

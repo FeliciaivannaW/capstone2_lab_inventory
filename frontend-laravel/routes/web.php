@@ -42,6 +42,10 @@ Route::middleware('frontend.auth')->group(function () {
 
         Route::get('/laboratories', [LaboratoryManagementController::class, 'index'])->name('laboratories');
         Route::post('/laboratories', [LaboratoryManagementController::class, 'store'])->name('laboratories.store');
+
+        Route::post('/lab-groups', [LaboratoryManagementController::class, 'storeGroup'])->name('lab-groups.store');
+        Route::post('/lab-groups/{groupId}/users', [LaboratoryManagementController::class, 'addGroupUser'])->name('lab-groups.users.store');
+        Route::post('/lab-groups/{groupId}/rooms', [LaboratoryManagementController::class, 'addGroupRoom'])->name('lab-groups.rooms.store');
     });
 
     Route::get('/inventory', [DashboardController::class, 'inventory'])

@@ -67,11 +67,18 @@ const LaboratoryModel = {
 
   async findHeads() {
     const [rows] = await db.query(`
-      SELECT u.id, u.name, u.email
+      SELECT
+        u.id,
+        u.name,
+        u.email,
+        r.name AS role_name
       FROM users u
       JOIN roles r ON u.role_id = r.id
-      WHERE r.name = 'kepala_laboratorium' AND u.status = 'active'
-      ORDER BY u.name ASC
+      WHERE r.name IN ('kepala_laboratorium', 'staf_laboratorium')
+        AND u.status = 'active'
+      ORDER BY
+        FIELD(r.name, 'kepala_laboratorium', 'staf_laboratorium'),
+        u.name ASC
     `);
     return rows;
   },
