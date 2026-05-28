@@ -1,15 +1,6 @@
 const db = require("../config/database");
-
-const getCurrentUser = async (userId) => {
-  const [rows] = await db.query(`
-    SELECT u.id, u.lab_id, r.name AS role
-    FROM users u
-    JOIN roles r ON u.role_id = r.id
-    WHERE u.id = ?
-    LIMIT 1
-  `, [userId]);
-  return rows[0] || null;
-};
+const BhpModel = require("../models/BhpModel");
+const LabAccessModel = require("../models/LabAccessModel");
 
 const parsePositiveInt = (value, fieldName) => {
   const parsed = Number(value);
@@ -21,14 +12,27 @@ const parsePositiveInt = (value, fieldName) => {
   return parsed;
 };
 
+const getAccessibleLabIdsOrFail = async (userId) => {
+  const currentUser = await LabAccessModel.findCurrentUser(userId);
+  if (!currentUser) {
+    throw Object.assign(new Error("User tidak ditemukan"), { statusCode: 404 });
+  }
+
+  if (currentUser.role !== "staf_laboratorium") {
+    throw Object.assign(new Error("Kelola BHP hanya untuk Staf Laboratorium"), { statusCode: 403 });
+  }
+
+  const labIds = await LabAccessModel.findAccessibleLabIds(userId);
+  if (!labIds.length) {
+    throw Object.assign(new Error("User staf laboratorium belum memiliki akses ke laboratorium/grup lab"), { statusCode: 400 });
+  }
+
+  return labIds;
+};
+
 const getBhpCatalogs = async (req, res) => {
   try {
-    const [catalogs] = await db.query(`
-      SELECT id, name, unit, description
-      FROM item_catalogs
-      WHERE type = 'bhp'
-      ORDER BY name ASC
-    `);
+    const catalogs = await BhpModel.findCatalogs();
     res.json({ status: "success", data: catalogs });
   } catch (error) {
     console.error("[GET BHP CATALOGS ERROR]", error);
@@ -38,54 +42,18 @@ const getBhpCatalogs = async (req, res) => {
 
 const getStocks = async (req, res) => {
   try {
-    const currentUser = await getCurrentUser(req.user.id);
-    const { lab_id, search, low_stock } = req.query;
-    const conditions = ["ic.type = 'bhp'"];
-    const params = [];
+    const accessibleLabIds = await getAccessibleLabIdsOrFail(req.user.id);
+    const requestedLabId = req.query.lab_id ? Number(req.query.lab_id) : null;
 
-    if (currentUser.role === "staf_laboratorium") {
-      if (!currentUser.lab_id) {
-        return res.status(400).json({ status: "error", message: "User staf laboratorium belum terhubung ke laboratorium" });
-      }
-      conditions.push("bs.lab_id = ?");
-      params.push(currentUser.lab_id);
-    } else if (lab_id) {
-      conditions.push("bs.lab_id = ?");
-      params.push(Number(lab_id));
+    if (requestedLabId && !accessibleLabIds.includes(requestedLabId)) {
+      return res.status(403).json({ status: "error", message: "Tidak boleh melihat stok lab lain" });
     }
 
-    if (search) {
-      conditions.push("(ic.name LIKE ? OR l.name LIKE ?)");
-      params.push(`%${search}%`, `%${search}%`);
-    }
-
-    if (low_stock === "1" || low_stock === "true") {
-      conditions.push("bs.current_stock <= bs.minimum_stock");
-    }
-
-    const [stocks] = await db.query(`
-      SELECT
-        bs.id,
-        bs.lab_id,
-        l.name AS laboratory_name,
-        bs.item_catalog_id,
-        ic.name AS item_name,
-        ic.unit AS catalog_unit,
-        bs.unit,
-        bs.current_stock,
-        bs.minimum_stock,
-        CASE
-          WHEN bs.current_stock <= bs.minimum_stock THEN 'kritis'
-          WHEN bs.current_stock <= (bs.minimum_stock * 2) THEN 'menipis'
-          ELSE 'aman'
-        END AS stock_status,
-        bs.updated_at
-      FROM bhp_stocks bs
-      JOIN item_catalogs ic ON bs.item_catalog_id = ic.id
-      JOIN laboratories l ON bs.lab_id = l.id
-      WHERE ${conditions.join(" AND ")}
-      ORDER BY l.name ASC, ic.name ASC
-    `, params);
+    const stocks = await BhpModel.findStocks({
+      labIds: requestedLabId ? [requestedLabId] : accessibleLabIds,
+      search: req.query.search,
+      lowStock: req.query.low_stock
+    });
 
     res.json({ status: "success", data: stocks });
   } catch (error) {
@@ -97,35 +65,18 @@ const getStocks = async (req, res) => {
 const getStockMovements = async (req, res) => {
   try {
     const stockId = parsePositiveInt(req.params.id, "ID stok");
-    const currentUser = await getCurrentUser(req.user.id);
+    const accessibleLabIds = await getAccessibleLabIdsOrFail(req.user.id);
 
-    const [stocks] = await db.query("SELECT id, lab_id FROM bhp_stocks WHERE id = ? LIMIT 1", [stockId]);
-    if (!stocks.length) {
+    const stock = await BhpModel.findStockById(stockId);
+    if (!stock) {
       return res.status(404).json({ status: "error", message: "Stok BHP tidak ditemukan" });
     }
 
-    if (currentUser.role === "staf_laboratorium" && stocks[0].lab_id !== currentUser.lab_id) {
+    if (!accessibleLabIds.includes(Number(stock.lab_id))) {
       return res.status(403).json({ status: "error", message: "Tidak boleh melihat stok lab lain" });
     }
 
-    const [movements] = await db.query(`
-      SELECT
-        m.id,
-        m.stock_id,
-        m.movement_type,
-        m.quantity,
-        m.movement_date,
-        m.note,
-        m.procurement_item_id,
-        m.receipt_id,
-        m.maintenance_id,
-        u.name AS performed_by_name
-      FROM bhp_stock_movements m
-      JOIN users u ON m.performed_by = u.id
-      WHERE m.stock_id = ?
-      ORDER BY m.movement_date DESC, m.id DESC
-    `, [stockId]);
-
+    const movements = await BhpModel.findMovementsByStockId(stockId);
     res.json({ status: "success", data: movements });
   } catch (error) {
     console.error("[GET BHP MOVEMENTS ERROR]", error);
@@ -136,63 +87,59 @@ const getStockMovements = async (req, res) => {
 const createStock = async (req, res) => {
   const connection = await db.getConnection();
   try {
-    const currentUser = await getCurrentUser(req.user.id);
-    let labId = req.body.lab_id ? Number(req.body.lab_id) : currentUser.lab_id;
+    const accessibleLabIds = await getAccessibleLabIdsOrFail(req.user.id);
+    let labId = req.body.lab_id ? Number(req.body.lab_id) : accessibleLabIds[0];
 
-    if (currentUser.role === "staf_laboratorium") {
-      labId = currentUser.lab_id;
-    }
-
-    if (!labId) {
-      return res.status(400).json({ status: "error", message: "Laboratorium wajib dipilih" });
+    if (!accessibleLabIds.includes(labId)) {
+      return res.status(403).json({ status: "error", message: "Tidak boleh menambahkan stok untuk lab lain" });
     }
 
     let itemCatalogId = req.body.item_catalog_id ? Number(req.body.item_catalog_id) : null;
-    const { item_name, unit = "pcs", minimum_stock = 0, initial_stock = 0 } = req.body;
+    const itemName = req.body.item_name ? String(req.body.item_name).trim() : "";
+    const unit = req.body.unit ? String(req.body.unit).trim() : "pcs";
+    const initialStock = Number(req.body.initial_stock) || 0;
+    const minimumStock = Number(req.body.minimum_stock) || 0;
+
+    if (initialStock < 0 || minimumStock < 0) {
+      return res.status(400).json({ status: "error", message: "Stok awal dan minimum stok tidak boleh negatif" });
+    }
 
     await connection.beginTransaction();
 
     if (!itemCatalogId) {
-      if (!item_name) {
+      if (!itemName) {
         throw Object.assign(new Error("Pilih katalog BHP atau isi nama item baru"), { statusCode: 400 });
       }
-      const [catalogResult] = await connection.query(`
-        INSERT INTO item_catalogs (category_id, name, type, unit, description)
-        VALUES (NULL, ?, 'bhp', ?, NULL)
-      `, [item_name, unit]);
+      const catalogResult = await BhpModel.createCatalog({ name: itemName, unit }, connection);
       itemCatalogId = catalogResult.insertId;
     }
 
-    const [catalogs] = await connection.query("SELECT id, unit FROM item_catalogs WHERE id = ? AND type = 'bhp' LIMIT 1", [itemCatalogId]);
-    if (!catalogs.length) {
+    const catalog = await BhpModel.findCatalogById(itemCatalogId, connection);
+    if (!catalog) {
       throw Object.assign(new Error("Katalog BHP tidak valid"), { statusCode: 400 });
     }
 
-    const qty = Number(initial_stock) || 0;
-    const minStock = Number(minimum_stock) || 0;
-    if (qty < 0 || minStock < 0) {
-      throw Object.assign(new Error("Stok awal dan minimum stok tidak boleh negatif"), { statusCode: 400 });
-    }
-
-    const [existing] = await connection.query(
-      "SELECT id FROM bhp_stocks WHERE lab_id = ? AND item_catalog_id = ? LIMIT 1",
-      [labId, itemCatalogId]
-    );
-    if (existing.length) {
+    const existing = await BhpModel.findStockByLabAndCatalog(labId, itemCatalogId, connection);
+    if (existing) {
       throw Object.assign(new Error("BHP ini sudah terdaftar pada lab tersebut"), { statusCode: 409 });
     }
 
-    const stockUnit = unit || catalogs[0].unit || "pcs";
-    const [stockResult] = await connection.query(`
-      INSERT INTO bhp_stocks (lab_id, item_catalog_id, current_stock, minimum_stock, unit)
-      VALUES (?, ?, ?, ?, ?)
-    `, [labId, itemCatalogId, qty, minStock, stockUnit]);
+    const stockResult = await BhpModel.createStock({
+      labId,
+      itemCatalogId,
+      currentStock: initialStock,
+      minimumStock,
+      unit: unit || catalog.unit || "pcs"
+    }, connection);
 
-    if (qty > 0) {
-      await connection.query(`
-        INSERT INTO bhp_stock_movements (stock_id, performed_by, movement_type, quantity, note)
-        VALUES (?, ?, 'in', ?, 'Stok awal')
-      `, [stockResult.insertId, req.user.id, qty]);
+    if (initialStock > 0) {
+      await BhpModel.createMovement({
+        stockId: stockResult.insertId,
+        performedBy: req.user.id,
+        movementType: "in",
+        quantity: initialStock,
+        note: "Stok awal"
+      }, connection);
     }
 
     await connection.commit();
@@ -209,23 +156,21 @@ const createStock = async (req, res) => {
 const updateStock = async (req, res) => {
   try {
     const stockId = parsePositiveInt(req.params.id, "ID stok");
-    const { minimum_stock, unit } = req.body;
-    const currentUser = await getCurrentUser(req.user.id);
+    const accessibleLabIds = await getAccessibleLabIdsOrFail(req.user.id);
 
-    const [stocks] = await db.query("SELECT id, lab_id FROM bhp_stocks WHERE id = ? LIMIT 1", [stockId]);
-    if (!stocks.length) {
+    const stock = await BhpModel.findStockById(stockId);
+    if (!stock) {
       return res.status(404).json({ status: "error", message: "Stok BHP tidak ditemukan" });
     }
 
-    if (currentUser.role === "staf_laboratorium" && stocks[0].lab_id !== currentUser.lab_id) {
+    if (!accessibleLabIds.includes(Number(stock.lab_id))) {
       return res.status(403).json({ status: "error", message: "Tidak boleh mengubah stok lab lain" });
     }
 
-    await db.query(`
-      UPDATE bhp_stocks
-      SET minimum_stock = ?, unit = ?
-      WHERE id = ?
-    `, [Number(minimum_stock) || 0, unit || "pcs", stockId]);
+    await BhpModel.updateStock(stockId, {
+      minimumStock: Number(req.body.minimum_stock) || 0,
+      unit: req.body.unit || "pcs"
+    });
 
     res.json({ status: "success", message: "Data stok BHP berhasil diperbarui" });
   } catch (error) {
@@ -246,19 +191,20 @@ const adjustStock = async (req, res) => {
       return res.status(400).json({ status: "error", message: "Tipe pergerakan stok tidak valid" });
     }
 
-    const currentUser = await getCurrentUser(req.user.id);
+    const accessibleLabIds = await getAccessibleLabIdsOrFail(req.user.id);
+
     await connection.beginTransaction();
 
-    const [stocks] = await connection.query("SELECT id, lab_id, current_stock FROM bhp_stocks WHERE id = ? FOR UPDATE", [stockId]);
-    if (!stocks.length) {
+    const stock = await BhpModel.findStockByIdForUpdate(stockId, connection);
+    if (!stock) {
       throw Object.assign(new Error("Stok BHP tidak ditemukan"), { statusCode: 404 });
     }
 
-    if (currentUser.role === "staf_laboratorium" && stocks[0].lab_id !== currentUser.lab_id) {
+    if (!accessibleLabIds.includes(Number(stock.lab_id))) {
       throw Object.assign(new Error("Tidak boleh mengubah stok lab lain"), { statusCode: 403 });
     }
 
-    let newStock = Number(stocks[0].current_stock);
+    let newStock = Number(stock.current_stock);
     if (movementType === "in") newStock += quantity;
     if (movementType === "out") newStock -= quantity;
     if (movementType === "adjustment") newStock = quantity;
@@ -267,11 +213,14 @@ const adjustStock = async (req, res) => {
       throw Object.assign(new Error("Stok tidak cukup untuk dikurangi"), { statusCode: 400 });
     }
 
-    await connection.query("UPDATE bhp_stocks SET current_stock = ? WHERE id = ?", [newStock, stockId]);
-    await connection.query(`
-      INSERT INTO bhp_stock_movements (stock_id, performed_by, movement_type, quantity, note)
-      VALUES (?, ?, ?, ?, ?)
-    `, [stockId, req.user.id, movementType, quantity, note]);
+    await BhpModel.updateStockQty(stockId, newStock, connection);
+    await BhpModel.createMovement({
+      stockId,
+      performedBy: req.user.id,
+      movementType,
+      quantity,
+      note
+    }, connection);
 
     await connection.commit();
     res.json({ status: "success", message: "Stok BHP berhasil diperbarui", data: { current_stock: newStock } });

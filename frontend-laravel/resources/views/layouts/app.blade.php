@@ -402,15 +402,8 @@
 
         {{-- Brand --}}
         <div class="flex items-center gap-3 px-4 py-5 border-b border-[#1E293B]">
-            <div class="flex-shrink-0">
-                <svg width="30" height="30" viewBox="0 0 40 40" fill="none">
-                    <rect x="8" y="22" width="24" height="10" fill="#4F46E5" rx="2"/>
-                    <ellipse cx="20" cy="22" rx="12" ry="4" fill="#818CF8"/>
-                    <ellipse cx="20" cy="32" rx="12" ry="4" fill="#4338CA"/>
-                    <path d="M15 7 L13 22 L27 22 L25 7" fill="#C7D2FE" stroke="#6366F1" stroke-width="1.5" stroke-linejoin="round"/>
-                    <rect x="14" y="4" width="12" height="4" rx="2" fill="#6366F1"/>
-                    <path d="M14 17 Q20 20 26 17 L27 22 L13 22 Z" fill="#6366F1" opacity="0.55"/>
-                </svg>
+            <div class="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-400/30 flex items-center justify-center text-xl flex-shrink-0">
+                🧪
             </div>
             <span class="brand-name sidebar-label text-white font-bold text-base tracking-tight">Labventory</span>
         </div>

@@ -1,51 +1,51 @@
 const db = require("../config/database");
+const RoomModel = require("../models/RoomModel");
+
+const toPositiveInt = (value, fieldName, required = true) => {
+  if ((value === undefined || value === null || value === "") && !required) return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    const error = new Error(`${fieldName} harus berupa angka lebih dari 0`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return parsed;
+};
+
+const normalizeRoomPayload = (body) => ({
+  floor_id: toPositiveInt(body.floor_id, "Lantai"),
+  room_type_id: toPositiveInt(body.room_type_id, "Tipe ruangan"),
+  code: String(body.code || "").trim(),
+  name: String(body.name || "").trim(),
+  capacity: body.capacity === "" || body.capacity === undefined || body.capacity === null ? null : Number(body.capacity),
+  description: body.description ? String(body.description).trim() : null
+});
+
+const validateRoomPayload = (room) => {
+  if (!room.code) {
+    const error = new Error("Kode ruangan wajib diisi");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!room.name) {
+    const error = new Error("Nama ruangan wajib diisi");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (room.capacity !== null && (!Number.isInteger(room.capacity) || room.capacity < 0)) {
+    const error = new Error("Kapasitas harus berupa angka minimal 0");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return room;
+};
 
 const getRooms = async (req, res) => {
   try {
-    const { search, room_type_id, floor_id } = req.query;
-    const conditions = [];
-    const params = [];
-
-    if (search) {
-      conditions.push("(rooms.code LIKE ? OR rooms.name LIKE ? OR buildings.name LIKE ?)");
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
-    }
-
-    if (room_type_id) {
-      conditions.push("rooms.room_type_id = ?");
-      params.push(Number(room_type_id));
-    }
-
-    if (floor_id) {
-      conditions.push("rooms.floor_id = ?");
-      params.push(Number(floor_id));
-    }
-
-    const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-
-    const [rooms] = await db.query(`
-      SELECT
-        rooms.id,
-        rooms.code,
-        rooms.name,
-        rooms.capacity,
-        rooms.description,
-        rooms.floor_id,
-        floors.name AS floor_name,
-        floors.floor_number,
-        buildings.name AS building_name,
-        rooms.room_type_id,
-        room_types.name AS room_type,
-        rooms.created_at,
-        rooms.updated_at
-      FROM rooms
-      JOIN floors ON rooms.floor_id = floors.id
-      JOIN buildings ON floors.building_id = buildings.id
-      JOIN room_types ON rooms.room_type_id = room_types.id
-      ${whereClause}
-      ORDER BY buildings.name ASC, floors.floor_number ASC, rooms.code ASC
-    `, params);
-
+    const rooms = await RoomModel.findAll(req.query);
     res.json({ status: "success", data: rooms });
   } catch (error) {
     console.error("[GET ROOMS ERROR]", error);
@@ -55,31 +55,12 @@ const getRooms = async (req, res) => {
 
 const getRoom = async (req, res) => {
   try {
-    const [rooms] = await db.query(`
-      SELECT
-        rooms.id,
-        rooms.code,
-        rooms.name,
-        rooms.capacity,
-        rooms.description,
-        rooms.floor_id,
-        floors.name AS floor_name,
-        buildings.name AS building_name,
-        rooms.room_type_id,
-        room_types.name AS room_type
-      FROM rooms
-      JOIN floors ON rooms.floor_id = floors.id
-      JOIN buildings ON floors.building_id = buildings.id
-      JOIN room_types ON rooms.room_type_id = room_types.id
-      WHERE rooms.id = ?
-      LIMIT 1
-    `, [req.params.id]);
-
-    if (!rooms.length) {
+    const room = await RoomModel.findById(req.params.id);
+    if (!room) {
       return res.status(404).json({ status: "error", message: "Ruangan tidak ditemukan" });
     }
 
-    res.json({ status: "success", data: rooms[0] });
+    res.json({ status: "success", data: room });
   } catch (error) {
     console.error("[GET ROOM ERROR]", error);
     res.status(500).json({ status: "error", message: "Gagal mengambil detail ruangan" });
@@ -88,99 +69,121 @@ const getRoom = async (req, res) => {
 
 const getRoomOptions = async (req, res) => {
   try {
-    const [floors] = await db.query(`
-      SELECT floors.id, floors.name, floors.floor_number, buildings.name AS building_name
-      FROM floors
-      JOIN buildings ON floors.building_id = buildings.id
-      ORDER BY buildings.name ASC, floors.floor_number ASC
-    `);
-
-    const [roomTypes] = await db.query("SELECT id, name, description FROM room_types ORDER BY name ASC");
+    const [buildings, floors, roomTypes] = await Promise.all([
+      RoomModel.findBuildings(),
+      RoomModel.findFloors(),
+      RoomModel.findRoomTypes()
+    ]);
 
     res.json({
       status: "success",
       data: {
+        buildings,
         floors,
         room_types: roomTypes
       }
     });
   } catch (error) {
     console.error("[GET ROOM OPTIONS ERROR]", error);
-    res.status(500).json({ status: "error", message: "Gagal mengambil opsi ruangan" });
+    res.status(500).json({ status: "error", message: "Gagal mengambil pilihan ruangan" });
   }
 };
 
 const createRoom = async (req, res) => {
   try {
-    const { floor_id, room_type_id, code, name, capacity, description } = req.body;
-
-    if (!floor_id || !room_type_id || !code || !name) {
-      return res.status(400).json({ status: "error", message: "Lantai, tipe ruangan, kode, dan nama ruangan wajib diisi" });
-    }
-
-    const [existing] = await db.query("SELECT id FROM rooms WHERE code = ? LIMIT 1", [code]);
-    if (existing.length) {
+    const payload = validateRoomPayload(normalizeRoomPayload(req.body));
+    const existing = await RoomModel.findByCode(payload.code);
+    if (existing) {
       return res.status(409).json({ status: "error", message: "Kode ruangan sudah digunakan" });
     }
 
-    const [result] = await db.query(`
-      INSERT INTO rooms (floor_id, room_type_id, code, name, capacity, description)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `, [Number(floor_id), Number(room_type_id), code, name, capacity || null, description || null]);
-
+    const result = await RoomModel.create(payload);
     res.status(201).json({ status: "success", message: "Ruangan berhasil ditambahkan", data: { id: result.insertId } });
   } catch (error) {
     console.error("[CREATE ROOM ERROR]", error);
-    res.status(500).json({ status: "error", message: "Gagal menambahkan ruangan" });
+    res.status(error.statusCode || 500).json({ status: "error", message: error.message || "Gagal menambahkan ruangan" });
+  }
+};
+
+const createRoomsBulk = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const rawRooms = Array.isArray(req.body.rooms) ? req.body.rooms : [];
+    if (!rawRooms.length) {
+      return res.status(400).json({ status: "error", message: "Data ruangan multiple tidak boleh kosong" });
+    }
+
+    const rooms = rawRooms.map((room) => validateRoomPayload(normalizeRoomPayload(room)));
+    const duplicateInPayload = rooms.find((room, index) => rooms.findIndex((item) => item.code === room.code) !== index);
+    if (duplicateInPayload) {
+      return res.status(400).json({ status: "error", message: `Kode ruangan ${duplicateInPayload.code} duplikat pada input` });
+    }
+
+    await connection.beginTransaction();
+
+    for (const room of rooms) {
+      const existing = await RoomModel.findByCode(room.code, connection);
+      if (existing) {
+        throw Object.assign(new Error(`Kode ruangan ${room.code} sudah digunakan`), { statusCode: 409 });
+      }
+    }
+
+    const result = await RoomModel.createMany(rooms, connection);
+    await connection.commit();
+
+    res.status(201).json({
+      status: "success",
+      message: `${rooms.length} ruangan berhasil ditambahkan`,
+      data: { affected_rows: result.affectedRows }
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error("[CREATE ROOMS BULK ERROR]", error);
+    res.status(error.statusCode || 500).json({ status: "error", message: error.message || "Gagal menambahkan ruangan multiple" });
+  } finally {
+    connection.release();
   }
 };
 
 const updateRoom = async (req, res) => {
   try {
-    const { floor_id, room_type_id, code, name, capacity, description } = req.body;
-    const id = Number(req.params.id);
+    const id = toPositiveInt(req.params.id, "ID ruangan");
+    const payload = validateRoomPayload(normalizeRoomPayload(req.body));
 
-    if (!floor_id || !room_type_id || !code || !name) {
-      return res.status(400).json({ status: "error", message: "Lantai, tipe ruangan, kode, dan nama ruangan wajib diisi" });
-    }
-
-    const [existing] = await db.query("SELECT id FROM rooms WHERE code = ? AND id <> ? LIMIT 1", [code, id]);
-    if (existing.length) {
-      return res.status(409).json({ status: "error", message: "Kode ruangan sudah digunakan" });
-    }
-
-    const [result] = await db.query(`
-      UPDATE rooms
-      SET floor_id = ?, room_type_id = ?, code = ?, name = ?, capacity = ?, description = ?
-      WHERE id = ?
-    `, [Number(floor_id), Number(room_type_id), code, name, capacity || null, description || null, id]);
-
-    if (result.affectedRows === 0) {
+    const room = await RoomModel.findById(id);
+    if (!room) {
       return res.status(404).json({ status: "error", message: "Ruangan tidak ditemukan" });
     }
 
+    const existing = await RoomModel.findByCodeExcludeId(payload.code, id);
+    if (existing) {
+      return res.status(409).json({ status: "error", message: "Kode ruangan sudah digunakan" });
+    }
+
+    await RoomModel.update(id, payload);
     res.json({ status: "success", message: "Ruangan berhasil diperbarui" });
   } catch (error) {
     console.error("[UPDATE ROOM ERROR]", error);
-    res.status(500).json({ status: "error", message: "Gagal memperbarui ruangan" });
+    res.status(error.statusCode || 500).json({ status: "error", message: error.message || "Gagal memperbarui ruangan" });
   }
 };
 
 const deleteRoom = async (req, res) => {
   try {
-    const [result] = await db.query("DELETE FROM rooms WHERE id = ?", [req.params.id]);
-
-    if (result.affectedRows === 0) {
+    const id = toPositiveInt(req.params.id, "ID ruangan");
+    const room = await RoomModel.findById(id);
+    if (!room) {
       return res.status(404).json({ status: "error", message: "Ruangan tidak ditemukan" });
     }
 
+    await RoomModel.delete(id);
     res.json({ status: "success", message: "Ruangan berhasil dihapus" });
   } catch (error) {
     console.error("[DELETE ROOM ERROR]", error);
     if (error.code === "ER_ROW_IS_REFERENCED_2") {
-      return res.status(409).json({ status: "error", message: "Ruangan tidak bisa dihapus karena masih dipakai oleh lab/inventaris" });
+      return res.status(409).json({ status: "error", message: "Ruangan tidak dapat dihapus karena masih dipakai oleh data lain" });
     }
-    res.status(500).json({ status: "error", message: "Gagal menghapus ruangan" });
+    res.status(error.statusCode || 500).json({ status: "error", message: "Gagal menghapus ruangan" });
   }
 };
 
@@ -189,6 +192,7 @@ module.exports = {
   getRoom,
   getRoomOptions,
   createRoom,
+  createRoomsBulk,
   updateRoom,
   deleteRoom
 };

@@ -43,16 +43,34 @@ class RoomManagementController extends Controller
 
     public function index(Request $request)
     {
-        $rooms = $this->getApiData('/rooms', $request->only(['search', 'room_type_id', 'floor_id']));
+        $rooms = $this->getApiData('/rooms', $request->only(['search', 'room_type_id', 'floor_id', 'building_id']));
         $options = $this->getApiData('/rooms/options');
+        $buildings = $options['buildings'] ?? [];
         $floors = $options['floors'] ?? [];
         $roomTypes = $options['room_types'] ?? [];
 
-        return view('pages.rooms', compact('rooms', 'floors', 'roomTypes'));
+        return view('pages.rooms', compact('rooms', 'buildings', 'floors', 'roomTypes'));
     }
 
     public function store(Request $request)
     {
+        if ($request->input('mode') === 'bulk') {
+            $validated = $request->validate([
+                'rooms' => 'required|array|min:1',
+                'rooms.*.floor_id' => 'required|integer',
+                'rooms.*.room_type_id' => 'required|integer',
+                'rooms.*.code' => 'required|string|max:50',
+                'rooms.*.name' => 'required|string|max:150',
+                'rooms.*.capacity' => 'nullable|integer|min:0',
+                'rooms.*.description' => 'nullable|string',
+            ]);
+
+            $result = $this->sendApiData('/rooms/bulk', ['rooms' => $validated['rooms']]);
+            return $result['ok']
+                ? back()->with('success', $result['message'])
+                : back()->withInput()->with('error', $result['message']);
+        }
+
         $validated = $request->validate([
             'floor_id' => 'required|integer',
             'room_type_id' => 'required|integer',
