@@ -167,9 +167,10 @@
                         <th>Kondisi</th>
                         <th>Status</th>
                         <th>Tgl Terima</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody x-data="{ editId: null }">
                     @foreach($assets as $i => $asset)
                         @php
                             $condition = $conditionMeta[$asset['asset_condition'] ?? ''] ?? ['label' => ucfirst($asset['asset_condition'] ?? '-'), 'class' => 'badge-draft'];
@@ -214,6 +215,43 @@
                             </td>
                             <td class="text-slate-500 text-xs">
                                 {{ !empty($asset['received_date']) ? \Carbon\Carbon::parse($asset['received_date'])->format('d M Y') : '-' }}
+                            </td>
+                            <td class="whitespace-nowrap">
+                                <button
+                                    type="button"
+                                    @click="editId = editId === {{ $asset['id'] }} ? null : {{ $asset['id'] }}"
+                                    class="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                                >
+                                    Edit Kondisi
+                                </button>
+                            </td>
+                        </tr>
+
+                        <tr x-show="editId === {{ $asset['id'] }}" x-cloak class="bg-slate-50">
+                            <td colspan="11">
+                                <form action="{{ route('inventory.condition.update', $asset['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-3 p-3">
+                                    @csrf
+                                    @method('PATCH')
+
+                                    <select name="asset_condition" class="rounded-xl border-slate-200 text-sm" required>
+                                        <option value="baik" {{ ($asset['asset_condition'] ?? '') === 'baik' ? 'selected' : '' }}>Baik</option>
+                                        <option value="rusak_ringan" {{ ($asset['asset_condition'] ?? '') === 'rusak_ringan' ? 'selected' : '' }}>Rusak Ringan</option>
+                                        <option value="rusak_berat" {{ ($asset['asset_condition'] ?? '') === 'rusak_berat' ? 'selected' : '' }}>Rusak Berat</option>
+                                        <option value="maintenance" {{ ($asset['asset_condition'] ?? '') === 'maintenance' ? 'selected' : '' }}>Maintenance</option>
+                                        <option value="dihapus" {{ ($asset['asset_condition'] ?? '') === 'dihapus' ? 'selected' : '' }}>Dihapus</option>
+                                        <option value="diganti" {{ ($asset['asset_condition'] ?? '') === 'diganti' ? 'selected' : '' }}>Diganti</option>
+                                    </select>
+
+                                    <input
+                                        name="note"
+                                        class="rounded-xl border-slate-200 text-sm"
+                                        placeholder="Catatan perubahan kondisi"
+                                    >
+
+                                    <button class="rounded-xl bg-indigo-600 text-white text-sm font-semibold px-4 py-2">
+                                        Simpan Kondisi
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     @endforeach

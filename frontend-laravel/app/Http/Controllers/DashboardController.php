@@ -16,7 +16,11 @@ class DashboardController extends Controller
     {
         try {
             $token = session('auth_token');
-            $response = Http::withToken($token)->get($this->apiUrl() . $endpoint, $queryParams);
+
+            $response = Http::withToken($token)->get(
+                $this->apiUrl() . $endpoint,
+                $queryParams
+            );
 
             if ($response->successful()) {
                 return $response->json('data') ?? $response->json();
@@ -28,6 +32,30 @@ class DashboardController extends Controller
         }
     }
 
+    private function sendApiData($endpoint, $data = [], $method = 'POST')
+    {
+        try {
+            $request = Http::withToken(session('auth_token'));
+
+            $response = match ($method) {
+                'PUT' => $request->put($this->apiUrl() . $endpoint, $data),
+                'PATCH' => $request->patch($this->apiUrl() . $endpoint, $data),
+                'DELETE' => $request->delete($this->apiUrl() . $endpoint),
+                default => $request->post($this->apiUrl() . $endpoint, $data),
+            };
+
+            return [
+                'ok' => $response->successful(),
+                'message' => $response->json('message') ?? ($response->successful() ? 'Berhasil' : 'Request gagal'),
+            ];
+        } catch (\Exception $e) {
+            return [
+                'ok' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
+    }
+
     public function index()
     {
         try {
@@ -36,7 +64,7 @@ class DashboardController extends Controller
             $health = [
                 'status' => 'error',
                 'message' => 'Tidak dapat terhubung ke backend',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
 
@@ -130,6 +158,33 @@ class DashboardController extends Controller
             'unlabeledCount' => $unlabeledCount,
             'availableCount' => $availableCount,
             'maintenanceCount' => $maintenanceCount,
+        ]);
+    }
+
+    public function updateInventoryCondition(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'asset_condition' => 'required|in:baik,rusak_ringan,rusak_berat,maintenance,dihapus,diganti',
+            'note' => 'nullable|string|max:1000',
+        ]);
+
+        $result = $this->sendApiData("/inventory/assets/{$id}/condition", $validated, 'PATCH');
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function inventoryHistory(Request $request)
+    {
+        $history = $this->getApiData(
+            '/inventory/condition-history',
+            $request->only(['search', 'condition'])
+        ) ?: [];
+
+        return view('pages.inventory-history', [
+            'history' => $history,
+            'filters' => $request->only(['search', 'condition']),
         ]);
     }
 

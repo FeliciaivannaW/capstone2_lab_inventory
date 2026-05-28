@@ -1,29 +1,80 @@
+const LabAccessModel = require("../models/LabAccessModel");
 const InventoryModel = require("../models/InventoryModel");
-const db = require("../config/database"); // needed for transactions connection retrieval
+const db = require("../config/database");
 const path = require("path");
 const fs = require("fs");
 
-const getInventoryAssets = async (req, res, next) => {
+const getAccessibleRoomIdsForUser = async (user) => {
+  if (user?.role !== "staf_laboratorium") {
+    return null;
+  }
+
+  const roomIds = await LabAccessModel.findAccessibleRoomIds(user.id);
+  return roomIds.map((id) => Number(id));
+};
+
+const checkAssetRoomAccess = async (user, asset, assetId) => {
+  if (user?.role !== "staf_laboratorium") {
+    return true;
+  }
+
+  const accessibleRoomIds = await getAccessibleRoomIdsForUser(user);
+
+  let roomId = asset?.room_id ? Number(asset.room_id) : null;
+
+  if (!roomId) {
+    const assetDetail = await InventoryModel.findById(assetId);
+    roomId = assetDetail?.room_id ? Number(assetDetail.room_id) : null;
+  }
+
+  if (!roomId) {
+    return false;
+  }
+
+  return accessibleRoomIds.includes(roomId);
+};
+
+const getInventoryAssets = async (req, res) => {
   try {
     const { search, status, condition, label_status, lab_id } = req.query;
-    const assets = await InventoryModel.findAll({ search, status, condition, label_status, lab_id });
+    const roomIds = await getAccessibleRoomIdsForUser(req.user);
+
+    if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0)) {
+      return res.json({
+        success: true,
+        data: [],
+        message: "Data inventaris berhasil diambil"
+      });
+    }
+
+    const assets = await InventoryModel.findAll({
+      search,
+      status,
+      condition,
+      label_status,
+      lab_id,
+      roomIds
+    });
 
     res.json({
       success: true,
-      data:    assets,
+      data: assets,
       message: "Data inventaris berhasil diambil"
     });
   } catch (error) {
     console.error("[INVENTORY ASSETS ERROR]", error);
+
     res.status(500).json({
       success: false,
       message: "Gagal mengambil data inventaris",
-      errors:  { detail: error.message }
+      errors: {
+        detail: error.message
+      }
     });
   }
 };
 
-const getInventoryAsset = async (req, res, next) => {
+const getInventoryAsset = async (req, res) => {
   try {
     const { id } = req.params;
     const asset = await InventoryModel.findById(id);
@@ -35,7 +86,17 @@ const getInventoryAsset = async (req, res, next) => {
       });
     }
 
+    const canAccess = await checkAssetRoomAccess(req.user, asset, id);
+
+    if (!canAccess) {
+      return res.status(403).json({
+        success: false,
+        message: "Tidak boleh melihat aset dari ruangan/lab lain"
+      });
+    }
+
     let receiptHistory = [];
+
     if (asset.procurement_item_id) {
       receiptHistory = await InventoryModel.findTimelineReceipts(asset.procurement_item_id);
     }
@@ -44,21 +105,25 @@ const getInventoryAsset = async (req, res, next) => {
 
     res.json({
       success: true,
-      data:    asset,
+      data: asset,
       message: "Detail aset berhasil diambil"
     });
   } catch (error) {
     console.error("[INVENTORY ASSET DETAIL ERROR]", error);
+
     res.status(500).json({
       success: false,
       message: "Gagal mengambil detail inventaris",
-      errors:  { detail: error.message }
+      errors: {
+        detail: error.message
+      }
     });
   }
 };
 
-const updateAssetLabel = async (req, res, next) => {
+const updateAssetLabel = async (req, res) => {
   const connection = await db.getConnection();
+
   try {
     await connection.beginTransaction();
 
@@ -66,17 +131,19 @@ const updateAssetLabel = async (req, res, next) => {
     const userId = req.user?.id;
 
     const label_number = req.body.label_number;
-    const asset_code   = req.body.asset_code   || null;
-    const barcode      = req.body.barcode       || null;
-    let   photo_url    = req.body.photo_url     || null;
+    const asset_code = req.body.asset_code || null;
+    const barcode = req.body.barcode || null;
+    let photo_url = req.body.photo_url || null;
 
     if (!label_number) {
       await connection.rollback();
-      connection.release();
+
       return res.status(400).json({
         success: false,
         message: "Nomor label harus diisi",
-        errors:  { label_number: "Wajib diisi" }
+        errors: {
+          label_number: "Wajib diisi"
+        }
       });
     }
 
@@ -84,7 +151,7 @@ const updateAssetLabel = async (req, res, next) => {
 
     if (!asset) {
       await connection.rollback();
-      connection.release();
+
       return res.status(404).json({
         success: false,
         message: "Aset inventaris tidak ditemukan"
@@ -92,21 +159,28 @@ const updateAssetLabel = async (req, res, next) => {
     }
 
     const dupLabel = await InventoryModel.findByLabelNumberExcludeId(label_number, id, connection);
+
     if (dupLabel) {
       await connection.rollback();
-      connection.release();
+
       return res.status(400).json({
         success: false,
         message: `Nomor label '${label_number}' sudah digunakan oleh aset lain`,
-        errors:  { label_number: "Sudah digunakan" }
+        errors: {
+          label_number: "Sudah digunakan"
+        }
       });
     }
 
     if (req.file) {
-      const uploadsDir = path.join(__dirname, '../../uploads/assets');
+      const uploadsDir = path.join(__dirname, "../../uploads/assets");
+
       if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
+        fs.mkdirSync(uploadsDir, {
+          recursive: true
+        });
       }
+
       photo_url = `/uploads/assets/${req.file.filename}`;
     }
 
@@ -122,11 +196,10 @@ const updateAssetLabel = async (req, res, next) => {
       updated_by: userId,
       old_condition: asset.asset_condition,
       new_condition: asset.asset_condition,
-      note: 'Label assigned'
+      note: "Label assigned"
     }, connection);
 
     await connection.commit();
-    connection.release();
 
     res.json({
       success: true,
@@ -134,25 +207,32 @@ const updateAssetLabel = async (req, res, next) => {
       data: {
         id,
         label_number,
-        asset_code:  asset_code  || asset.asset_code,
-        barcode:     barcode     || null,
-        photo_url:   photo_url   || null,
-        status:      'labeled'
+        asset_code: asset_code || asset.asset_code,
+        barcode: barcode || null,
+        photo_url: photo_url || null,
+        status: "labeled"
       }
     });
   } catch (error) {
-    try { await connection.rollback(); } catch (_) {}
-    connection.release();
+    try {
+      await connection.rollback();
+    } catch (_) {}
+
     console.error("[INVENTORY LABEL UPDATE ERROR]", error);
+
     res.status(500).json({
       success: false,
       message: "Gagal memperbarui label inventaris",
-      errors:  { detail: error.message }
+      errors: {
+        detail: error.message
+      }
     });
+  } finally {
+    connection.release();
   }
 };
 
-const getAssetTimeline = async (req, res, next) => {
+const getAssetTimeline = async (req, res) => {
   try {
     const { id } = req.params;
     const asset = await InventoryModel.findById(id);
@@ -164,102 +244,246 @@ const getAssetTimeline = async (req, res, next) => {
       });
     }
 
+    const canAccess = await checkAssetRoomAccess(req.user, asset, id);
+
+    if (!canAccess) {
+      return res.status(403).json({
+        success: false,
+        message: "Tidak boleh melihat timeline aset dari ruangan/lab lain"
+      });
+    }
+
     let timeline = [];
 
-    // 1. Procurement origin
     if (asset.procurement_item_id) {
-      const p = await InventoryModel.findTimelineProcurement(asset.procurement_item_id);
-      if (p) {
+      const procurement = await InventoryModel.findTimelineProcurement(asset.procurement_item_id);
+
+      if (procurement) {
         timeline.push({
-          type:        'procurement',
-          title:       'Pengadaan',
-          description: `Diajukan dalam draf "${p.draft_title}" (${p.budget_year})`,
-          detail:      `${p.item_name} — estimasi Rp ${Number(p.estimated_price).toLocaleString('id')} × ${p.quantity}`,
-          date:        p.finalized_at,
-          user:        p.created_by_name,
-          status:      p.review_status
+          type: "procurement",
+          title: "Pengadaan",
+          description: `Diajukan dalam draf "${procurement.draft_title}" (${procurement.budget_year})`,
+          detail: `${procurement.item_name} — estimasi Rp ${Number(procurement.estimated_price).toLocaleString("id")} × ${procurement.quantity}`,
+          date: procurement.finalized_at,
+          user: procurement.created_by_name,
+          status: procurement.review_status
         });
       }
     }
 
-    // 2. All goods_receipt records for this procurement_item
     if (asset.procurement_item_id) {
       const receipts = await InventoryModel.findTimelineReceipts(asset.procurement_item_id);
-      receipts.forEach(r => {
+
+      receipts.forEach((receipt) => {
         timeline.push({
-          type:        'receipt',
-          title:       'Penerimaan Barang',
-          description: `Diterima ${r.quantity_received} unit`,
-          detail:      r.note || null,
-          date:        r.received_date,
-          user:        r.received_by_name,
-          status:      'received'
+          type: "receipt",
+          title: "Penerimaan Barang",
+          description: `Diterima ${receipt.quantity_received} unit`,
+          detail: receipt.note || null,
+          date: receipt.received_date,
+          user: receipt.received_by_name,
+          status: "received"
         });
       });
     }
 
-    // 3. Condition logs
-    const condLogs = await InventoryModel.findTimelineConditionLogs(id);
-    condLogs.forEach(log => {
+    const conditionLogs = await InventoryModel.findTimelineConditionLogs(id);
+
+    conditionLogs.forEach((log) => {
       timeline.push({
-        type:        'condition_change',
-        title:       'Perubahan Kondisi / Label',
-        description: `${log.old_condition || '—'} → ${log.new_condition}`,
-        detail:      log.note,
-        date:        log.updated_at,
-        user:        log.updated_by_name,
-        status:      log.new_condition
+        type: "condition_change",
+        title: "Perubahan Kondisi / Label",
+        description: `${log.old_condition || "—"} → ${log.new_condition}`,
+        detail: log.note,
+        date: log.updated_at,
+        user: log.updated_by_name,
+        status: log.new_condition
       });
     });
 
-    // 4. Maintenance logs
-    const maintLogs = await InventoryModel.findTimelineMaintenance(id);
-    maintLogs.forEach(log => {
+    const maintenanceLogs = await InventoryModel.findTimelineMaintenance(id);
+
+    maintenanceLogs.forEach((log) => {
       timeline.push({
-        type:        'maintenance',
-        title:       'Maintenance',
-        description: log.issue_description || 'Pemeliharaan rutin',
-        detail:      log.action_taken,
-        date:        log.maintenance_date,
-        user:        log.performed_by_name,
-        status:      log.status,
-        cost:        log.cost
+        type: "maintenance",
+        title: "Maintenance",
+        description: log.issue_description || "Pemeliharaan rutin",
+        detail: log.action_taken,
+        date: log.maintenance_date,
+        user: log.performed_by_name,
+        status: log.status,
+        cost: log.cost
       });
     });
 
-    // 5. Disposal
     const disposalRows = await InventoryModel.findTimelineDisposal(id);
-    disposalRows.forEach(row => {
+
+    disposalRows.forEach((row) => {
       timeline.push({
-        type:        'disposal',
-        title:       'Penghapusan Aset',
+        type: "disposal",
+        title: "Penghapusan Aset",
         description: row.reason,
-        detail:      row.disposal_note,
-        date:        row.disposal_date,
-        user:        row.disposed_by_name,
-        status:      'disposed'
+        detail: row.disposal_note,
+        date: row.disposal_date,
+        user: row.disposed_by_name,
+        status: "disposed"
       });
     });
 
-    // Sort chronologically
     timeline.sort((a, b) => {
-      const da = a.date ? new Date(a.date) : new Date(0);
-      const db_ = b.date ? new Date(b.date) : new Date(0);
-      return da - db_;
+      const dateA = a.date ? new Date(a.date) : new Date(0);
+      const dateB = b.date ? new Date(b.date) : new Date(0);
+      return dateA - dateB;
     });
 
     res.json({
       success: true,
-      data:    timeline,
+      data: timeline,
       message: "Timeline aset berhasil diambil"
     });
   } catch (error) {
     console.error("[ASSET TIMELINE ERROR]", error);
+
     res.status(500).json({
       success: false,
       message: "Gagal mengambil timeline aset",
-      errors:  { detail: error.message }
+      errors: {
+        detail: error.message
+      }
     });
+  }
+};
+
+const getConditionHistory = async (req, res) => {
+  try {
+    const roomIds = await getAccessibleRoomIdsForUser(req.user);
+
+    if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0)) {
+      return res.json({
+        success: true,
+        data: [],
+        message: "History kondisi aset berhasil diambil"
+      });
+    }
+
+    const history = await InventoryModel.findConditionHistory({
+      search: req.query.search,
+      condition: req.query.condition,
+      roomIds
+    });
+
+    res.json({
+      success: true,
+      data: history,
+      message: "History kondisi aset berhasil diambil"
+    });
+  } catch (error) {
+    console.error("[CONDITION HISTORY ERROR]", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil history kondisi aset",
+      errors: {
+        detail: error.message
+      }
+    });
+  }
+};
+
+const updateAssetCondition = async (req, res) => {
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const { id } = req.params;
+    const { asset_condition, note } = req.body;
+
+    const validConditions = [
+      "baik",
+      "rusak_ringan",
+      "rusak_berat",
+      "maintenance",
+      "dihapus",
+      "diganti"
+    ];
+
+    if (!validConditions.includes(asset_condition)) {
+      await connection.rollback();
+
+      return res.status(400).json({
+        success: false,
+        message: "Kondisi aset tidak valid"
+      });
+    }
+
+    const asset = await InventoryModel.findByIdForUpdate(id, connection);
+
+    if (!asset) {
+      await connection.rollback();
+
+      return res.status(404).json({
+        success: false,
+        message: "Aset inventaris tidak ditemukan"
+      });
+    }
+
+    const canAccess = await checkAssetRoomAccess(req.user, asset, id);
+
+    if (!canAccess) {
+      await connection.rollback();
+
+      return res.status(403).json({
+        success: false,
+        message: "Tidak boleh update aset dari ruangan/lab lain"
+      });
+    }
+
+    const nextStatus =
+      asset_condition === "maintenance"
+        ? "maintenance"
+        : asset_condition === "dihapus"
+          ? "disposed"
+          : asset_condition === "diganti"
+            ? "replaced"
+            : "available";
+
+    await InventoryModel.updateCondition(id, {
+      condition: asset_condition,
+      status: nextStatus,
+      note
+    }, connection);
+
+    await InventoryModel.createConditionLog({
+      inventory_asset_id: id,
+      updated_by: req.user?.id,
+      old_condition: asset.asset_condition,
+      new_condition: asset_condition,
+      note: note || "Update kondisi aset"
+    }, connection);
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: "Kondisi aset berhasil diperbarui"
+    });
+  } catch (error) {
+    try {
+      await connection.rollback();
+    } catch (_) {}
+
+    console.error("[UPDATE CONDITION ERROR]", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Gagal memperbarui kondisi aset",
+      errors: {
+        detail: error.message
+      }
+    });
+  } finally {
+    connection.release();
   }
 };
 
@@ -267,5 +491,7 @@ module.exports = {
   getInventoryAssets,
   getInventoryAsset,
   updateAssetLabel,
-  getAssetTimeline
+  getAssetTimeline,
+  getConditionHistory,
+  updateAssetCondition
 };

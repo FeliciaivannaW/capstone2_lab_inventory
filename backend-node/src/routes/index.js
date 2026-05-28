@@ -230,6 +230,9 @@ router.post("/goods-receipts", authMiddleware, roleMiddleware(["staf_administras
 // INVENTORY ASSET ROUTES
 // ============================================================
 router.get("/inventory/assets", authMiddleware, roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium"]), inventoryController.getInventoryAssets);
+router.get("/inventory/condition-history", authMiddleware, roleMiddleware(["staf_laboratorium"]), inventoryController.getConditionHistory);
+router.patch("/inventory/assets/:id/condition", authMiddleware, roleMiddleware(["staf_laboratorium"]), inventoryController.updateAssetCondition);
+router.put("/inventory/assets/:id/condition", authMiddleware, roleMiddleware(["staf_laboratorium"]), inventoryController.updateAssetCondition);
 router.get("/inventory/assets/:id", authMiddleware, roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium"]), inventoryController.getInventoryAsset);
 router.patch("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.updateAssetLabel);
 router.put("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.updateAssetLabel);
