@@ -185,12 +185,20 @@
 </div>
 
 {{-- ───── INVENTORY HEALTH (informasi tambahan) ───── --}}
-<div class="glass-card rounded-2xl p-6">
-    <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
-        Status Inventaris
-        <span class="text-[0.65rem] font-normal text-slate-400 ml-1">(informasi pelengkap)</span>
-    </h3>
+<div class="glass-card rounded-2xl p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+            Status Inventaris
+            <span class="text-[0.65rem] font-normal text-slate-400 ml-1">(informasi pelengkap)</span>
+        </h3>
+        @php $totalInv = ($inv['total'] ?? 0); @endphp
+        @if($totalInv > 0)
+            <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                {{ $totalInv }} aset total
+            </span>
+        @endif
+    </div>
     @php
         $invBars = [
             ['label' => 'Kondisi Baik',  'value' => $inv['condition_good'] ?? 0,         'color' => 'bg-emerald-500'],
@@ -215,5 +223,53 @@
             </div>
         @endforeach
     </div>
+</div>
+
+{{-- ───── QUICK ACTIONS ───── --}}
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <a href="{{ route('staf-admin.goods-receipt-index', ['receipt_status' => 'belum']) }}"
+       class="glass-card rounded-xl p-4 flex items-center gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all group">
+        <div class="w-9 h-9 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-4.5 h-4.5 text-rose-600" style="width:18px;height:18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+        </div>
+        <div class="min-w-0">
+            <p class="text-xs font-bold text-slate-800">Belum Diterima</p>
+            <p class="text-[0.65rem] text-slate-400 mt-0.5">Filter item pending</p>
+        </div>
+    </a>
+
+    <a href="{{ route('staf-admin.inventory-label', ['label_status' => 'unlabeled']) }}"
+       class="glass-card rounded-xl p-4 flex items-center gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all group">
+        <div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-4.5 h-4.5 text-amber-600" style="width:18px;height:18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+            </svg>
+        </div>
+        <div class="min-w-0">
+            <p class="text-xs font-bold text-slate-800">Belum Berlabel</p>
+            <p class="text-[0.65rem] text-slate-400 mt-0.5">
+                @if($assetsUnlabeled > 0)
+                    {{ $assetsUnlabeled }} aset menunggu
+                @else
+                    Semua sudah berlabel ✓
+                @endif
+            </p>
+        </div>
+    </a>
+
+    <a href="{{ route('staf-admin.asset-list') }}"
+       class="glass-card rounded-xl p-4 flex items-center gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all group">
+        <div class="w-9 h-9 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-4.5 h-4.5 text-violet-600" style="width:18px;height:18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+        </div>
+        <div class="min-w-0">
+            <p class="text-xs font-bold text-slate-800">Lihat Siklus Barang</p>
+            <p class="text-[0.65rem] text-slate-400 mt-0.5">Timeline per aset</p>
+        </div>
+    </a>
 </div>
 @endsection
