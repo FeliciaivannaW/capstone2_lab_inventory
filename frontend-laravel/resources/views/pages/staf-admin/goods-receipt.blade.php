@@ -227,7 +227,10 @@ function receiptApp() {
         },
 
         async submitReceipt() {
-            if (!this.receivedDate || !this.qtyReceived) { alert('Lengkapi tanggal dan jumlah'); return; }
+            if (!this.receivedDate || !this.qtyReceived) {
+                alert('Lengkapi tanggal dan jumlah terlebih dahulu');
+                return;
+            }
             const data = {
                 procurement_item_id: this.modalItemId,
                 received_date: this.receivedDate,
@@ -241,9 +244,15 @@ function receiptApp() {
                     body: JSON.stringify(data)
                 });
                 const d = await res.json();
-                if (d.status === 'success') { alert('Penerimaan berhasil dicatat!'); location.reload(); }
-                else alert('Error: ' + (d.message || 'Gagal'));
-            } catch(e) { alert('Terjadi kesalahan'); }
+                if (d.status === 'success') {
+                    this.modalOpen = false;
+                    location.reload();
+                } else {
+                    alert('Gagal: ' + (d.message || 'Terjadi kesalahan'));
+                }
+            } catch(e) {
+                alert('Terjadi kesalahan jaringan, coba lagi');
+            }
             this.modalOpen = false;
         }
     }
