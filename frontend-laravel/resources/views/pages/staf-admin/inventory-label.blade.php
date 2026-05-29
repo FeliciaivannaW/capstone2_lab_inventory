@@ -557,8 +557,14 @@ function labelDrawerApp() {
                     const d = await r.json();
                     // getApiData wraps the Node.js response inside d.data
                     const payload = d.data ?? d;
-                    this.labelStatus    = payload.available ? 'available' : 'taken';
-                    this.labelStatusMsg = payload.message || '';
+                    if (payload.available === null || payload.available === undefined) {
+                        // API unreachable — neutral, backend will still validate on submit
+                        this.labelStatus    = null;
+                        this.labelStatusMsg = '';
+                    } else {
+                        this.labelStatus    = payload.available ? 'available' : 'taken';
+                        this.labelStatusMsg = payload.message || '';
+                    }
                 } catch {
                     this.labelStatus = null;
                 }

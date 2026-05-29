@@ -686,7 +686,13 @@ class StafAdminController extends Controller
             'exclude_id' => $request->query('exclude_id', ''),
         ]);
 
-        return response()->json($result ?: ['available' => false, 'message' => 'Gagal mengecek label']);
+        // Empty result means API call failed — return neutral (not "taken")
+        // so the user can still submit; the backend will do the final duplicate check.
+        if (empty($result)) {
+            return response()->json(['available' => null, 'message' => 'Tidak dapat memeriksa (akan dicek saat simpan)']);
+        }
+
+        return response()->json($result);
     }
 
     /**
