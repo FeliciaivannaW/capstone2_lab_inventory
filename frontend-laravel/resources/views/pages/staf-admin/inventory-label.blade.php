@@ -289,7 +289,7 @@
         </div>
 
         {{-- Form --}}
-        <form :action="formAction" method="POST" enctype="multipart/form-data"
+        <form x-ref="labelForm" :action="formAction" method="POST" enctype="multipart/form-data"
               class="flex-1 overflow-y-auto px-6 py-5 space-y-5"
               @submit="loading = true">
             @csrf
@@ -611,8 +611,7 @@ function labelDrawerApp() {
                 return;
             }
             this.loading = true;
-            const form = this.$el.querySelector('form');
-            form.submit();
+            this.$refs.labelForm.submit();
         }
     }
 }
