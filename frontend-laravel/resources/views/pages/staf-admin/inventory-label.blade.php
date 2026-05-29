@@ -311,19 +311,74 @@
                 </div>
             </div>
 
-            {{-- Label input --}}
+            {{-- Label input (smart: auto-suggest + real-time availability check) --}}
             <div>
                 <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
                     Nomor Label <span class="text-red-500">*</span>
                 </label>
+
+                {{-- Auto-suggest chip --}}
+                <template x-if="suggestedLabel">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-[0.65rem] text-slate-400">Saran:</span>
+                        <code class="font-mono text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200"
+                              x-text="suggestedLabel"></code>
+                        <button type="button" @click="useSuggestion()"
+                                class="text-[0.65rem] font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-0.5 rounded-full border border-indigo-200 transition-colors">
+                            Gunakan →
+                        </button>
+                    </div>
+                </template>
+
+                {{-- Input dengan badge availability --}}
                 <div class="relative">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-mono text-sm">#</span>
-                    <input type="text" name="label_number" x-model="form.label_number" required
-                           placeholder="contoh: LAB-COMNET-001"
-                           class="w-full pl-8 pr-3 py-2.5 text-sm font-mono border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                    <input type="text" name="label_number" x-model="form.label_number"
+                           @input="checkLabel($event.target.value)"
+                           required placeholder="contoh: LAB-COMNET-001"
+                           :class="labelStatus === 'taken'
+                               ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                               : labelStatus === 'available'
+                                   ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-500/20'
+                                   : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20'"
+                           class="w-full px-3 py-2.5 pr-28 text-sm font-mono border rounded-xl focus:outline-none focus:ring-2 transition-all">
+
+                    {{-- Status badge di kanan input --}}
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs font-semibold pointer-events-none">
+                        <template x-if="labelStatus === 'checking'">
+                            <span class="text-slate-400 flex items-center gap-1">
+                                <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                </svg>
+                                Cek...
+                            </span>
+                        </template>
+                        <template x-if="labelStatus === 'available'">
+                            <span class="text-emerald-600 flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Tersedia
+                            </span>
+                        </template>
+                        <template x-if="labelStatus === 'taken'">
+                            <span class="text-red-500 flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                                Dipakai
+                            </span>
+                        </template>
+                    </span>
                 </div>
-                <p class="text-[0.65rem] text-slate-400 mt-1.5">
-                    Format anjuran: <code class="font-mono bg-slate-100 px-1 py-0.5 rounded">LAB-[KODE]-[NO]</code>
+
+                {{-- Error detail jika taken --}}
+                <template x-if="labelStatus === 'taken'">
+                    <p class="text-[0.65rem] text-red-500 mt-1" x-text="labelStatusMsg"></p>
+                </template>
+
+                <p class="text-[0.65rem] text-slate-400 mt-1.5" x-show="!labelStatus">
+                    Format: <code class="font-mono bg-slate-100 px-1 py-0.5 rounded">LAB-[KODE]-[NO]</code>
                 </p>
             </div>
 
@@ -420,6 +475,11 @@ function labelDrawerApp() {
         dragging: false,
         previewUrl: null,
         formAction: '',
+        // Smart label state
+        suggestedLabel: '',
+        labelStatus: null,    // null | 'checking' | 'available' | 'taken'
+        labelStatusMsg: '',
+        checkTimer: null,
         asset: {
             id: null,
             asset_code: '',
@@ -448,6 +508,24 @@ function labelDrawerApp() {
             this.form.label_number = this.asset.label_number;
             this.previewUrl = null;
             this.formAction = `{{ url('staf-admin/inventory-label') }}/${asset.id}`;
+
+            // Auto-suggest: parse INV-COMNET-2025-003 → LAB-COMNET-003
+            const parts = (asset.asset_code || '').split('-');
+            if (parts.length >= 4 && parts[0] === 'INV') {
+                const labCode = parts[1];
+                const seq     = parts[parts.length - 1];
+                this.suggestedLabel = `LAB-${labCode}-${seq}`;
+            } else {
+                this.suggestedLabel = '';
+            }
+
+            // Reset status, then check existing label if any
+            this.labelStatus = null;
+            this.labelStatusMsg = '';
+            if (this.form.label_number) {
+                this.checkLabel(this.form.label_number);
+            }
+
             this.drawerOpen = true;
             document.body.style.overflow = 'hidden';
         },
@@ -456,7 +534,35 @@ function labelDrawerApp() {
             this.drawerOpen = false;
             this.previewUrl = null;
             this.dragging = false;
+            this.labelStatus = null;
+            clearTimeout(this.checkTimer);
             document.body.style.overflow = '';
+        },
+
+        useSuggestion() {
+            this.form.label_number = this.suggestedLabel;
+            this.checkLabel(this.suggestedLabel);
+        },
+
+        checkLabel(val) {
+            clearTimeout(this.checkTimer);
+            if (!val || !val.trim()) { this.labelStatus = null; return; }
+            this.labelStatus = 'checking';
+            this.checkTimer = setTimeout(async () => {
+                try {
+                    const url = `{{ route('staf-admin.label-check') }}?label=${encodeURIComponent(val.trim())}&exclude_id=${this.asset.id}`;
+                    const r = await fetch(url, {
+                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
+                    });
+                    const d = await r.json();
+                    // getApiData wraps the Node.js response inside d.data
+                    const payload = d.data ?? d;
+                    this.labelStatus    = payload.available ? 'available' : 'taken';
+                    this.labelStatusMsg = payload.message || '';
+                } catch {
+                    this.labelStatus = null;
+                }
+            }, 500);
         },
 
         handleDrop(e) {
@@ -486,12 +592,19 @@ function labelDrawerApp() {
         },
 
         submitForm() {
-            if (!this.form.label_number) {
+            if (!this.form.label_number || !this.form.label_number.trim()) {
                 alert('Nomor label wajib diisi');
                 return;
             }
+            if (this.labelStatus === 'taken') {
+                alert('Nomor label sudah dipakai aset lain. Gunakan nomor yang berbeda.');
+                return;
+            }
+            if (this.labelStatus === 'checking') {
+                alert('Sedang memeriksa ketersediaan label, harap tunggu sebentar.');
+                return;
+            }
             this.loading = true;
-            // Trigger native form submission
             const form = this.$el.querySelector('form');
             form.submit();
         }

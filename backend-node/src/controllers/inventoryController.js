@@ -487,10 +487,45 @@ const updateAssetCondition = async (req, res) => {
   }
 };
 
+const checkLabelAvailability = async (req, res) => {
+  try {
+    const { label, exclude_id } = req.query;
+
+    if (!label || !label.trim()) {
+      return res.json({
+        status: "success",
+        data: { available: false, message: "Label kosong" }
+      });
+    }
+
+    const dup = await InventoryModel.findByLabelNumberExcludeId(
+      label.trim(),
+      exclude_id || 0
+    );
+
+    res.json({
+      status: "success",
+      data: {
+        available: !dup,
+        message: dup
+          ? `Label '${label}' sudah dipakai oleh aset lain`
+          : "Label tersedia"
+      }
+    });
+  } catch (error) {
+    console.error("[LABEL CHECK ERROR]", error);
+    res.status(500).json({
+      status: "error",
+      message: "Gagal mengecek ketersediaan label"
+    });
+  }
+};
+
 module.exports = {
   getInventoryAssets,
   getInventoryAsset,
   updateAssetLabel,
+  checkLabelAvailability,
   getAssetTimeline,
   getConditionHistory,
   updateAssetCondition

@@ -676,6 +676,20 @@ class StafAdminController extends Controller
     }
 
     /**
+     * Check if a label number is available (not used by another asset).
+     * Proxies to GET /inventory/label-check on the Node.js API.
+     */
+    public function labelCheck(Request $request)
+    {
+        $result = $this->getApiData('/inventory/label-check', [
+            'label'      => $request->query('label', ''),
+            'exclude_id' => $request->query('exclude_id', ''),
+        ]);
+
+        return response()->json($result ?: ['available' => false, 'message' => 'Gagal mengecek label']);
+    }
+
+    /**
      * AJAX endpoint: update label without page reload.
      * Sends JSON body (asset_code, label_number, barcode, photo_url)
      * to PATCH /inventory/assets/:id/label on Node.js API.

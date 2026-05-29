@@ -127,6 +127,7 @@ Route::middleware('frontend.auth')->group(function () {
         Route::get('/goods-receipt/{draftId}', [StafAdminController::class, 'goodsReceipt'])->name('staf-admin.goods-receipt');
         Route::post('/api/goods-receipt', [StafAdminController::class, 'storeGoodsReceipt'])->name('staf-admin.goods-receipt.store');
 
+        Route::get('/api/label-check', [StafAdminController::class, 'labelCheck'])->name('staf-admin.label-check');
         Route::get('/inventory-label', [StafAdminController::class, 'inventoryLabel'])->name('staf-admin.inventory-label');
         Route::get('/inventory-label/{id}/edit', [StafAdminController::class, 'inventoryLabelEdit'])->name('staf-admin.inventory-label.edit');
         Route::put('/inventory-label/{id}', [StafAdminController::class, 'inventoryLabelUpdate'])->name('staf-admin.inventory-label.update');
