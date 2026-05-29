@@ -1,4 +1,4 @@
-# Labventory
+# Labventory 🖥️🧪
 
 ## Laboratory Asset Management Application
 

@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Labventory') — Labventory</title>
+    <link rel="icon" type="image/svg+xml"
+        href='data:image/svg+xml;utf8,
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+            <text y="50" font-size="48">🧪</text>
+        </svg>'>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -402,15 +407,8 @@
 
         {{-- Brand --}}
         <div class="flex items-center gap-3 px-4 py-5 border-b border-[#1E293B]">
-            <div class="flex-shrink-0">
-                <svg width="30" height="30" viewBox="0 0 40 40" fill="none">
-                    <rect x="8" y="22" width="24" height="10" fill="#4F46E5" rx="2"/>
-                    <ellipse cx="20" cy="22" rx="12" ry="4" fill="#818CF8"/>
-                    <ellipse cx="20" cy="32" rx="12" ry="4" fill="#4338CA"/>
-                    <path d="M15 7 L13 22 L27 22 L25 7" fill="#C7D2FE" stroke="#6366F1" stroke-width="1.5" stroke-linejoin="round"/>
-                    <rect x="14" y="4" width="12" height="4" rx="2" fill="#6366F1"/>
-                    <path d="M14 17 Q20 20 26 17 L27 22 L13 22 Z" fill="#6366F1" opacity="0.55"/>
-                </svg>
+            <div class="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-400/30 flex items-center justify-center text-xl flex-shrink-0">
+                🧪
             </div>
             <span class="brand-name sidebar-label text-white font-bold text-base tracking-tight">Labventory</span>
         </div>
@@ -468,15 +466,17 @@
                 </a>
             @endif
 
-            {{-- Staf Lab + Administrator --}}
-            @if(in_array($role, ['administrator', 'staf_laboratorium']))
+            {{-- Staf Laboratorium --}}
+            @if($role === 'staf_laboratorium')
                 <div class="nav-section sidebar-label">Laboratorium</div>
+
                 <a href="{{ route('bhp') }}" class="nav-link {{ request()->routeIs('bhp') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
                     </svg>
                     <span class="sidebar-label">Kelola Stok BHP</span>
                 </a>
+
                 <a href="{{ route('maintenance') }}" class="nav-link {{ request()->routeIs('maintenance') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
@@ -484,11 +484,19 @@
                     </svg>
                     <span class="sidebar-label">Log Maintenance</span>
                 </a>
-                <a href="{{ route('inventory') }}" class="nav-link">
+
+                <a href="{{ route('inventory') }}" class="nav-link {{ request()->routeIs('inventory') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                     </svg>
                     <span class="sidebar-label">Update Kondisi Aset</span>
+                </a>
+
+                <a href="{{ route('inventory.history') }}" class="nav-link {{ request()->routeIs('inventory.history') ? 'active' : '' }}">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="sidebar-label">History Kondisi</span>
                 </a>
             @endif
 

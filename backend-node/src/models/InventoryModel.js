@@ -4,13 +4,13 @@ const InventoryModel = {
   /**
    * Find inventory assets based on filters
    */
-  async findAll({ search, status, condition, label_status, lab_id }) {
+  async findAll({ search, status, condition, label_status, lab_id, roomIds }) {
     let whereConditions = [];
     let params = [];
 
     if (search) {
-      whereConditions.push("(ia.asset_code LIKE ? OR ia.label_number LIKE ? OR ic.name LIKE ?)");
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      whereConditions.push("(ia.asset_code LIKE ? OR ia.label_number LIKE ? OR ic.name LIKE ? OR r.name LIKE ?)");
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     if (status) {
@@ -30,14 +30,13 @@ const InventoryModel = {
     }
 
     if (lab_id) {
-      whereConditions.push(`(
-        ia.procurement_item_id IS NOT NULL AND EXISTS (
-          SELECT 1 FROM procurement_items pi2
-          JOIN procurement_drafts pd2 ON pi2.draft_id = pd2.id
-          WHERE pi2.id = ia.procurement_item_id AND pd2.lab_id = ?
-        )
-      )`);
+      whereConditions.push("COALESCE(lproc.id, lroom.id) = ?");
       params.push(lab_id);
+    }
+
+    if (Array.isArray(roomIds) && roomIds.length > 0) {
+      whereConditions.push("ia.room_id IN (?)");
+      params.push(roomIds);
     }
 
     const whereClause = whereConditions.length > 0
@@ -63,22 +62,24 @@ const InventoryModel = {
         ia.receipt_id,
         ia.created_at,
         ia.updated_at,
-        ic.name       AS item_name,
-        ic.type       AS item_type,
-        ic.unit       AS item_unit,
-        icat.name     AS category_name,
-        r.name        AS room_name,
-        r.code        AS room_code,
-        pd.lab_id,
-        l.name        AS lab_name,
-        l.code        AS lab_code
+        ic.name AS item_name,
+        ic.type AS item_type,
+        ic.unit AS item_unit,
+        icat.name AS category_name,
+        r.id AS room_id,
+        r.name AS room_name,
+        r.code AS room_code,
+        COALESCE(lproc.id, lroom.id) AS lab_id,
+        COALESCE(lproc.name, lroom.name) AS lab_name,
+        COALESCE(lproc.code, lroom.code) AS lab_code
       FROM inventory_assets AS ia
       JOIN item_catalogs AS ic ON ia.item_catalog_id = ic.id
       LEFT JOIN item_categories AS icat ON ic.category_id = icat.id
       LEFT JOIN rooms AS r ON ia.room_id = r.id
+      LEFT JOIN laboratories AS lroom ON r.id = lroom.room_id
       LEFT JOIN procurement_items AS pi ON ia.procurement_item_id = pi.id
       LEFT JOIN procurement_drafts AS pd ON pi.draft_id = pd.id
-      LEFT JOIN laboratories AS l ON pd.lab_id = l.id
+      LEFT JOIN laboratories AS lproc ON pd.lab_id = lproc.id
       ${whereClause}
       ORDER BY ia.created_at DESC
     `, params);
@@ -136,10 +137,19 @@ const InventoryModel = {
    */
   async findByIdForUpdate(id, tx = null) {
     const conn = tx || db;
-    const [rows] = await conn.query(
-      "SELECT id, label_number, asset_code, status, asset_condition FROM inventory_assets WHERE id = ? FOR UPDATE",
-      [id]
-    );
+    const [rows] = await conn.query(`
+      SELECT
+        id,
+        room_id,
+        label_number,
+        asset_code,
+        status,
+        asset_condition
+      FROM inventory_assets
+      WHERE id = ?
+      LIMIT 1
+      FOR UPDATE
+    `, [id]);
     return rows[0] || null;
   },
 
@@ -302,7 +312,67 @@ const InventoryModel = {
       WHERE ad.inventory_asset_id = ?
     `, [assetId]);
     return rows;
+  },
+
+  async updateCondition(id, { condition, status, note }, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(`
+      UPDATE inventory_assets
+      SET asset_condition = ?, status = ?, notes = COALESCE(?, notes), updated_at = NOW()
+      WHERE id = ?
+    `, [condition, status, note || null, id]);
+
+    return result;
+  },
+
+  async findConditionHistory({ search, condition, roomIds }) {
+    const whereConditions = [];
+    const params = [];
+
+    if (search) {
+      whereConditions.push("(ia.asset_code LIKE ? OR ia.label_number LIKE ? OR ic.name LIKE ? OR acl.note LIKE ?)");
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    if (condition) {
+      whereConditions.push("acl.new_condition = ?");
+      params.push(condition);
+    }
+
+    if (Array.isArray(roomIds) && roomIds.length > 0) {
+      whereConditions.push("ia.room_id IN (?)");
+      params.push(roomIds);
+    }
+
+    const whereClause = whereConditions.length ? `WHERE ${whereConditions.join(" AND ")}` : "";
+
+    const [rows] = await db.query(`
+      SELECT
+        acl.id,
+        acl.inventory_asset_id,
+        acl.old_condition,
+        acl.new_condition,
+        acl.note,
+        acl.updated_at,
+        ia.asset_code,
+        ia.label_number,
+        ia.status,
+        ic.name AS item_name,
+        r.code AS room_code,
+        r.name AS room_name,
+        u.name AS updated_by_name
+      FROM asset_condition_logs acl
+      JOIN inventory_assets ia ON acl.inventory_asset_id = ia.id
+      JOIN item_catalogs ic ON ia.item_catalog_id = ic.id
+      LEFT JOIN rooms r ON ia.room_id = r.id
+      LEFT JOIN users u ON acl.updated_by = u.id
+      ${whereClause}
+      ORDER BY acl.updated_at DESC, acl.id DESC
+    `, params);
+
+    return rows;
   }
+
 };
 
 module.exports = InventoryModel;

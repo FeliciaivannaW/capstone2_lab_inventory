@@ -1,9 +1,6 @@
 const db = require("../config/database");
 
 const UserModel = {
-  /**
-   * Find all users based on filters
-   */
   async findAll({ role, status, search }) {
     const conditions = [];
     const params = [];
@@ -37,7 +34,20 @@ const UserModel = {
         u.lab_id,
         l.name AS laboratory_name,
         u.created_at,
-        u.updated_at
+        u.updated_at,
+        (
+          SELECT GROUP_CONCAT(lg.id ORDER BY lg.name SEPARATOR ',')
+          FROM lab_group_users lgu
+          JOIN lab_groups lg ON lg.id = lgu.group_id
+          WHERE lgu.user_id = u.id
+        ) AS lab_group_ids,
+        (
+          SELECT GROUP_CONCAT(CONCAT(l.name, ' - ', lg.name) ORDER BY l.name, lg.name SEPARATOR ', ')
+          FROM lab_group_users lgu
+          JOIN lab_groups lg ON lg.id = lgu.group_id
+          JOIN laboratories l ON l.id = lg.laboratory_id
+          WHERE lgu.user_id = u.id
+        ) AS lab_group_names
       FROM users u
       JOIN roles r ON u.role_id = r.id
       LEFT JOIN laboratories l ON u.lab_id = l.id
@@ -48,9 +58,6 @@ const UserModel = {
     return users;
   },
 
-  /**
-   * Find user by ID
-   */
   async findById(id) {
     const [users] = await db.query(`
       SELECT
@@ -64,7 +71,20 @@ const UserModel = {
         u.lab_id,
         l.name AS laboratory_name,
         u.created_at,
-        u.updated_at
+        u.updated_at,
+        (
+          SELECT GROUP_CONCAT(lg.id ORDER BY lg.name SEPARATOR ',')
+          FROM lab_group_users lgu
+          JOIN lab_groups lg ON lg.id = lgu.group_id
+          WHERE lgu.user_id = u.id
+        ) AS lab_group_ids,
+        (
+          SELECT GROUP_CONCAT(CONCAT(l.name, ' - ', lg.name) ORDER BY l.name, lg.name SEPARATOR ', ')
+          FROM lab_group_users lgu
+          JOIN lab_groups lg ON lg.id = lgu.group_id
+          JOIN laboratories l ON l.id = lg.laboratory_id
+          WHERE lgu.user_id = u.id
+        ) AS lab_group_names
       FROM users u
       JOIN roles r ON u.role_id = r.id
       LEFT JOIN laboratories l ON u.lab_id = l.id
@@ -75,9 +95,6 @@ const UserModel = {
     return users[0] || null;
   },
 
-  /**
-   * Find simple user ID by Email (for validation)
-   */
   async findByEmail(email) {
     const [users] = await db.query(
       "SELECT id FROM users WHERE email = ? LIMIT 1",
@@ -86,9 +103,6 @@ const UserModel = {
     return users[0] || null;
   },
 
-  /**
-   * Find simple user ID by Email for another user (for update validation)
-   */
   async findByEmailExcludeId(email, id) {
     const [users] = await db.query(
       "SELECT id FROM users WHERE email = ? AND id <> ? LIMIT 1",
@@ -97,12 +111,9 @@ const UserModel = {
     return users[0] || null;
   },
 
-  /**
-   * Get user for login authentication (includes password hash)
-   */
   async findByEmailForAuth(email) {
     const [users] = await db.query(`
-      SELECT 
+      SELECT
         users.id,
         users.name,
         users.email,
@@ -121,12 +132,9 @@ const UserModel = {
     return users[0] || null;
   },
 
-  /**
-   * Get user profile details for authenticated user
-   */
   async findByIdForAuth(id) {
     const [users] = await db.query(`
-      SELECT 
+      SELECT
         users.id,
         users.name,
         users.email,
@@ -143,9 +151,6 @@ const UserModel = {
     return users[0] || null;
   },
 
-  /**
-   * Find role and lab ID for a specific user ID
-   */
   async findRoleAndLabByUserId(id) {
     const [rows] = await db.query(`
       SELECT u.id, u.lab_id, r.name AS role
@@ -157,9 +162,6 @@ const UserModel = {
     return rows[0] || null;
   },
 
-  /**
-   * Insert user
-   */
   async create({ role_id, lab_id, name, nrp_nip, email, password, status }, tx = null) {
     const conn = tx || db;
     const [result] = await conn.query(`
@@ -170,31 +172,57 @@ const UserModel = {
     return result;
   },
 
-  /**
-   * Update user details
-   */
   async update(id, { role_id, lab_id, name, nrp_nip, email, password, status }, tx = null) {
     const conn = tx || db;
+
     if (password) {
       const [result] = await conn.query(`
         UPDATE users
         SET role_id = ?, lab_id = ?, name = ?, nrp_nip = ?, email = ?, password = ?, status = ?
         WHERE id = ?
       `, [role_id, lab_id, name, nrp_nip || null, email, password, status, id]);
+
       return result;
-    } else {
-      const [result] = await conn.query(`
-        UPDATE users
-        SET role_id = ?, lab_id = ?, name = ?, nrp_nip = ?, email = ?, status = ?
-        WHERE id = ?
-      `, [role_id, lab_id, name, nrp_nip || null, email, status, id]);
-      return result;
+    }
+
+    const [result] = await conn.query(`
+      UPDATE users
+      SET role_id = ?, lab_id = ?, name = ?, nrp_nip = ?, email = ?, status = ?
+      WHERE id = ?
+    `, [role_id, lab_id, name, nrp_nip || null, email, status, id]);
+
+    return result;
+  },
+
+  async syncLabGroups(userId, groupIds = [], tx = null) {
+    const conn = tx || db;
+    const uniqueGroupIds = [...new Set(
+      (Array.isArray(groupIds) ? groupIds : [])
+        .map(Number)
+        .filter((id) => Number.isInteger(id) && id > 0)
+    )];
+
+    await conn.query("DELETE FROM lab_group_users WHERE user_id = ?", [userId]);
+
+    for (const groupId of uniqueGroupIds) {
+      await conn.query(`
+        INSERT INTO lab_group_users (group_id, user_id, role_in_group)
+        VALUES (?, ?, 'staf_lab')
+        ON DUPLICATE KEY UPDATE role_in_group = VALUES(role_in_group)
+      `, [groupId, userId]);
     }
   },
 
-  /**
-   * Delete user by ID
-   */
+  async deleteLabGroupAccess(userId, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(
+      "DELETE FROM lab_group_users WHERE user_id = ?",
+      [userId]
+    );
+
+    return result;
+  },
+
   async delete(id, tx = null) {
     const conn = tx || db;
     const [result] = await conn.query("DELETE FROM users WHERE id = ?", [id]);
