@@ -58,6 +58,16 @@ class DashboardController extends Controller
 
     public function index()
     {
+        $role = session('auth_user')['role'] ?? null;
+
+        if ($role === 'staf_administrasi') {
+            return redirect()->route('staf-admin.dashboard');
+        }
+
+        if ($role === 'kepala_laboratorium') {
+            return redirect()->route('procurement');
+        }
+
         try {
             $health = Http::get($this->apiUrl() . '/health')->json();
         } catch (\Exception $e) {
@@ -190,7 +200,14 @@ class DashboardController extends Controller
 
     public function procurement()
     {
-        $drafts = $this->getApiData('/procurement/drafts');
+        $authUser = session('auth_user');
+        $params = [];
+
+        if (($authUser['role'] ?? '') === 'kepala_laboratorium' && !empty($authUser['lab_id'])) {
+            $params['lab_id'] = $authUser['lab_id'];
+        }
+
+        $drafts = $this->getApiData('/procurement/drafts', $params);
 
         return view('pages.procurement.index', compact('drafts'));
     }
