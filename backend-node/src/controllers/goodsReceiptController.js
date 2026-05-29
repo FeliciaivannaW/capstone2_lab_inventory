@@ -65,16 +65,16 @@ const getPendingItems = async (req, res, next) => {
     });
 
     res.json({
-      success: true,
+      status:  "success",
       data:    Object.values(draftsMap),
       message: "Data pending items berhasil diambil"
     });
   } catch (error) {
     console.error("[GOODS RECEIPTS PENDING ERROR]", error);
     res.status(500).json({
-      success: false,
+      status:  "error",
       message: "Gagal mengambil data pending items",
-      errors:  { detail: error.message }
+      detail:  error.message
     });
   }
 };
@@ -118,16 +118,16 @@ const getReceiptsByItem = async (req, res, next) => {
     `, params);
 
     res.json({
-      success: true,
+      status:  "success",
       data:    receipts,
       message: "Riwayat penerimaan berhasil diambil"
     });
   } catch (error) {
     console.error("[GOODS RECEIPTS BY ITEM ERROR]", error);
     res.status(500).json({
-      success: false,
+      status:  "error",
       message: "Gagal mengambil riwayat penerimaan",
-      errors:  { detail: error.message }
+      detail:  error.message
     });
   }
 };
@@ -161,15 +161,15 @@ const getReceiptsByDraft = async (req, res, next) => {
     `, [draftId]);
 
     res.json({
-      success: true,
+      status:  "success",
       data:    receipts
     });
   } catch (error) {
     console.error("[GOODS RECEIPTS BY DRAFT ERROR]", error);
     res.status(500).json({
-      success: false,
+      status:  "error",
       message: "Gagal mengambil data penerimaan barang",
-      errors:  { detail: error.message }
+      detail:  error.message
     });
   }
 };
@@ -417,7 +417,7 @@ const createGoodsReceipt = async (req, res, next) => {
     connection.release();
 
     res.status(201).json({
-      success: true,
+      status:  "success",
       message: "Penerimaan barang berhasil dicatat",
       data: {
         receipt_id:           receiptId,
@@ -428,7 +428,6 @@ const createGoodsReceipt = async (req, res, next) => {
         ordered_quantity:     item.quantity,
         remaining_qty:        remaining - qty,
         item_type:            item.item_type,
-        // Only populated for inventory type
         created_assets:       item.item_type === 'inventory' ? createdAssets : []
       }
     });
@@ -438,9 +437,9 @@ const createGoodsReceipt = async (req, res, next) => {
     connection.release();
     console.error("[GOODS RECEIPT CREATE ERROR]", error);
     res.status(500).json({
-      success: false,
+      status:  "error",
       message: "Gagal mencatat penerimaan barang",
-      errors:  { detail: error.message }
+      detail:  error.message
     });
   }
 };
