@@ -3,8 +3,8 @@ const ProcurementModel = require("../models/ProcurementModel");
 
 const getProcurementDrafts = async (req, res, next) => {
   try {
-    const { status, budget_year, search } = req.query;
-    const drafts = await ProcurementModel.findDrafts({ status, budget_year, search });
+    const { status, budget_year, search, lab_id } = req.query;
+    const drafts = await ProcurementModel.findDrafts({ status, budget_year, search, lab_id });
 
     res.json({
       status: "success",

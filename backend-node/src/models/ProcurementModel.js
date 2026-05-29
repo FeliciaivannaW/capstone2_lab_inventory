@@ -4,7 +4,7 @@ const ProcurementModel = {
   /**
    * Find procurement drafts based on filters
    */
-  async findDrafts({ status, budget_year, search }) {
+  async findDrafts({ status, budget_year, search, lab_id }) {
     let whereConditions = [];
     let params = [];
 
@@ -21,6 +21,11 @@ const ProcurementModel = {
     if (search) {
       whereConditions.push("(pd.title LIKE ? OR l.name LIKE ?)");
       params.push(`%${search}%`, `%${search}%`);
+    }
+
+    if (lab_id) {
+      whereConditions.push("pd.lab_id = ?");
+      params.push(lab_id);
     }
 
     const whereClause = whereConditions.length > 0
