@@ -1,81 +1,10 @@
-const db = require("../config/database");
+const UserModel = require("../models/UserModel");
+const ProcurementModel = require("../models/ProcurementModel");
 
-/**
- * Get all procurement drafts for the user's laboratory
- * Accessible to: kepala_laboratorium, ketua_program_studi, staf_administrasi
- */
 const getProcurementDrafts = async (req, res, next) => {
   try {
-    // Query parameter filters
     const { status, budget_year, search } = req.query;
-
-    let whereConditions = [];
-    let params = [];
-
-    if (status) {
-      whereConditions.push("pd.status = ?");
-      params.push(status);
-    }
-
-    if (budget_year) {
-      whereConditions.push("pd.budget_year = ?");
-      params.push(budget_year);
-    }
-
-    if (search) {
-      whereConditions.push("(pd.title LIKE ? OR l.name LIKE ?)");
-      params.push(`%${search}%`, `%${search}%`);
-    }
-
-    const whereClause = whereConditions.length > 0
-      ? "WHERE " + whereConditions.join(" AND ")
-      : "";
-
-    const [drafts] = await db.query(`
-      SELECT
-        pd.id,
-        pd.lab_id,
-        pd.title,
-        pd.budget_year,
-        pd.status,
-        pd.is_locked,
-        pd.notes,
-        pd.created_at,
-        pd.submitted_at,
-        pd.finalized_at,
-        l.name AS lab_name,
-        l.code AS lab_code,
-        uc.name AS created_by_name,
-        uf.name AS finalized_by_name,
-        COUNT(pi.id) AS item_count,
-        SUM(CASE WHEN pi.review_status = 'approved' THEN 1 ELSE 0 END) AS approved_count,
-        SUM(CASE WHEN pi.review_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_count,
-        SUM(CASE WHEN pi.review_status = 'pending' THEN 1 ELSE 0 END) AS pending_count,
-        -- Jumlah item approved yang SUDAH fully received (sum qty_received >= qty ordered)
-        SUM(
-          CASE WHEN pi.review_status = 'approved' AND (
-            SELECT COALESCE(SUM(gr2.quantity_received), 0)
-            FROM goods_receipts gr2
-            WHERE gr2.procurement_item_id = pi.id
-          ) >= pi.quantity THEN 1 ELSE 0 END
-        ) AS received_items,
-        -- Jumlah item approved yang BELUM fully received
-        SUM(
-          CASE WHEN pi.review_status = 'approved' AND (
-            SELECT COALESCE(SUM(gr3.quantity_received), 0)
-            FROM goods_receipts gr3
-            WHERE gr3.procurement_item_id = pi.id
-          ) < pi.quantity THEN 1 ELSE 0 END
-        ) AS pending_items
-      FROM procurement_drafts AS pd
-      JOIN laboratories AS l ON pd.lab_id = l.id
-      JOIN users AS uc ON pd.created_by = uc.id
-      LEFT JOIN users AS uf ON pd.finalized_by = uf.id
-      LEFT JOIN procurement_items AS pi ON pd.id = pi.draft_id
-      ${whereClause}
-      GROUP BY pd.id
-      ORDER BY pd.created_at DESC
-    `, params);
+    const drafts = await ProcurementModel.findDrafts({ status, budget_year, search });
 
     res.json({
       status: "success",
@@ -91,72 +20,19 @@ const getProcurementDrafts = async (req, res, next) => {
   }
 };
 
-/**
- * Get single procurement draft with all items
- * Accessible to: kepala_laboratorium (creator), ketua_program_studi, staf_administrasi
- */
 const getProcurementDraft = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const draft = await ProcurementModel.findDraftById(id);
 
-    // Get draft details
-    const [draftRows] = await db.query(`
-      SELECT
-        pd.id,
-        pd.lab_id,
-        pd.title,
-        pd.budget_year,
-        pd.status,
-        pd.is_locked,
-        pd.notes,
-        pd.created_at,
-        pd.submitted_at,
-        pd.finalized_at,
-        l.name AS lab_name,
-        l.code AS lab_code,
-        uc.name AS created_by_name,
-        uc.id AS created_by_id,
-        uf.name AS finalized_by_name,
-        uf.id AS finalized_by_id
-      FROM procurement_drafts AS pd
-      JOIN laboratories AS l ON pd.lab_id = l.id
-      JOIN users AS uc ON pd.created_by = uc.id
-      LEFT JOIN users AS uf ON pd.finalized_by = uf.id
-      WHERE pd.id = ?
-    `, [id]);
-
-    if (draftRows.length === 0) {
+    if (!draft) {
       return res.status(404).json({
         status: "error",
         message: "Draf pengadaan tidak ditemukan"
       });
     }
 
-    const draft = draftRows[0];
-
-    // Get items in this draft
-    const [items] = await db.query(`
-      SELECT
-        pi.id,
-        pi.item_name,
-        pi.item_type,
-        pi.quantity,
-        pi.estimated_price,
-        pi.purchase_link,
-        pi.review_status,
-        pi.review_note,
-        pi.reviewed_at,
-        ur.name AS reviewed_by_name,
-        ia.asset_code AS replacement_asset_code,
-        ic.name AS catalog_name
-      FROM procurement_items AS pi
-      LEFT JOIN users AS ur ON pi.reviewed_by = ur.id
-      LEFT JOIN inventory_assets AS ia ON pi.replacement_asset_id = ia.id
-      LEFT JOIN item_catalogs AS ic ON pi.item_catalog_id = ic.id
-      WHERE pi.draft_id = ?
-      ORDER BY pi.created_at ASC
-    `, [id]);
-
+    const items = await ProcurementModel.findItemsByDraftId(id);
     draft.items = items;
 
     res.json({
@@ -173,18 +49,12 @@ const getProcurementDraft = async (req, res, next) => {
   }
 };
 
-/**
- * Review a single procurement item (approve or reject)
- * Accessible to: ketua_program_studi only
- * Draft must not be locked
- */
 const reviewProcurementItem = async (req, res, next) => {
   try {
     const { draftId, itemId } = req.params;
     const { review_status, review_note } = req.body;
     const userId = req.user?.id;
 
-    // Validate input
     if (!['approved', 'rejected'].includes(review_status)) {
       return res.status(400).json({
         status: "error",
@@ -192,20 +62,14 @@ const reviewProcurementItem = async (req, res, next) => {
       });
     }
 
-    // Check draft exists and not locked
-    const [draftRows] = await db.query(
-      `SELECT id, status, is_locked FROM procurement_drafts WHERE id = ?`,
-      [draftId]
-    );
+    const draft = await ProcurementModel.findDraftByIdForLock(draftId);
 
-    if (draftRows.length === 0) {
+    if (!draft) {
       return res.status(404).json({
         status: "error",
         message: "Draf pengadaan tidak ditemukan"
       });
     }
-
-    const draft = draftRows[0];
 
     if (draft.is_locked || draft.status === 'finalized') {
       return res.status(403).json({
@@ -214,27 +78,22 @@ const reviewProcurementItem = async (req, res, next) => {
       });
     }
 
-    // Check item exists in draft
-    const [itemRows] = await db.query(
-      `SELECT id FROM procurement_items WHERE id = ? AND draft_id = ?`,
-      [itemId, draftId]
-    );
+    const item = await ProcurementModel.findItemByIdAndDraftId(itemId, draftId);
 
-    if (itemRows.length === 0) {
+    if (!item) {
       return res.status(404).json({
         status: "error",
         message: "Item pengadaan tidak ditemukan"
       });
     }
 
-    // Update item review
     const reviewedAt = new Date();
-    await db.query(
-      `UPDATE procurement_items 
-       SET review_status = ?, review_note = ?, reviewed_by = ?, reviewed_at = ?
-       WHERE id = ?`,
-      [review_status, review_note || null, userId, reviewedAt, itemId]
-    );
+    await ProcurementModel.updateItemReview(itemId, {
+      reviewStatus: review_status,
+      reviewNote: review_note,
+      reviewedBy: userId,
+      reviewedAt
+    });
 
     res.json({
       status: "success",
@@ -255,30 +114,19 @@ const reviewProcurementItem = async (req, res, next) => {
   }
 };
 
-/**
- * Finalize a procurement draft (lock it)
- * Accessible to: ketua_program_studi only
- * Draft must be in 'submitted' status
- */
 const finalizeProcurementDraft = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
 
-    // Check draft exists and can be finalized
-    const [draftRows] = await db.query(
-      `SELECT id, status, is_locked FROM procurement_drafts WHERE id = ?`,
-      [id]
-    );
+    const draft = await ProcurementModel.findDraftByIdForLock(id);
 
-    if (draftRows.length === 0) {
+    if (!draft) {
       return res.status(404).json({
         status: "error",
         message: "Draf pengadaan tidak ditemukan"
       });
     }
-
-    const draft = draftRows[0];
 
     if (draft.is_locked || draft.status === 'finalized') {
       return res.status(403).json({
@@ -287,14 +135,13 @@ const finalizeProcurementDraft = async (req, res, next) => {
       });
     }
 
-    // Update draft to finalized
     const finalizedAt = new Date();
-    await db.query(
-      `UPDATE procurement_drafts 
-       SET status = 'finalized', is_locked = true, finalized_by = ?, finalized_at = ?
-       WHERE id = ?`,
-      [userId, finalizedAt, id]
-    );
+    await ProcurementModel.finalizeDraft(id, {
+      status: 'finalized',
+      isLocked: true,
+      finalizedBy: userId,
+      finalizedAt
+    });
 
     res.json({
       status: "success",
@@ -316,17 +163,12 @@ const finalizeProcurementDraft = async (req, res, next) => {
   }
 };
 
-/**
- * Create a new procurement draft
- * Accessible to: kepala_laboratorium, staf_administrasi
- */
 const createProcurementDraft = async (req, res, next) => {
   try {
     const { title, lab_id, budget_year, notes } = req.body;
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
-    // Validation
     if (!title || !lab_id || !budget_year) {
       return res.status(400).json({
         status: "error",
@@ -334,13 +176,9 @@ const createProcurementDraft = async (req, res, next) => {
       });
     }
 
-    // Authorization: kepala_lab hanya bisa membuat untuk lab mereka
     if (userRole === 'kepala_laboratorium') {
-      const [userLabs] = await db.query(
-        `SELECT lab_id FROM users WHERE id = ?`,
-        [userId]
-      );
-      if (!userLabs.length || userLabs[0].lab_id != lab_id) {
+      const userLab = await UserModel.findRoleAndLabByUserId(userId);
+      if (!userLab || userLab.lab_id != lab_id) {
         return res.status(403).json({
           status: "error",
           message: "Anda hanya bisa membuat draf untuk laboratorium Anda sendiri"
@@ -349,16 +187,21 @@ const createProcurementDraft = async (req, res, next) => {
     }
 
     const createdAt = new Date();
-    await db.query(
-      `INSERT INTO procurement_drafts (lab_id, created_by, title, budget_year, notes, status, created_at)
-       VALUES (?, ?, ?, ?, ?, 'draft', ?)`,
-      [lab_id, userId, title, budget_year, notes || null, createdAt]
-    );
+    const result = await ProcurementModel.createDraft({
+      labId: lab_id,
+      createdBy: userId,
+      title,
+      budgetYear: budget_year,
+      notes,
+      status: 'draft',
+      createdAt
+    });
 
     res.json({
       status: "success",
       message: "Draf pengadaan berhasil dibuat",
       data: {
+        id: result.insertId,
         title,
         lab_id,
         budget_year,
@@ -377,11 +220,6 @@ const createProcurementDraft = async (req, res, next) => {
   }
 };
 
-/**
- * Update procurement draft
- * Accessible to: creator or staf_administrasi
- * Draft must be in 'draft' status
- */
 const updateProcurementDraft = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -389,22 +227,15 @@ const updateProcurementDraft = async (req, res, next) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
-    // Check draft exists
-    const [draftRows] = await db.query(
-      `SELECT id, created_by, status, is_locked FROM procurement_drafts WHERE id = ?`,
-      [id]
-    );
+    const draft = await ProcurementModel.findDraftByIdForLock(id);
 
-    if (draftRows.length === 0) {
+    if (!draft) {
       return res.status(404).json({
         status: "error",
         message: "Draf pengadaan tidak ditemukan"
       });
     }
 
-    const draft = draftRows[0];
-
-    // Guard: draft must be in 'draft' status
     if (draft.status !== 'draft' || draft.is_locked) {
       return res.status(403).json({
         status: "error",
@@ -412,7 +243,6 @@ const updateProcurementDraft = async (req, res, next) => {
       });
     }
 
-    // Authorization: only creator or staf_administrasi
     if (userRole !== 'staf_administrasi' && draft.created_by !== userId) {
       return res.status(403).json({
         status: "error",
@@ -420,11 +250,7 @@ const updateProcurementDraft = async (req, res, next) => {
       });
     }
 
-    await db.query(
-      `UPDATE procurement_drafts SET title = ?, lab_id = ?, budget_year = ?, notes = ?
-       WHERE id = ?`,
-      [title, lab_id, budget_year, notes || null, id]
-    );
+    await ProcurementModel.updateDraft(id, { title, labId: lab_id, budgetYear: budget_year, notes });
 
     res.json({
       status: "success",
@@ -441,33 +267,21 @@ const updateProcurementDraft = async (req, res, next) => {
   }
 };
 
-/**
- * Delete procurement draft
- * Accessible to: creator or staf_administrasi
- * Draft must be in 'draft' status with no items
- */
 const deleteProcurementDraft = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
-    // Check draft exists
-    const [draftRows] = await db.query(
-      `SELECT id, created_by, status, is_locked FROM procurement_drafts WHERE id = ?`,
-      [id]
-    );
+    const draft = await ProcurementModel.findDraftByIdForLock(id);
 
-    if (draftRows.length === 0) {
+    if (!draft) {
       return res.status(404).json({
         status: "error",
         message: "Draf pengadaan tidak ditemukan"
       });
     }
 
-    const draft = draftRows[0];
-
-    // Guard: draft must be in 'draft' status
     if (draft.status !== 'draft' || draft.is_locked) {
       return res.status(403).json({
         status: "error",
@@ -475,7 +289,6 @@ const deleteProcurementDraft = async (req, res, next) => {
       });
     }
 
-    // Authorization: only creator or staf_administrasi
     if (userRole !== 'staf_administrasi' && draft.created_by !== userId) {
       return res.status(403).json({
         status: "error",
@@ -483,21 +296,16 @@ const deleteProcurementDraft = async (req, res, next) => {
       });
     }
 
-    // Check if draft has items
-    const [itemCount] = await db.query(
-      `SELECT COUNT(*) as count FROM procurement_items WHERE draft_id = ?`,
-      [id]
-    );
+    const itemsCount = await ProcurementModel.countItemsInDraft(id);
 
-    if (itemCount[0].count > 0) {
+    if (itemsCount > 0) {
       return res.status(400).json({
         status: "error",
         message: "Tidak bisa menghapus draf yang memiliki items. Hapus items terlebih dahulu."
       });
     }
 
-    // Delete draft
-    await db.query(`DELETE FROM procurement_drafts WHERE id = ?`, [id]);
+    await ProcurementModel.deleteDraft(id);
 
     res.json({
       status: "success",
@@ -513,11 +321,6 @@ const deleteProcurementDraft = async (req, res, next) => {
   }
 };
 
-/**
- * Add item to procurement draft
- * Accessible to: creator or staf_administrasi
- * Draft must be in 'draft' status
- */
 const addProcurementItem = async (req, res, next) => {
   try {
     const { id: draftId } = req.params;
@@ -525,20 +328,14 @@ const addProcurementItem = async (req, res, next) => {
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
-    // Check draft exists and accessible
-    const [draftRows] = await db.query(
-      `SELECT id, created_by, status, is_locked FROM procurement_drafts WHERE id = ?`,
-      [draftId]
-    );
+    const draft = await ProcurementModel.findDraftByIdForLock(draftId);
 
-    if (draftRows.length === 0) {
+    if (!draft) {
       return res.status(404).json({
         status: "error",
         message: "Draf pengadaan tidak ditemukan"
       });
     }
-
-    const draft = draftRows[0];
 
     if (draft.status !== 'draft' || draft.is_locked) {
       return res.status(403).json({
@@ -554,7 +351,6 @@ const addProcurementItem = async (req, res, next) => {
       });
     }
 
-    // Validate input
     if (!item_name || !item_type || !quantity || estimated_price === undefined) {
       return res.status(400).json({
         status: "error",
@@ -563,12 +359,16 @@ const addProcurementItem = async (req, res, next) => {
     }
 
     const createdAt = new Date();
-    await db.query(
-      `INSERT INTO procurement_items 
-       (draft_id, item_name, item_type, quantity, estimated_price, purchase_link, replacement_asset_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [draftId, item_name, item_type, quantity, estimated_price, purchase_link || null, replacement_asset_id || null, createdAt]
-    );
+    await ProcurementModel.createItem({
+      draftId,
+      itemName: item_name,
+      itemType: item_type,
+      quantity,
+      estimatedPrice: estimated_price,
+      purchaseLink: purchase_link,
+      replacementAssetId: replacement_asset_id,
+      createdAt
+    });
 
     res.json({
       status: "success",
@@ -592,31 +392,20 @@ const addProcurementItem = async (req, res, next) => {
   }
 };
 
-/**
- * Delete item from procurement draft
- * Accessible to: creator or staf_administrasi
- * Item must have pending review status
- */
 const deleteProcurementItem = async (req, res, next) => {
   try {
     const { id: draftId, itemId } = req.params;
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
-    // Check draft exists
-    const [draftRows] = await db.query(
-      `SELECT id, created_by, status FROM procurement_drafts WHERE id = ?`,
-      [draftId]
-    );
+    const draft = await ProcurementModel.findDraftByIdForLock(draftId);
 
-    if (draftRows.length === 0) {
+    if (!draft) {
       return res.status(404).json({
         status: "error",
         message: "Draf pengadaan tidak ditemukan"
       });
     }
-
-    const draft = draftRows[0];
 
     if (draft.status !== 'draft') {
       return res.status(403).json({
@@ -632,28 +421,23 @@ const deleteProcurementItem = async (req, res, next) => {
       });
     }
 
-    // Check item exists and is pending
-    const [itemRows] = await db.query(
-      `SELECT id, review_status FROM procurement_items WHERE id = ? AND draft_id = ?`,
-      [itemId, draftId]
-    );
+    const item = await ProcurementModel.findItemByIdAndDraftId(itemId, draftId);
 
-    if (itemRows.length === 0) {
+    if (!item) {
       return res.status(404).json({
         status: "error",
         message: "Item tidak ditemukan"
       });
     }
 
-    if (itemRows[0].review_status !== 'pending') {
+    if (item.review_status !== 'pending') {
       return res.status(403).json({
         status: "error",
         message: "Hanya item dengan status pending yang bisa dihapus"
       });
     }
 
-    // Delete item
-    await db.query(`DELETE FROM procurement_items WHERE id = ?`, [itemId]);
+    await ProcurementModel.deleteItem(itemId);
 
     res.json({
       status: "success",
@@ -669,26 +453,16 @@ const deleteProcurementItem = async (req, res, next) => {
   }
 };
 
-/**
- * Submit procurement draft (change status draft → submitted)
- * Accessible to: kepala_laboratorium, staf_administrasi
- * Validations: must have >= 1 item, is_locked must be false
- */
 const submitProcurementDraft = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId  = req.user?.id;
 
-    const [draftRows] = await db.query(
-      `SELECT id, status, is_locked FROM procurement_drafts WHERE id = ?`,
-      [id]
-    );
+    const draft = await ProcurementModel.findDraftByIdForLock(id);
 
-    if (draftRows.length === 0) {
+    if (!draft) {
       return res.status(404).json({ success: false, message: "Draf pengadaan tidak ditemukan" });
     }
-
-    const draft = draftRows[0];
 
     if (draft.is_locked) {
       return res.status(403).json({ success: false, message: "Draf sudah terkunci, tidak bisa diubah" });
@@ -698,25 +472,18 @@ const submitProcurementDraft = async (req, res, next) => {
       return res.status(400).json({ success: false, message: `Draf sudah dalam status '${draft.status}', tidak bisa di-submit ulang` });
     }
 
-    // Must have at least 1 item
-    const [itemCount] = await db.query(
-      `SELECT COUNT(*) AS cnt FROM procurement_items WHERE draft_id = ?`,
-      [id]
-    );
-    if (itemCount[0].cnt < 1) {
+    const count = await ProcurementModel.countItemsInDraft(id);
+    if (count < 1) {
       return res.status(400).json({ success: false, message: "Draf harus memiliki minimal 1 item sebelum di-submit" });
     }
 
     const submittedAt = new Date();
-    await db.query(
-      `UPDATE procurement_drafts SET status = 'submitted', submitted_at = ? WHERE id = ?`,
-      [submittedAt, id]
-    );
+    await ProcurementModel.submitDraft(id, { status: 'submitted', submittedAt });
 
     res.json({
       success: true,
       message: "Draf berhasil di-submit untuk review Kaprodi",
-      data:    { draft_id: id, status: 'submitted', submitted_at: submittedAt }
+      data:    { draft_id: id, status: 'submitted', submittedAt }
     });
   } catch (error) {
     console.error("[PROCUREMENT SUBMIT ERROR]", error);
@@ -724,11 +491,6 @@ const submitProcurementDraft = async (req, res, next) => {
   }
 };
 
-/**
- * Update a single procurement item (edit)
- * Accessible to: kepala_laboratorium (creator), staf_administrasi
- * Draft must be in 'draft' status, is_locked must be false
- */
 const updateProcurementItem = async (req, res, next) => {
   try {
     const { id: draftId, itemId } = req.params;
@@ -736,15 +498,10 @@ const updateProcurementItem = async (req, res, next) => {
     const userId   = req.user?.id;
     const userRole = req.user?.role;
 
-    // Check draft
-    const [draftRows] = await db.query(
-      `SELECT id, created_by, status, is_locked FROM procurement_drafts WHERE id = ?`,
-      [draftId]
-    );
-    if (draftRows.length === 0) {
+    const draft = await ProcurementModel.findDraftByIdForLock(draftId);
+    if (!draft) {
       return res.status(404).json({ success: false, message: "Draf tidak ditemukan" });
     }
-    const draft = draftRows[0];
 
     if (draft.is_locked || draft.status !== 'draft') {
       return res.status(403).json({ success: false, message: "Draf tidak bisa diedit dalam status ini" });
@@ -753,31 +510,24 @@ const updateProcurementItem = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Tidak memiliki wewenang untuk mengubah item ini" });
     }
 
-    // Check item exists in draft
-    const [itemRows] = await db.query(
-      `SELECT id FROM procurement_items WHERE id = ? AND draft_id = ?`,
-      [itemId, draftId]
-    );
-    if (itemRows.length === 0) {
+    const item = await ProcurementModel.findItemByIdAndDraftId(itemId, draftId);
+    if (!item) {
       return res.status(404).json({ success: false, message: "Item tidak ditemukan dalam draf ini" });
     }
 
-    // Build update
-    const fields = [];
-    const params = [];
-    if (item_name)        { fields.push('item_name = ?');        params.push(item_name); }
-    if (item_type)        { fields.push('item_type = ?');        params.push(item_type); }
-    if (quantity)         { fields.push('quantity = ?');         params.push(quantity); }
-    if (estimated_price !== undefined) { fields.push('estimated_price = ?'); params.push(estimated_price); }
-    if (purchase_link !== undefined)   { fields.push('purchase_link = ?');   params.push(purchase_link || null); }
-    if (replacement_asset_id !== undefined) { fields.push('replacement_asset_id = ?'); params.push(replacement_asset_id || null); }
+    const fields = {};
+    if (item_name)        fields.item_name = item_name;
+    if (item_type)        fields.item_type = item_type;
+    if (quantity)         fields.quantity = quantity;
+    if (estimated_price !== undefined) fields.estimated_price = estimated_price;
+    if (purchase_link !== undefined)   fields.purchase_link = purchase_link || null;
+    if (replacement_asset_id !== undefined) fields.replacement_asset_id = replacement_asset_id || null;
 
-    if (fields.length === 0) {
+    if (Object.keys(fields).length === 0) {
       return res.status(400).json({ success: false, message: "Tidak ada field yang diubah" });
     }
 
-    params.push(itemId);
-    await db.query(`UPDATE procurement_items SET ${fields.join(', ')} WHERE id = ?`, params);
+    await ProcurementModel.updateItem(itemId, fields);
 
     res.json({ success: true, message: "Item berhasil diperbarui", data: { item_id: itemId } });
   } catch (error) {

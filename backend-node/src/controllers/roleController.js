@@ -1,8 +1,8 @@
-const db = require("../config/database");
+const RoleModel = require("../models/RoleModel");
 
 const getRoles = async (req, res, next) => {
   try {
-    const [roles] = await db.query("SELECT * FROM roles ORDER BY id ASC");
+    const roles = await RoleModel.findAll();
 
     res.json({
       status: "success",

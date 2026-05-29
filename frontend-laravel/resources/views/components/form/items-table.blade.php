@@ -57,13 +57,7 @@
         </table>
     @endif
 
-    @if($canEdit)
-        <div style="margin-top: 15px;">
-            <button type="button" class="btn btn-primary" onclick="showAddItemModal()">
-                + Tambah Item
-            </button>
-        </div>
-    @endif
+
 </div>
 
 <style>

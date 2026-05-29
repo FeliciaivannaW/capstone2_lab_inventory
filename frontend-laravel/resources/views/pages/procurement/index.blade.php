@@ -100,7 +100,7 @@
                                 $st = $statusMap[$draft['status']] ?? ['label' => ucfirst($draft['status']), 'class' => 'badge-draft'];
                             @endphp
                             <tr x-show="showRow({{ $index }})" x-cloak data-filter-status="{{ $draft['status'] }}"
-                                data-filter-lab="{{ $draft['lab_name'] }}" data-filter-year="{{ $draft['year'] }}">
+                                data-filter-lab="{{ $draft['lab_name'] }}" data-filter-year="{{ $draft['budget_year'] }}">
                                 <td class="text-slate-400 font-mono text-xs">{{ $index + 1 }}</td>
                                 <td class="font-semibold text-slate-800">{{ $draft['title'] }}</td>
                                 <td>
