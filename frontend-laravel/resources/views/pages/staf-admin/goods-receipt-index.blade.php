@@ -22,6 +22,20 @@
 
 <div x-data="receiptIndexApp()">
 
+    {{-- Toast Notification --}}
+    <div x-show="toast.show" x-transition.opacity x-cloak
+         :class="toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'"
+         class="fixed bottom-6 right-6 z-[9999] flex items-center gap-3 text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-xl"
+         style="display:none;">
+        <svg x-show="toast.type === 'success'" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+        </svg>
+        <svg x-show="toast.type === 'error'" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+        <span x-text="toast.message"></span>
+    </div>
+
     {{-- Header --}}
     <div class="mb-6 flex items-start justify-between flex-wrap gap-3">
         <div>
@@ -352,6 +366,12 @@ function receiptIndexApp() {
         receiptNote: '',
         openLogs: [],
         loading: false,
+        toast: { show: false, message: '', type: 'success' },
+
+        showToast(message, type = 'success') {
+            this.toast = { show: true, message, type };
+            setTimeout(() => { this.toast.show = false; }, 3500);
+        },
 
         openModal(id, name, ordered, received) {
             this.modalItemId = id;
@@ -370,7 +390,7 @@ function receiptIndexApp() {
 
         async submitReceipt() {
             if (!this.receivedDate || !this.qtyReceived) {
-                alert('Lengkapi tanggal dan jumlah');
+                this.showToast('Lengkapi tanggal dan jumlah terlebih dahulu', 'error');
                 return;
             }
             this.loading = true;
@@ -393,10 +413,10 @@ function receiptIndexApp() {
                     this.modalOpen = false;
                     location.reload();
                 } else {
-                    alert('Error: ' + (d.message || 'Gagal'));
+                    this.showToast('Gagal: ' + (d.message || 'Terjadi kesalahan'), 'error');
                 }
             } catch (e) {
-                alert('Terjadi kesalahan jaringan');
+                this.showToast('Terjadi kesalahan jaringan, coba lagi', 'error');
             } finally {
                 this.loading = false;
             }
