@@ -181,7 +181,7 @@
                         <x-sort-header field="reviewer">Reviewer</x-sort-header>
                         <x-sort-header field="note">Catatan</x-sort-header>
                         <x-sort-header field="link">Link</x-sort-header>
-                        @if($canEdit ?? false)
+                        @if($canReview)
                             <th>Aksi</th>
                         @endif
                     </tr>
