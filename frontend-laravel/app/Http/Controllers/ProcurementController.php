@@ -71,6 +71,9 @@ class ProcurementController extends Controller
         if ($authUser['role'] === 'staf_administrasi') {
             $laboratories = $this->getApiData('/laboratories');
             $laboratories = collect($laboratories)->pluck('name', 'id')->toArray();
+        } elseif ($authUser['role'] === 'kepala_laboratorium' && empty($authUser['lab_id'])) {
+            return redirect()->route('procurement')
+                ->with('error', 'Akun Anda belum terhubung ke laboratorium. Hubungi Administrator.');
         }
 
         return view('pages.procurement.form', [
@@ -90,10 +93,13 @@ class ProcurementController extends Controller
     {
         $authUser = session('auth_user');
         $validated = $request->validate([
-            'title' => 'required|string',
-            'lab_id' => 'required|integer',
-            'budget_year' => 'required|integer',
-            'notes' => 'nullable|string'
+            'title'       => 'required|string|max:255',
+            'lab_id'      => 'required|integer|min:1',
+            'budget_year' => 'required|integer|min:2000|max:2100',
+            'notes'       => 'nullable|string|max:1000',
+        ], [
+            'lab_id.required' => 'Laboratorium wajib dipilih.',
+            'lab_id.min'      => 'Laboratorium tidak valid.',
         ]);
 
         $result = $this->postApiData('/procurement/drafts', $validated);
