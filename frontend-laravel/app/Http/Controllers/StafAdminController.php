@@ -596,19 +596,17 @@ class StafAdminController extends Controller
     {
         $filters = [];
 
-        if ($request->filled('search')) {
-            $filters['search'] = $request->search;
-        }
+        if ($request->filled('search'))    { $filters['search']    = $request->search; }
+        if ($request->filled('condition')) { $filters['condition'] = $request->condition; }
+        if ($request->filled('lab_id'))    { $filters['lab_id']    = $request->lab_id; }
 
-        if ($request->filled('condition')) {
-            $filters['condition'] = $request->condition;
-        }
-
-        $assets = $this->getApiData('/inventory/assets', $filters);
+        $assets = $this->getApiData('/inventory/assets', $filters) ?: [];
+        $labs   = $this->getApiData('/laboratories') ?: [];
 
         return view('pages.staf-admin.asset-list', [
-            'assets' => $assets,
-            'filters' => $request->only(['search', 'condition']),
+            'assets'  => $assets,
+            'labs'    => $labs,
+            'filters' => $request->only(['search', 'condition', 'lab_id']),
         ]);
     }
 
