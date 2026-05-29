@@ -137,13 +137,10 @@ const updateAssetLabel = async (req, res) => {
 
     if (!label_number) {
       await connection.rollback();
-
       return res.status(400).json({
-        success: false,
+        status:  "error",
         message: "Nomor label harus diisi",
-        errors: {
-          label_number: "Wajib diisi"
-        }
+        errors:  { label_number: "Wajib diisi" }
       });
     }
 
@@ -151,9 +148,8 @@ const updateAssetLabel = async (req, res) => {
 
     if (!asset) {
       await connection.rollback();
-
       return res.status(404).json({
-        success: false,
+        status:  "error",
         message: "Aset inventaris tidak ditemukan"
       });
     }
@@ -162,26 +158,17 @@ const updateAssetLabel = async (req, res) => {
 
     if (dupLabel) {
       await connection.rollback();
-
       return res.status(400).json({
-        success: false,
+        status:  "error",
         message: `Nomor label '${label_number}' sudah digunakan oleh aset lain`,
-        errors: {
-          label_number: "Sudah digunakan"
-        }
+        errors:  { label_number: "Sudah digunakan" }
       });
     }
 
+    // File saved by multer to uploads/qr/; store full URL so frontend can load it
     if (req.file) {
-      const uploadsDir = path.join(__dirname, "../../uploads/assets");
-
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, {
-          recursive: true
-        });
-      }
-
-      photo_url = `/uploads/assets/${req.file.filename}`;
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      photo_url = `${baseUrl}/uploads/qr/${req.file.filename}`;
     }
 
     await InventoryModel.updateLabel(id, {
@@ -202,30 +189,24 @@ const updateAssetLabel = async (req, res) => {
     await connection.commit();
 
     res.json({
-      success: true,
-      message: "Label dan foto berhasil diperbarui. Status diubah ke 'labeled'.",
+      status:  "success",
+      message: "Label dan foto berhasil diperbarui",
       data: {
         id,
         label_number,
         asset_code: asset_code || asset.asset_code,
-        barcode: barcode || null,
-        photo_url: photo_url || null,
-        status: "labeled"
+        barcode:    barcode || null,
+        photo_url:  photo_url || null,
+        status:     "labeled"
       }
     });
   } catch (error) {
-    try {
-      await connection.rollback();
-    } catch (_) {}
-
+    try { await connection.rollback(); } catch (_) {}
     console.error("[INVENTORY LABEL UPDATE ERROR]", error);
-
     res.status(500).json({
-      success: false,
+      status:  "error",
       message: "Gagal memperbarui label inventaris",
-      errors: {
-        detail: error.message
-      }
+      detail:  error.message
     });
   } finally {
     connection.release();
