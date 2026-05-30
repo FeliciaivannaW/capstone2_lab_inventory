@@ -4,12 +4,12 @@ const InventoryModel = {
   /**
    * Find inventory assets based on filters
    */
-  async findAll({ search, status, condition, label_status, lab_id, roomIds }) {
+  async findAll({ search, status, condition, label_status, lab_id, roomIds, receipt_id } = {}) {
     let whereConditions = [];
     let params = [];
 
     if (search) {
-      whereConditions.push("(ia.asset_code LIKE ? OR ia.label_number LIKE ? OR ic.name LIKE ? OR r.name LIKE ?)");
+      whereConditions.push("(ia.asset_code LIKE ? OR ia.label_number LIKE ? OR COALESCE(ic.name, pi.item_name) LIKE ? OR r.name LIKE ?)");
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
@@ -39,6 +39,11 @@ const InventoryModel = {
       params.push(roomIds);
     }
 
+    if (receipt_id) {
+      whereConditions.push("ia.receipt_id = ?");
+      params.push(Number(receipt_id));
+    }
+
     const whereClause = whereConditions.length > 0
       ? "WHERE " + whereConditions.join(" AND ")
       : "";
@@ -62,26 +67,31 @@ const InventoryModel = {
         ia.receipt_id,
         ia.created_at,
         ia.updated_at,
-        ic.name AS item_name,
-        ic.type AS item_type,
-        ic.unit AS item_unit,
-        icat.name AS category_name,
-        r.id AS room_id,
+        COALESCE(ic.name, pi.item_name)    AS item_name,
+        COALESCE(ic.type, pi.item_type)    AS item_type,
+        ic.unit                             AS item_unit,
+        icat.name                           AS category_name,
+        r.id   AS room_id,
         r.name AS room_name,
         r.code AS room_code,
-        COALESCE(lproc.id, lroom.id) AS lab_id,
+        COALESCE(lproc.id,   lroom.id)   AS lab_id,
         COALESCE(lproc.name, lroom.name) AS lab_name,
-        COALESCE(lproc.code, lroom.code) AS lab_code
+        COALESCE(lproc.code, lroom.code) AS lab_code,
+        pd.id    AS draft_id,
+        pd.title AS draft_title,
+        gr.received_date AS receipt_date,
+        gr.quantity_received
       FROM inventory_assets AS ia
-      JOIN item_catalogs AS ic ON ia.item_catalog_id = ic.id
+      LEFT JOIN item_catalogs AS ic   ON ia.item_catalog_id = ic.id
       LEFT JOIN item_categories AS icat ON ic.category_id = icat.id
-      LEFT JOIN rooms AS r ON ia.room_id = r.id
-      LEFT JOIN laboratories AS lroom ON r.id = lroom.room_id
+      LEFT JOIN rooms AS r             ON ia.room_id = r.id
+      LEFT JOIN laboratories AS lroom  ON r.id = lroom.room_id
       LEFT JOIN procurement_items AS pi ON ia.procurement_item_id = pi.id
       LEFT JOIN procurement_drafts AS pd ON pi.draft_id = pd.id
-      LEFT JOIN laboratories AS lproc ON pd.lab_id = lproc.id
+      LEFT JOIN laboratories AS lproc  ON pd.lab_id = lproc.id
+      LEFT JOIN goods_receipts AS gr   ON ia.receipt_id = gr.id
       ${whereClause}
-      ORDER BY ia.created_at DESC
+      ORDER BY ia.receipt_id DESC, ia.id ASC
     `, params);
 
     return assets;
@@ -199,7 +209,7 @@ const InventoryModel = {
   /**
    * Update asset label and fields dynamically
    */
-  async updateLabel(id, { label_number, asset_code, barcode, photo_url, status = 'labeled' }, tx = null) {
+  async updateLabel(id, { label_number, asset_code, barcode, photo_url, qr_url, serial_number, room_id, status = 'labeled' }, tx = null) {
     const conn = tx || db;
     const updateFields = ["label_number = ?", "status = ?", "updated_at = NOW()"];
     const updateParams = [label_number, status];
@@ -215,8 +225,18 @@ const InventoryModel = {
     if (photo_url) {
       updateFields.push("photo_url = ?");
       updateParams.push(photo_url);
+    }
+    if (qr_url) {
       updateFields.push("qr_code = ?");
-      updateParams.push(photo_url);
+      updateParams.push(qr_url);
+    }
+    if (serial_number) {
+      updateFields.push("serial_number = ?");
+      updateParams.push(serial_number);
+    }
+    if (room_id) {
+      updateFields.push("room_id = ?");
+      updateParams.push(Number(room_id));
     }
 
     updateParams.push(id);

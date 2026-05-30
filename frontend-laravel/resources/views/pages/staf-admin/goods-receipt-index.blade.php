@@ -327,6 +327,33 @@
                     <input type="number" x-model="qtyReceived" :max="modalRemaining" min="1"
                            class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
                 </div>
+
+                {{-- Separator --}}
+                <div class="border-t border-slate-100 pt-3">
+                    <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-3">Informasi Pembelian <span class="font-normal text-slate-300">(opsional)</span></p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[0.7rem] font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
+                                Harga Beli / Unit
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-semibold">Rp</span>
+                                <input type="number" x-model="purchasePrice" min="0" step="1"
+                                       placeholder="0"
+                                       class="w-full pl-8 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[0.7rem] font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
+                                Tanggal Faktur
+                            </label>
+                            <input type="date" x-model="purchaseDate"
+                                   max="{{ date('Y-m-d') }}"
+                                   class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                        </div>
+                    </div>
+                </div>
+
                 <div>
                     <label class="text-[0.7rem] font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Catatan</label>
                     <textarea x-model="receiptNote" rows="2" placeholder="Opsional…"
@@ -364,6 +391,8 @@ function receiptIndexApp() {
         receivedDate: '{{ date('Y-m-d') }}',
         qtyReceived: '',
         receiptNote: '',
+        purchasePrice: '',
+        purchaseDate: '',
         openLogs: [],
         loading: false,
         toast: { show: false, message: '', type: 'success' },
@@ -379,6 +408,8 @@ function receiptIndexApp() {
             this.modalRemaining = ordered - received;
             this.qtyReceived = this.modalRemaining;
             this.receiptNote = '';
+            this.purchasePrice = '';
+            this.purchaseDate = '';
             this.modalOpen = true;
         },
 
@@ -395,18 +426,26 @@ function receiptIndexApp() {
             }
             this.loading = true;
             try {
+                const payload = {
+                    procurement_item_id: this.modalItemId,
+                    received_date: this.receivedDate,
+                    quantity_received: parseInt(this.qtyReceived),
+                    note: this.receiptNote || null
+                };
+                if (this.purchasePrice !== '' && this.purchasePrice !== null) {
+                    payload.purchase_price = parseFloat(this.purchasePrice);
+                }
+                if (this.purchaseDate) {
+                    payload.purchase_date = this.purchaseDate;
+                }
+
                 const res = await fetch('{{ route('staf-admin.goods-receipt.store') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
                     },
-                    body: JSON.stringify({
-                        procurement_item_id: this.modalItemId,
-                        received_date: this.receivedDate,
-                        quantity_received: parseInt(this.qtyReceived),
-                        note: this.receiptNote || null
-                    })
+                    body: JSON.stringify(payload)
                 });
                 const d = await res.json();
                 if (d.status === 'success') {

@@ -1,7 +1,7 @@
 const db = require("../config/database");
 
 const RoomModel = {
-  async findAll({ search, room_type_id, floor_id, building_id }) {
+  async findAll({ search, room_type_id, floor_id, building_id, lab_id } = {}) {
     const conditions = [];
     const params = [];
 
@@ -23,6 +23,17 @@ const RoomModel = {
     if (building_id) {
       conditions.push("buildings.id = ?");
       params.push(Number(building_id));
+    }
+
+    if (lab_id) {
+      conditions.push(`rooms.id IN (
+        SELECT room_id FROM laboratories WHERE id = ?
+        UNION
+        SELECT lgr.room_id FROM lab_group_rooms lgr
+        JOIN lab_groups lg ON lgr.group_id = lg.id
+        WHERE lg.laboratory_id = ?
+      )`);
+      params.push(Number(lab_id), Number(lab_id));
     }
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";

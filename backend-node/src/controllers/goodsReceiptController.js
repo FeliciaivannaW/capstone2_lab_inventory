@@ -196,7 +196,7 @@ const createGoodsReceipt = async (req, res, next) => {
   try {
     await connection.beginTransaction();
 
-    const { procurement_item_id, received_date, quantity_received, note } = req.body;
+    const { procurement_item_id, received_date, quantity_received, note, purchase_price, purchase_date } = req.body;
     const userId = req.user?.id;
 
     // ── Input validation ──────────────────────────────────────────
@@ -340,18 +340,23 @@ const createGoodsReceipt = async (req, res, next) => {
         const seqStr   = String(nextSeq).padStart(3, '0');
         const assetCode = `INV-${labCode}-${year}-${seqStr}`;
 
+        const parsedPrice = purchase_price ? parseFloat(purchase_price) : null;
+        const parsedDate  = purchase_date   ? purchase_date             : null;
+
         const [assetResult] = await connection.query(`
           INSERT INTO inventory_assets (
             item_catalog_id, procurement_item_id, receipt_id,
-            asset_code, received_date, status, asset_condition,
-            replaced_by_asset_id, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, 'received', 'baik', NULL, NOW(), NOW())
+            asset_code, received_date, purchase_price, purchase_date,
+            status, asset_condition, replaced_by_asset_id, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, 'received', 'baik', NULL, NOW(), NOW())
         `, [
           item.item_catalog_id,
           procurement_item_id,
           receiptId,
           assetCode,
-          received_date
+          received_date,
+          parsedPrice,
+          parsedDate
         ]);
 
         createdAssets.push({
@@ -364,7 +369,16 @@ const createGoodsReceipt = async (req, res, next) => {
 
     } else if (item.item_type === 'bhp') {
       // UPSERT bhp_stocks — increment current_stock
-      // bhp_stocks is unique per (lab_id, item_catalog_id)
+      if (!item.item_catalog_id) {
+        // BHP tanpa catalog tidak bisa di-track di stok, skip stock update
+        await connection.commit();
+        connection.release();
+        return res.status(201).json({
+          status: "success",
+          message: "Penerimaan barang BHP dicatat (tanpa update stok karena item tidak terdaftar di katalog)",
+          data: { receipt_id: receiptId, procurement_item_id: parseInt(procurement_item_id, 10), received_date, quantity_received: qty }
+        });
+      }
 
       // Fetch unit from item_catalogs
       const [catalogRows] = await connection.query(

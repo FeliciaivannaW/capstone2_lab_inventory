@@ -1,8 +1,9 @@
 const LabAccessModel = require("../models/LabAccessModel");
 const InventoryModel = require("../models/InventoryModel");
-const db = require("../config/database");
+const db   = require("../config/database");
 const path = require("path");
-const fs = require("fs");
+const fs   = require("fs");
+const QRCode = require("qrcode");
 
 const getAccessibleRoomIdsForUser = async (user) => {
   if (user?.role !== "staf_laboratorium") {
@@ -36,41 +37,96 @@ const checkAssetRoomAccess = async (user, asset, assetId) => {
 
 const getInventoryAssets = async (req, res) => {
   try {
-    const { search, status, condition, label_status, lab_id } = req.query;
+    const { search, status, condition, label_status, lab_id, receipt_id } = req.query;
     const roomIds = await getAccessibleRoomIdsForUser(req.user);
 
     if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0)) {
-      return res.json({
-        success: true,
-        data: [],
-        message: "Data inventaris berhasil diambil"
+      return res.json({ success: true, data: [], message: "Data inventaris berhasil diambil" });
+    }
+
+    const assets = await InventoryModel.findAll({ search, status, condition, label_status, lab_id, roomIds, receipt_id });
+
+    res.json({ success: true, data: assets, message: "Data inventaris berhasil diambil" });
+  } catch (error) {
+    console.error("[INVENTORY ASSETS ERROR]", error);
+    res.status(500).json({ success: false, message: "Gagal mengambil data inventaris", errors: { detail: error.message } });
+  }
+};
+
+const getInventoryBatches = async (req, res) => {
+  try {
+    const { label_status } = req.query;
+
+    const [rows] = await db.query(`
+      SELECT
+        gr.id                              AS receipt_id,
+        gr.received_date,
+        gr.quantity_received,
+        pd.id                              AS draft_id,
+        pd.title                           AS draft_title,
+        pd.budget_year,
+        l.name                             AS lab_name,
+        l.code                             AS lab_code,
+        pi.item_name,
+        COALESCE(ic.name, pi.item_name)    AS catalog_name,
+        COUNT(ia.id)                       AS total_assets,
+        SUM(CASE WHEN ia.label_number IS NOT NULL AND ia.label_number != '' THEN 1 ELSE 0 END) AS labeled_count,
+        SUM(CASE WHEN ia.label_number IS NULL OR ia.label_number = '' THEN 1 ELSE 0 END)       AS unlabeled_count
+      FROM goods_receipts AS gr
+      JOIN procurement_items AS pi  ON gr.procurement_item_id = pi.id
+      JOIN procurement_drafts AS pd ON pi.draft_id = pd.id
+      JOIN laboratories AS l        ON pd.lab_id = l.id
+      LEFT JOIN item_catalogs AS ic ON pi.item_catalog_id = ic.id
+      LEFT JOIN inventory_assets AS ia ON ia.receipt_id = gr.id
+      GROUP BY gr.id, pd.id, l.id, pi.id, ic.id
+      HAVING total_assets > 0
+      ORDER BY gr.received_date DESC, gr.id DESC
+    `);
+
+    // Group by receipt_id
+    const batchMap = {};
+    for (const row of rows) {
+      const rid = row.receipt_id;
+      if (!batchMap[rid]) {
+        batchMap[rid] = {
+          receipt_id:        rid,
+          received_date:     row.received_date,
+          draft_id:          row.draft_id,
+          draft_title:       row.draft_title,
+          budget_year:       row.budget_year,
+          lab_name:          row.lab_name,
+          lab_code:          row.lab_code,
+          total_assets:      0,
+          labeled_count:     0,
+          unlabeled_count:   0,
+          items:             []
+        };
+      }
+      const b = batchMap[rid];
+      b.total_assets    += Number(row.total_assets);
+      b.labeled_count   += Number(row.labeled_count);
+      b.unlabeled_count += Number(row.unlabeled_count);
+      b.items.push({
+        item_name:       row.item_name,
+        catalog_name:    row.catalog_name,
+        total_assets:    Number(row.total_assets),
+        labeled_count:   Number(row.labeled_count),
+        unlabeled_count: Number(row.unlabeled_count)
       });
     }
 
-    const assets = await InventoryModel.findAll({
-      search,
-      status,
-      condition,
-      label_status,
-      lab_id,
-      roomIds
-    });
+    let batches = Object.values(batchMap);
 
-    res.json({
-      success: true,
-      data: assets,
-      message: "Data inventaris berhasil diambil"
-    });
+    if (label_status === 'unlabeled') {
+      batches = batches.filter(b => b.unlabeled_count > 0);
+    } else if (label_status === 'labeled') {
+      batches = batches.filter(b => b.labeled_count > 0);
+    }
+
+    res.json({ status: "success", data: batches });
   } catch (error) {
-    console.error("[INVENTORY ASSETS ERROR]", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Gagal mengambil data inventaris",
-      errors: {
-        detail: error.message
-      }
-    });
+    console.error("[INVENTORY BATCHES ERROR]", error);
+    res.status(500).json({ status: "error", message: "Gagal mengambil data batch", detail: error.message });
   }
 };
 
@@ -130,10 +186,12 @@ const updateAssetLabel = async (req, res) => {
     const { id } = req.params;
     const userId = req.user?.id;
 
-    const label_number = req.body.label_number;
-    const asset_code = req.body.asset_code || null;
-    const barcode = req.body.barcode || null;
-    let photo_url = req.body.photo_url || null;
+    const label_number  = req.body.label_number;
+    const asset_code    = req.body.asset_code    || null;
+    const barcode       = req.body.barcode       || null;
+    const serial_number = req.body.serial_number || null;
+    const room_id       = req.body.room_id       || null;
+    let photo_url       = req.body.photo_url     || null;
 
     if (!label_number) {
       await connection.rollback();
@@ -165,17 +223,46 @@ const updateAssetLabel = async (req, res) => {
       });
     }
 
-    // File saved by multer to uploads/qr/; store full URL so frontend can load it
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+    // Jika user upload foto manual → pakai itu
     if (req.file) {
-      const baseUrl = `${req.protocol}://${req.get("host")}`;
       photo_url = `${baseUrl}/uploads/qr/${req.file.filename}`;
+    }
+
+    // Auto-generate QR code dari label_number (selalu, kecuali sudah ada upload manual)
+    let qr_url = photo_url; // default: pakai foto upload jika ada
+    try {
+      const qrDir = path.join(__dirname, "../../uploads/qr");
+      if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
+
+      const qrFilename = `qr-label-${id}-${Date.now()}.png`;
+      const qrFilepath = path.join(qrDir, qrFilename);
+
+      await QRCode.toFile(qrFilepath, label_number, {
+        width: 400,
+        margin: 2,
+        color: { dark: "#1e293b", light: "#ffffff" }
+      });
+
+      qr_url = `${baseUrl}/uploads/qr/${qrFilename}`;
+
+      // Jika tidak ada upload manual, pakai QR yang di-generate
+      if (!photo_url) {
+        photo_url = qr_url;
+      }
+    } catch (qrErr) {
+      console.warn("[QR GENERATE WARN]", qrErr.message);
     }
 
     await InventoryModel.updateLabel(id, {
       label_number,
       asset_code,
       barcode,
-      photo_url
+      photo_url,
+      qr_url,
+      serial_number,
+      room_id
     }, connection);
 
     await InventoryModel.createConditionLog({
@@ -190,14 +277,17 @@ const updateAssetLabel = async (req, res) => {
 
     res.json({
       status:  "success",
-      message: "Label dan foto berhasil diperbarui",
+      message: "Label dan QR berhasil disimpan",
       data: {
         id,
         label_number,
-        asset_code: asset_code || asset.asset_code,
-        barcode:    barcode || null,
-        photo_url:  photo_url || null,
-        status:     "labeled"
+        asset_code:    asset_code    || asset.asset_code,
+        serial_number: serial_number || null,
+        room_id:       room_id       ? Number(room_id) : null,
+        barcode:       barcode       || null,
+        photo_url:     photo_url     || null,
+        qr_code:       qr_url        || null,
+        status:        "labeled"
       }
     });
   } catch (error) {
@@ -504,6 +594,7 @@ const checkLabelAvailability = async (req, res) => {
 
 module.exports = {
   getInventoryAssets,
+  getInventoryBatches,
   getInventoryAsset,
   updateAssetLabel,
   checkLabelAvailability,

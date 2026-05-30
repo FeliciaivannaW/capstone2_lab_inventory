@@ -68,12 +68,9 @@ class ProcurementController extends Controller
         $authUser = session('auth_user');
         $laboratories = [];
 
-        if ($authUser['role'] === 'staf_administrasi') {
-            $laboratories = $this->getApiData('/laboratories');
+        if (in_array($authUser['role'], ['staf_administrasi', 'kepala_laboratorium'])) {
+            $laboratories = $this->getApiData('/laboratories') ?: [];
             $laboratories = collect($laboratories)->pluck('name', 'id')->toArray();
-        } elseif ($authUser['role'] === 'kepala_laboratorium' && empty($authUser['lab_id'])) {
-            return redirect()->route('procurement')
-                ->with('error', 'Akun Anda belum terhubung ke laboratorium. Hubungi Administrator.');
         }
 
         return view('pages.procurement.form', [
@@ -163,8 +160,8 @@ class ProcurementController extends Controller
         }
 
         $laboratories = [];
-        if ($authUser['role'] === 'staf_administrasi') {
-            $laboratories = $this->getApiData('/laboratories');
+        if (in_array($authUser['role'], ['staf_administrasi', 'kepala_laboratorium'])) {
+            $laboratories = $this->getApiData('/laboratories') ?: [];
             $laboratories = collect($laboratories)->pluck('name', 'id')->toArray();
         }
 

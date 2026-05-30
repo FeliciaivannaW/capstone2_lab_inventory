@@ -406,9 +406,11 @@ class StafAdminController extends Controller
     {
         $validated = $request->validate([
             'procurement_item_id' => 'required|integer',
-            'received_date' => 'required|date',
-            'quantity_received' => 'required|integer|min:1',
-            'note' => 'nullable|string',
+            'received_date'       => 'required|date',
+            'quantity_received'   => 'required|integer|min:1',
+            'note'                => 'nullable|string',
+            'purchase_price'      => 'nullable|numeric|min:0',
+            'purchase_date'       => 'nullable|date',
         ]);
 
         $result = $this->postApiData('/goods-receipts', $validated);
@@ -425,54 +427,23 @@ class StafAdminController extends Controller
      */
     public function inventoryLabel(Request $request)
     {
-        $filters = [];
+        $tab           = $request->input('tab', 'unlabeled');
+        $highlightBatch = $request->input('batch');
 
-        if ($request->filled('search')) {
-            $filters['search'] = $request->search;
-        }
+        $labelStatus = $tab === 'labeled' ? 'labeled' : 'unlabeled';
+        $batches = $this->getApiData('/inventory/batches', ['label_status' => $labelStatus]) ?: [];
 
-        if ($request->filled('status')) {
-            $filters['status'] = $request->status;
-        }
-
-        if ($request->filled('label_status')) {
-            $filters['label_status'] = $request->label_status;
-        }
-
-        $assets = $this->getApiData('/inventory/assets', $filters) ?: [];
-
-        // Build mapping procurement_item_id → draft (untuk kolom Asal Draf)
-        $drafts = $this->getApiData('/procurement/drafts', ['status' => 'finalized']) ?: [];
-        $procItemToDraft = [];
-        $draftOptions = [];
-
-        foreach ($drafts as $d) {
-            $draftOptions[] = ['id' => $d['id'], 'title' => $d['title']];
-            $detail = $this->getApiData("/procurement/drafts/{$d['id']}");
-            foreach ($detail['items'] ?? [] as $item) {
-                $procItemToDraft[$item['id']] = [
-                    'id'    => $d['id'],
-                    'title' => $d['title'],
-                ];
-            }
-        }
-
-        // Inject draft info ke setiap asset
-        foreach ($assets as &$a) {
-            $pid = $a['procurement_item_id'] ?? null;
-            $a['source_draft'] = $pid && isset($procItemToDraft[$pid]) ? $procItemToDraft[$pid] : null;
-        }
-        unset($a);
-
-        // Filter by source draft jika ada
-        if ($request->filled('source_draft')) {
-            $assets = array_values(array_filter($assets, fn($a) => ($a['source_draft']['id'] ?? null) == $request->source_draft));
+        // Jika ada highlight_batch, taruh batch itu di posisi pertama
+        if ($highlightBatch) {
+            usort($batches, fn($a, $b) =>
+                ($b['receipt_id'] == $highlightBatch ? 1 : 0) - ($a['receipt_id'] == $highlightBatch ? 1 : 0)
+            );
         }
 
         return view('pages.staf-admin.inventory-label', [
-            'assets'        => $assets,
-            'filters'       => $request->only(['search', 'status', 'label_status', 'source_draft']),
-            'draftOptions'  => $draftOptions,
+            'batches'        => $batches,
+            'tab'            => $tab,
+            'highlightBatch' => $highlightBatch,
         ]);
     }
 
@@ -499,28 +470,43 @@ class StafAdminController extends Controller
     public function inventoryLabelUpdate(Request $request, $id)
     {
         $validated = $request->validate([
-            'label_number' => 'required|string|max:100',
-            'qr_photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'label_number'  => 'required|string|max:100',
+            'serial_number' => 'nullable|string|max:100',
+            'room_id'       => 'nullable|integer',
+            'qr_photo'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        $data = [
-            'label_number' => $validated['label_number'],
+        $data  = [
+            'label_number'  => $validated['label_number'],
+            'serial_number' => $validated['serial_number'] ?? null,
+            'room_id'       => $validated['room_id'] ?? null,
         ];
-
         $files = [];
         if ($request->hasFile('qr_photo')) {
             $files['qr_photo'] = $request->file('qr_photo');
         }
 
-        if (!empty($files)) {
-            $result = $this->postApiDataWithFile("/inventory/assets/{$id}/label", $data, $files);
-        } else {
-            $result = $this->postApiData("/inventory/assets/{$id}/label", $data, 'PUT');
+        $result = !empty($files)
+            ? $this->postApiDataWithFile("/inventory/assets/{$id}/label", $data, $files)
+            : $this->postApiData("/inventory/assets/{$id}/label", $data, 'PUT');
+
+        $success = ($result['status'] ?? '') === 'success';
+
+        // AJAX request → return JSON with QR URL
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'ok'           => $success,
+                'message'      => $result['message'] ?? ($success ? 'Berhasil' : 'Gagal'),
+                'qr_code'      => $result['data']['qr_code']   ?? null,
+                'photo_url'    => $result['data']['photo_url'] ?? null,
+                'label_number' => $result['data']['label_number'] ?? $validated['label_number'],
+            ]);
         }
 
-        if (($result['status'] ?? '') === 'success') {
+        // Normal form submit → redirect
+        if ($success) {
             return redirect()->route('staf-admin.inventory-label')
-                ->with('success', 'Label dan foto berhasil diperbarui');
+                ->with('success', 'Label dan QR berhasil disimpan');
         }
 
         return back()->with('error', $result['message'] ?? 'Gagal memperbarui label');
@@ -539,50 +525,21 @@ class StafAdminController extends Controller
      */
     public function dashboard()
     {
-        $statistics = $this->getApiData('/statistics/summary');
+        // Single API call — semua data dari statisticsController
+        $stats = $this->getApiData('/statistics/summary') ?: [];
 
-        // ── Hitung counter untuk 3 fitur ──
-        $drafts = $this->getApiData('/procurement/drafts', ['status' => 'finalized']);
+        $inv        = $stats['inventory']      ?? [];
+        $label      = $stats['label']          ?? [];
+        $bhp        = $stats['bhp']            ?? [];
+        $bhpLow     = $stats['bhpLowStock']    ?? [];
+        $proc       = $stats['procurement']    ?? [];
+        $recv       = $stats['reception']      ?? [];
+        $trend      = $stats['monthlyTrend']   ?? [];
+        $activity   = $stats['recentActivity'] ?? [];
 
-        $draftsPending = 0;     // draf yang masih ada item belum diterima
-        $itemsPending  = 0;     // total item belum diterima
-        foreach ($drafts as $d) {
-            $detail = $this->getApiData("/procurement/drafts/{$d['id']}");
-            $approved = array_filter($detail['items'] ?? [], fn($i) => ($i['review_status'] ?? '') === 'approved');
-            $totalOrdered = array_sum(array_map(fn($i) => (int)($i['quantity'] ?? 0), $approved));
-
-            $receipts = $this->getApiData("/goods-receipts/by-draft/{$d['id']}");
-            $totalReceived = array_sum(array_map(fn($r) => (int)($r['quantity_received'] ?? 0), $receipts));
-
-            $remaining = max(0, $totalOrdered - $totalReceived);
-            if ($remaining > 0) {
-                $draftsPending++;
-                $itemsPending += $remaining;
-            }
-        }
-
-        // ── Counter Fitur 2: aset belum berlabel ──
-        $allAssets = $this->getApiData('/inventory/assets') ?: [];
-        $assetsUnlabeled = count(array_filter($allAssets, fn($a) => empty($a['label_number'])));
-        $assetsLabeled   = count($allAssets) - $assetsUnlabeled;
-
-        // ── Recent activity terbaru ──
-        usort($allAssets, function ($a, $b) {
-            $da = strtotime($a['updated_at'] ?? $a['received_date'] ?? $a['created_at'] ?? '1970');
-            $db = strtotime($b['updated_at'] ?? $b['received_date'] ?? $b['created_at'] ?? '1970');
-            return $db <=> $da;
-        });
-        $recentAssets = array_slice($allAssets, 0, 5);
-
-        return view('pages.staf-admin.dashboard', [
-            'stats'           => $statistics,
-            'recentAssets'    => $recentAssets,
-            'draftsTotal'     => count($drafts),
-            'draftsPending'   => $draftsPending,
-            'itemsPending'    => $itemsPending,
-            'assetsUnlabeled' => $assetsUnlabeled,
-            'assetsLabeled'   => $assetsLabeled,
-        ]);
+        return view('pages.staf-admin.dashboard', compact(
+            'inv', 'label', 'bhp', 'bhpLow', 'proc', 'recv', 'trend', 'activity'
+        ));
     }
 
     // ============================================================
@@ -676,7 +633,30 @@ class StafAdminController extends Controller
     }
 
     /**
-     * Check if a label number is available (not used by another asset).
+     * Print label page for single asset
+     */
+    public function printLabel(Request $request)
+    {
+        $id = $request->query('id');
+        if (!$id) abort(404);
+
+        $asset = $this->getApiData("/inventory/assets/{$id}");
+        if (empty($asset)) abort(404);
+
+        return view('pages.staf-admin.print-label', compact('asset'));
+    }
+
+    /**
+     * Proxy: GET /api/inventory/assets → Node.js backend
+     */
+    public function inventoryAssetsApi(Request $request)
+    {
+        $filters = $request->only(['search', 'status', 'condition', 'label_status', 'lab_id', 'receipt_id']);
+        $assets = $this->getApiData('/inventory/assets', $filters) ?: [];
+        return response()->json(['data' => $assets]);
+    }
+
+    /**
      * Proxies to GET /inventory/label-check on the Node.js API.
      */
     public function labelCheck(Request $request)
@@ -703,14 +683,26 @@ class StafAdminController extends Controller
     public function inventoryLabelUpdateAjax(Request $request, $id)
     {
         $validated = $request->validate([
-            'label_number' => 'required|string|max:100',
-            'asset_code'   => 'nullable|string|max:100',
-            'barcode'      => 'nullable|string|max:255',
-            'photo_url'    => 'nullable|string',
+            'label_number'  => 'required|string|max:100',
+            'asset_code'    => 'nullable|string|max:100',
+            'barcode'       => 'nullable|string|max:255',
+            'photo_url'     => 'nullable|string',
+            'serial_number' => 'nullable|string|max:100',
+            'room_id'       => 'nullable|integer',
         ]);
 
         $result = $this->postApiData("/inventory/assets/{$id}/label", $validated, 'PATCH');
 
         return response()->json($result);
+    }
+
+    /**
+     * Proxy: GET /api/rooms → Node.js backend
+     * Used by the label drawer to populate the room dropdown.
+     */
+    public function roomsApi(Request $request)
+    {
+        $rooms = $this->getApiData('/rooms') ?: [];
+        return response()->json(['data' => $rooms]);
     }
 }

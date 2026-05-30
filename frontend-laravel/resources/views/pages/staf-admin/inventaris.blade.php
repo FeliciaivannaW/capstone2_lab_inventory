@@ -1,119 +1,125 @@
 @extends('layouts.app')
-
 @section('title', 'Semua Inventaris')
 
 @section('content')
 @php
     $statusMeta = [
-        'received'    => ['label' => 'Diterima',    'dot' => 'bg-blue-400',    'badge' => 'bg-blue-50 text-blue-700 border-blue-200'],
-        'labeled'     => ['label' => 'Berlabel',    'dot' => 'bg-amber-400',   'badge' => 'bg-amber-50 text-amber-700 border-amber-200'],
-        'available'   => ['label' => 'Tersedia',    'dot' => 'bg-emerald-500', 'badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200'],
-        'in_use'      => ['label' => 'Digunakan',   'dot' => 'bg-indigo-500',  'badge' => 'bg-indigo-50 text-indigo-700 border-indigo-200'],
-        'maintenance' => ['label' => 'Maintenance', 'dot' => 'bg-orange-400',  'badge' => 'bg-orange-50 text-orange-700 border-orange-200'],
-        'disposed'    => ['label' => 'Dihapus',     'dot' => 'bg-red-400',     'badge' => 'bg-red-50 text-red-700 border-red-200'],
-        'replaced'    => ['label' => 'Diganti',     'dot' => 'bg-slate-400',   'badge' => 'bg-slate-100 text-slate-600 border-slate-200'],
+        'received'    => ['label' => 'Diterima',    'color' => 'blue',    'dot' => 'bg-blue-400',    'badge' => 'bg-blue-50 text-blue-700 border-blue-200'],
+        'labeled'     => ['label' => 'Berlabel',    'color' => 'indigo',  'dot' => 'bg-indigo-400',  'badge' => 'bg-indigo-50 text-indigo-700 border-indigo-200'],
+        'available'   => ['label' => 'Tersedia',    'color' => 'emerald', 'dot' => 'bg-emerald-500', 'badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200'],
+        'in_use'      => ['label' => 'Digunakan',   'color' => 'violet',  'dot' => 'bg-violet-500',  'badge' => 'bg-violet-50 text-violet-700 border-violet-200'],
+        'maintenance' => ['label' => 'Maintenance', 'color' => 'amber',   'dot' => 'bg-amber-400',   'badge' => 'bg-amber-50 text-amber-700 border-amber-200'],
+        'disposed'    => ['label' => 'Dihapus',     'color' => 'red',     'dot' => 'bg-red-400',     'badge' => 'bg-red-50 text-red-700 border-red-200'],
+        'replaced'    => ['label' => 'Diganti',     'color' => 'slate',   'dot' => 'bg-slate-400',   'badge' => 'bg-slate-100 text-slate-600 border-slate-200'],
     ];
     $condMeta = [
-        'baik'         => ['label' => 'Baik',         'class' => 'badge-approved'],
-        'rusak_ringan' => ['label' => 'Rusak Ringan',  'class' => 'badge-pending'],
-        'rusak_berat'  => ['label' => 'Rusak Berat',   'class' => 'badge-rejected'],
-        'maintenance'  => ['label' => 'Maintenance',   'class' => 'badge-active'],
-        'dihapus'      => ['label' => 'Dihapus',       'class' => 'badge-rejected'],
-        'diganti'      => ['label' => 'Diganti',       'class' => 'badge-active'],
+        'baik'         => ['label' => 'Baik',        'color' => 'bg-emerald-100 text-emerald-700'],
+        'rusak_ringan' => ['label' => 'Rusak Ringan', 'color' => 'bg-amber-100 text-amber-700'],
+        'rusak_berat'  => ['label' => 'Rusak Berat',  'color' => 'bg-red-100 text-red-700'],
+        'maintenance'  => ['label' => 'Maintenance',  'color' => 'bg-orange-100 text-orange-700'],
+        'dihapus'      => ['label' => 'Dihapus',      'color' => 'bg-slate-100 text-slate-600'],
+        'diganti'      => ['label' => 'Diganti',      'color' => 'bg-violet-100 text-violet-700'],
     ];
+    $totalLabeled   = $byStatus['labeled'] ?? 0;
+    $totalReceived  = $byStatus['received'] ?? 0;
+    $totalAvailable = ($byStatus['available'] ?? 0) + ($byStatus['in_use'] ?? 0);
+    $totalBaik      = $byCondition['baik'] ?? 0;
 @endphp
 
-{{-- ─── Header ─────────────────────────────────────────── --}}
-<div class="mb-6 flex items-start justify-between flex-wrap gap-3">
+{{-- Header --}}
+<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
     <div>
-        <h1 class="text-2xl font-bold text-slate-900">Semua Inventaris</h1>
-        <p class="text-sm text-slate-500 mt-1">
-            Pantau seluruh aset inventaris laboratorium — status, kondisi, dan siklus hidup.
-        </p>
+        <h1 class="text-xl font-bold text-slate-900">Semua Inventaris</h1>
+        <p class="text-sm text-slate-500 mt-0.5">Pantau seluruh aset — status, kondisi, harga, dan QR code.</p>
     </div>
-    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+    <span class="text-xs font-semibold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-        Read-Only View
+        Read-Only
     </span>
 </div>
 
-{{-- ─── Summary cards ───────────────────────────────────── --}}
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-    <div class="glass-card rounded-2xl p-5 border border-slate-100">
-        <p class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider">Total Aset</p>
-        <p class="text-3xl font-bold text-slate-900 mt-1 leading-none">{{ $totalAssets }}</p>
-        <p class="text-[0.7rem] text-slate-400 mt-2">semua status</p>
-    </div>
-    @foreach([['received','Baru Terima'],['labeled','Berlabel'],['available','Tersedia'],['in_use','Digunakan']] as [$s,$l])
-        @php $cnt = $byStatus[$s] ?? 0; $m = $statusMeta[$s]; @endphp
-        <div class="glass-card rounded-2xl p-5 border {{ 'border-slate-100' }}">
-            <p class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider">{{ $l }}</p>
-            <p class="text-3xl font-bold text-slate-900 mt-1 leading-none">{{ $cnt }}</p>
-            <div class="flex items-center gap-1.5 mt-2">
-                <span class="w-2 h-2 rounded-full {{ $m['dot'] }}"></span>
-                <p class="text-[0.7rem] text-slate-400">{{ $m['label'] }}</p>
-            </div>
+{{-- ══ SUMMARY CHIPS (clickable as filter shortcuts) ══ --}}
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+    @php
+    $summaryChips = [
+        ['label' => 'Total Aset',      'count' => $totalAssets,   'sub' => 'semua status',  'color' => 'slate',   'param' => ''],
+        ['label' => 'Perlu Label',      'count' => $totalReceived, 'sub' => 'status: diterima','color' => 'blue',  'param' => 'received'],
+        ['label' => 'Sudah Berlabel',   'count' => $totalLabeled,  'sub' => 'siap digunakan', 'color' => 'indigo', 'param' => 'labeled'],
+        ['label' => 'Kondisi Baik',     'count' => $totalBaik,     'sub' => 'tidak rusak',   'color' => 'emerald', 'param' => ''],
+    ];
+    $colorMap = [
+        'slate'   => ['bg' => 'bg-slate-50',   'ring' => 'ring-slate-200',   'num' => 'text-slate-900', 'icon_bg' => 'bg-slate-100',   'icon' => 'text-slate-500'],
+        'blue'    => ['bg' => 'bg-blue-50',    'ring' => 'ring-blue-200',    'num' => 'text-blue-700',  'icon_bg' => 'bg-blue-100',    'icon' => 'text-blue-600'],
+        'indigo'  => ['bg' => 'bg-indigo-50',  'ring' => 'ring-indigo-200',  'num' => 'text-indigo-700','icon_bg' => 'bg-indigo-100',  'icon' => 'text-indigo-600'],
+        'emerald' => ['bg' => 'bg-emerald-50', 'ring' => 'ring-emerald-200', 'num' => 'text-emerald-700','icon_bg'=> 'bg-emerald-100', 'icon' => 'text-emerald-600'],
+    ];
+    @endphp
+    @foreach($summaryChips as $chip)
+    @php $cm = $colorMap[$chip['color']]; $isActive = ($filters['status'] ?? '') === $chip['param'] && $chip['param']; @endphp
+    <a href="{{ $chip['param'] ? route('staf-admin.inventaris', ['status' => $chip['param']]) : route('staf-admin.inventaris') }}"
+       class="glass-card rounded-2xl p-4 flex items-center gap-3 transition-all hover:shadow-md
+              {{ $isActive ? 'ring-2 ' . $cm['ring'] : 'hover:ring-1 hover:' . $cm['ring'] }}">
+        <div class="w-10 h-10 rounded-xl {{ $cm['icon_bg'] }} flex items-center justify-center flex-shrink-0">
+            <p class="text-lg font-bold {{ $cm['num'] }}">{{ $chip['count'] }}</p>
         </div>
+        <div class="min-w-0">
+            <p class="text-xs font-bold text-slate-700 truncate">{{ $chip['label'] }}</p>
+            <p class="text-[10px] text-slate-400 mt-0.5 truncate">{{ $chip['sub'] }}</p>
+        </div>
+    </a>
     @endforeach
 </div>
 
-{{-- ─── Condition mini-bar ──────────────────────────────── --}}
+{{-- ══ KONDISI BAR ══ --}}
 @if($totalAssets > 0)
-<div class="glass-card rounded-2xl p-5 mb-6">
-    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Kondisi Aset</p>
-    <div class="flex gap-2 flex-wrap">
-        @foreach($byCondition as $cond => $cnt)
-            @php $cm = $condMeta[$cond] ?? ['label' => $cond, 'class' => 'badge-draft']; @endphp
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200">
-                {{ $cm['label'] }}
-                <span class="font-bold text-slate-900">{{ $cnt }}</span>
-            </span>
-        @endforeach
-    </div>
+<div class="glass-card rounded-2xl px-5 py-3.5 mb-5 flex items-center gap-3 flex-wrap">
+    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex-shrink-0">Kondisi:</span>
+    @foreach($byCondition as $cond => $cnt)
+    @php $cm = $condMeta[$cond] ?? ['label' => $cond, 'color' => 'bg-slate-100 text-slate-600']; @endphp
+    <a href="{{ route('staf-admin.inventaris', array_merge($filters, ['condition' => $cond])) }}"
+       class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold {{ $cm['color'] }} border border-current border-opacity-20 hover:opacity-80 transition-opacity {{ ($filters['condition'] ?? '') === $cond ? 'ring-2 ring-offset-1 ring-current ring-opacity-30' : '' }}">
+        {{ $cm['label'] }} <span class="font-bold">{{ $cnt }}</span>
+    </a>
+    @endforeach
+    @if($filters['condition'] ?? null)
+        <a href="{{ route('staf-admin.inventaris', array_diff_key($filters, ['condition' => ''])) }}" class="text-[11px] text-slate-400 hover:text-slate-600 ml-1">✕ Reset kondisi</a>
+    @endif
 </div>
 @endif
 
-{{-- ─── Filter bar ──────────────────────────────────────── --}}
+{{-- ══ FILTER BAR ══ --}}
 <form method="GET" action="{{ route('staf-admin.inventaris') }}"
-      class="glass-card rounded-2xl px-5 py-4 mb-5 flex flex-wrap items-end gap-4">
-    {{-- Search --}}
+      class="glass-card rounded-2xl px-5 py-4 mb-5 flex flex-wrap items-end gap-3">
     <div class="flex-[2] min-w-[180px]">
         <label class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Cari Aset</label>
         <div class="relative">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/>
-            </svg>
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
-                   placeholder="Kode aset, label, nama barang…"
-                   class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                   placeholder="Kode, label, nama barang…"
+                   class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
         </div>
     </div>
-    {{-- Lab --}}
-    <div class="flex-1 min-w-[160px]">
+    <div class="flex-1 min-w-[140px]">
         <label class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Laboratorium</label>
-        <select name="lab_id" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+        <select name="lab_id" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
             <option value="">Semua Lab</option>
             @foreach($labs as $lab)
-                <option value="{{ $lab['id'] }}" {{ ($filters['lab_id'] ?? '') == $lab['id'] ? 'selected' : '' }}>
-                    {{ $lab['name'] }}
-                </option>
+                <option value="{{ $lab['id'] }}" {{ ($filters['lab_id'] ?? '') == $lab['id'] ? 'selected' : '' }}>{{ $lab['name'] }}</option>
             @endforeach
         </select>
     </div>
-    {{-- Status --}}
-    <div class="flex-1 min-w-[140px]">
+    <div class="flex-1 min-w-[130px]">
         <label class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Status</label>
-        <select name="status" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+        <select name="status" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
             <option value="">Semua Status</option>
             @foreach($statusMeta as $val => $meta)
                 <option value="{{ $val }}" {{ ($filters['status'] ?? '') == $val ? 'selected' : '' }}>{{ $meta['label'] }}</option>
             @endforeach
         </select>
     </div>
-    {{-- Condition --}}
-    <div class="flex-1 min-w-[140px]">
+    <div class="flex-1 min-w-[130px]">
         <label class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Kondisi</label>
-        <select name="condition" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+        <select name="condition" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
             <option value="">Semua Kondisi</option>
             @foreach($condMeta as $val => $cm)
                 <option value="{{ $val }}" {{ ($filters['condition'] ?? '') == $val ? 'selected' : '' }}>{{ $cm['label'] }}</option>
@@ -121,203 +127,227 @@
         </select>
     </div>
     <div class="flex gap-2">
-        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+        <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             Filter
         </button>
         @if(array_filter($filters))
-            <a href="{{ route('staf-admin.inventaris') }}"
-               class="inline-flex items-center px-3 py-2 text-sm font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
-                Reset
-            </a>
+            <a href="{{ route('staf-admin.inventaris') }}" class="inline-flex items-center px-3 py-2 text-sm font-semibold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Reset</a>
         @endif
     </div>
 </form>
 
-{{-- ─── Table ───────────────────────────────────────────── --}}
-<div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($assets) }})">
-    @php
-        $labs = collect($assets)->pluck('laboratory_name')->unique()->filter()->values()->toArray();
-        $labOptions = count($labs) ? array_combine($labs, $labs) : [];
-        $roomsList = collect($assets)->pluck('room_name')->unique()->filter()->values()->toArray();
-        $roomOptions = count($roomsList) ? array_combine($roomsList, $roomsList) : [];
-        
-        $statusOptions = [];
-        foreach($statusMeta as $val => $m) {
-            $statusOptions[$val] = $m['label'];
-        }
-        $condOptions = [];
-        foreach($condMeta as $val => $cm) {
-            $condOptions[$val] = $cm['label'];
-        }
-    @endphp
-    <div class="px-6 py-4 border-b border-slate-100 space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <p class="text-sm font-semibold text-slate-700">
-                {{ count($assets) }} aset terdaftar
-                @if(array_filter($filters))
-                    <span class="text-slate-400 font-normal">dari {{ $totalAssets }} total</span>
-                @endif
-            </p>
-            {{-- Lifecycle legend --}}
-            <div class="hidden sm:flex items-center gap-3">
-                @foreach(['received' => 'Terima','labeled' => 'Label','available' => 'Siap','in_use' => 'Pakai'] as $s => $l)
-                    <span class="inline-flex items-center gap-1 text-[0.6rem] font-semibold text-slate-500">
-                        <span class="w-2 h-2 rounded-full {{ $statusMeta[$s]['dot'] }}"></span>{{ $l }}
-                    </span>
-                    @if($s !== 'in_use')<svg class="w-3 h-3 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>@endif
-                @endforeach
-            </div>
-        </div>
-        <div class="flex flex-wrap items-end gap-3 pt-2 border-t border-slate-50">
-            <x-table-filter column="lab" label="Laboratorium" :options="$labOptions" />
-            <x-table-filter column="room" label="Ruangan" :options="$roomOptions" />
-            <x-table-filter column="status" label="Status" :options="$statusOptions" />
-            <x-table-filter column="condition" label="Kondisi" :options="$condOptions" />
-            <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
-                Reset Filter
-            </button>
-        </div>
+{{-- ══ TABLE ══ --}}
+<div class="glass-card rounded-2xl overflow-hidden" x-data="inventarisApp({{ count($assets) }})">
+
+    <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+        <p class="text-sm font-semibold text-slate-700">
+            {{ count($assets) }} aset
+            @if(array_filter($filters))<span class="text-slate-400 font-normal">dari {{ $totalAssets }} total</span>@endif
+        </p>
+        <p class="text-xs text-slate-400">Klik baris untuk detail lengkap</p>
     </div>
 
     @if(empty($assets))
         <div class="flex flex-col items-center justify-center py-20 text-center">
-            <svg class="w-14 h-14 text-slate-200 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-            </svg>
-            <p class="text-sm font-semibold text-slate-400">Tidak ada aset ditemukan</p>
-            <p class="text-xs text-slate-300 mt-1">Coba ubah filter atau tunggu barang diterima dan diberi label.</p>
+            <div class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                <svg class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            </div>
+            <p class="text-sm font-semibold text-slate-500">Tidak ada aset ditemukan</p>
+            <p class="text-xs text-slate-400 mt-1">Coba ubah filter atau tunggu barang diterima.</p>
         </div>
     @else
         <div class="overflow-x-auto">
-            <table class="lv-table">
+            <table class="w-full text-sm">
                 <thead>
-                    <tr>
-                        <x-sort-header field="num">#</x-sort-header>
-                        <x-sort-header field="code">Kode Aset</x-sort-header>
-                        <x-sort-header field="name">Nama Barang</x-sort-header>
-                        <x-sort-header field="lab">Lab</x-sort-header>
-                        <x-sort-header field="room">Ruangan</x-sort-header>
-                        <x-sort-header field="label">Label</x-sort-header>
-                        <x-sort-header field="status">Status</x-sort-header>
-                        <x-sort-header field="condition">Kondisi</x-sort-header>
-                        <x-sort-header field="date">Tgl Terima</x-sort-header>
-                        <x-sort-header field="lifecycle">Lifecycle</x-sort-header>
-                        <th>Timeline</th>
+                    <tr class="bg-slate-50 border-b border-slate-100">
+                        <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider w-8">#</th>
+                        <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kode Aset</th>
+                        <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nama Barang</th>
+                        <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lab</th>
+                        <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Harga Beli</th>
+                        <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kondisi</th>
+                        <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                        <th class="px-4 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider w-8"></th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-slate-50">
                     @foreach($assets as $i => $asset)
-                        @php
-                            $st     = $asset['status'] ?? 'received';
-                            $sMeta  = $statusMeta[$st]   ?? ['label' => $st,                    'dot' => 'bg-slate-300', 'badge' => 'bg-slate-100 text-slate-600 border-slate-200'];
-                            $cond   = $asset['asset_condition'] ?? 'baik';
-                            $cMeta  = $condMeta[$cond]   ?? ['label' => $cond, 'class' => 'badge-draft'];
+                    @php
+                        $st    = $asset['status'] ?? 'received';
+                        $sMeta = $statusMeta[$st] ?? ['label' => $st, 'dot' => 'bg-slate-300', 'badge' => 'bg-slate-100 text-slate-600 border-slate-200'];
+                        $cond  = $asset['asset_condition'] ?? 'baik';
+                        $cMeta = $condMeta[$cond] ?? ['label' => $cond, 'color' => 'bg-slate-100 text-slate-600'];
+                        $price = $asset['purchase_price'] ?? null;
+                        $hasQr = !empty($asset['qr_code']) || !empty($asset['photo_url']);
+                        $qrUrl = $asset['qr_code'] ?? $asset['photo_url'] ?? null;
+                    @endphp
+                    {{-- Main row --}}
+                    <tr x-show="showRow({{ $i }})" x-cloak
+                        @click="toggleExpand({{ $i }})"
+                        class="hover:bg-slate-50/70 cursor-pointer transition-colors"
+                        :class="expanded === {{ $i }} ? 'bg-indigo-50/40' : ''">
 
-                            // Lifecycle step index
-                            $steps    = ['received', 'labeled', 'available', 'in_use', 'maintenance'];
-                            $stepIdx  = array_search($st, $steps);
-                        @endphp
-                        <tr x-show="showRow({{ $i }})" x-cloak data-filter-lab="{{ $asset['laboratory_name'] ?? '—' }}" data-filter-room="{{ $asset['room_name'] ?? '—' }}" data-filter-status="{{ $st }}" data-filter-condition="{{ $cond }}">
-                            <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
+                        <td class="px-4 py-3.5 text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
 
-                            <td>
-                                <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
-                                    {{ $asset['asset_code'] }}
-                                </span>
-                            </td>
-
-                            <td class="font-semibold text-slate-800">
-                                {{ $asset['item_name'] ?? '—' }}
-                                @if($asset['category_name'] ?? null)
-                                    <p class="text-[0.65rem] text-slate-400 font-normal mt-0.5">{{ $asset['category_name'] }}</p>
-                                @endif
-                            </td>
-
-                            <td>
-                                @if($asset['lab_code'] ?? null)
-                                    <span class="badge badge-active text-xs">{{ $asset['lab_code'] }}</span>
-                                    <p class="text-[0.65rem] text-slate-400 mt-0.5">{{ $asset['lab_name'] ?? '' }}</p>
+                        <td class="px-4 py-3.5">
+                            <div class="flex items-center gap-2">
+                                {{-- QR thumbnail jika ada --}}
+                                @if($hasQr)
+                                    <div class="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0 bg-white">
+                                        <img src="{{ $qrUrl }}" class="w-full h-full object-contain" alt="QR">
+                                    </div>
                                 @else
-                                    <span class="text-slate-300 text-xs italic">—</span>
+                                    <div class="w-8 h-8 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                                    </div>
                                 @endif
-                            </td>
+                                <code class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg">{{ $asset['asset_code'] }}</code>
+                            </div>
+                        </td>
 
-                            <td class="text-slate-500 text-xs">{{ $asset['room_name'] ?? '—' }}</td>
+                        <td class="px-4 py-3.5">
+                            <p class="text-sm font-semibold text-slate-800">{{ $asset['item_name'] ?? '—' }}</p>
+                            @if($asset['category_name'] ?? null)
+                                <p class="text-[11px] text-slate-400 mt-0.5">{{ $asset['category_name'] }}</p>
+                            @endif
+                        </td>
 
-                            <td>
-                                @if($asset['label_number'] ?? null)
-                                    <span class="badge badge-approved text-xs">{{ $asset['label_number'] }}</span>
-                                @else
-                                    <span class="badge badge-pending text-xs">Belum</span>
-                                @endif
-                            </td>
+                        <td class="px-4 py-3.5">
+                            @if($asset['lab_code'] ?? null)
+                                <span class="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">{{ $asset['lab_code'] }}</span>
+                            @else
+                                <span class="text-slate-300 text-xs">—</span>
+                            @endif
+                        </td>
 
-                            <td>
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.65rem] font-semibold border {{ $sMeta['badge'] }}">
-                                    <span class="w-1.5 h-1.5 rounded-full {{ $sMeta['dot'] }}"></span>
-                                    {{ $sMeta['label'] }}
-                                </span>
-                            </td>
+                        <td class="px-4 py-3.5">
+                            @if($price)
+                                <p class="text-sm font-semibold text-slate-700">Rp {{ number_format($price, 0, ',', '.') }}</p>
+                            @else
+                                <span class="text-slate-300 text-xs italic">—</span>
+                            @endif
+                        </td>
 
-                            <td>
-                                <span class="badge {{ $cMeta['class'] }} text-xs">{{ $cMeta['label'] }}</span>
-                            </td>
+                        <td class="px-4 py-3.5">
+                            <span class="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full {{ $cMeta['color'] }}">
+                                {{ $cMeta['label'] }}
+                            </span>
+                        </td>
 
-                            <td class="text-slate-500 text-xs">
-                                {{ $asset['received_date'] ? date('d M Y', strtotime($asset['received_date'])) : '—' }}
-                            </td>
+                        <td class="px-4 py-3.5">
+                            <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border {{ $sMeta['badge'] }}">
+                                <span class="w-1.5 h-1.5 rounded-full {{ $sMeta['dot'] }}"></span>
+                                {{ $sMeta['label'] }}
+                            </span>
+                        </td>
 
-                            {{-- Lifecycle mini progress --}}
-                            <td style="min-width: 130px;">
-                                <div class="flex items-center gap-0.5">
-                                    @foreach(['received','labeled','available','in_use'] as $idx => $step)
-                                        @php
-                                            $stepMeta  = $statusMeta[$step];
-                                            $isDone    = $stepIdx !== false && $stepIdx >= $idx;
-                                            $isCurrent = $st === $step;
-                                        @endphp
-                                        <div class="relative group">
-                                            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all
-                                                        {{ $isCurrent ? 'border-indigo-500 bg-indigo-500 ring-2 ring-indigo-200' :
-                                                          ($isDone ? 'border-emerald-400 bg-emerald-400' : 'border-slate-200 bg-white') }}">
-                                                @if($isDone && !$isCurrent)
-                                                    <svg class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                                                    </svg>
-                                                @endif
-                                            </div>
-                                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10">
-                                                <span class="bg-slate-800 text-white text-[0.6rem] font-semibold px-2 py-0.5 rounded whitespace-nowrap">
-                                                    {{ $stepMeta['label'] }}
-                                                </span>
-                                            </div>
+                        <td class="px-4 py-3.5 text-center">
+                            <svg class="w-4 h-4 text-slate-400 transition-transform mx-auto"
+                                 :class="expanded === {{ $i }} ? 'rotate-180' : ''"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </td>
+                    </tr>
+
+                    {{-- Expanded row --}}
+                    <tr x-show="showRow({{ $i }}) && expanded === {{ $i }}" x-cloak
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100">
+                        <td colspan="8" class="px-4 pb-4 pt-0 bg-indigo-50/30">
+                            <div class="rounded-2xl bg-white border border-indigo-100 p-4 flex flex-col sm:flex-row gap-5">
+
+                                {{-- QR section --}}
+                                <div class="flex-shrink-0 flex flex-col items-center gap-2">
+                                    @if($hasQr)
+                                        <div class="w-24 h-24 rounded-xl overflow-hidden border-2 border-indigo-200 bg-white p-1">
+                                            <img src="{{ $qrUrl }}" class="w-full h-full object-contain" alt="QR {{ $asset['label_number'] ?? $asset['asset_code'] }}">
                                         </div>
-                                        @if($idx < 3)
-                                            <div class="h-0.5 w-3 {{ $isDone && $stepIdx !== false && $stepIdx > $idx ? 'bg-emerald-400' : 'bg-slate-200' }}"></div>
-                                        @endif
-                                    @endforeach
+                                        <p class="text-[10px] text-slate-400 text-center">Scan QR</p>
+                                    @else
+                                        <div class="w-24 h-24 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-1 bg-slate-50">
+                                            <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                                            <p class="text-[10px] text-slate-400 text-center">Belum<br>ada QR</p>
+                                        </div>
+                                    @endif
                                 </div>
-                            </td>
 
-                            <td>
-                                <a href="{{ route('staf-admin.asset-timeline', $asset['id']) }}"
-                                   class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition-colors">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                    </svg>
-                                    Riwayat
-                                </a>
-                            </td>
-                        </tr>
+                                {{-- Detail grid --}}
+                                <div class="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
+                                    @php
+                                    $details = [
+                                        ['Label',       $asset['label_number'] ?? null,   'mono'],
+                                        ['Kode Aset',   $asset['asset_code'] ?? '—',      'mono'],
+                                        ['Laboratorium',$asset['lab_name'] ?? '—',         'text'],
+                                        ['Ruangan',     $asset['room_name'] ?? '—',        'text'],
+                                        ['Serial No.',  $asset['serial_number'] ?? '—',   'mono'],
+                                        ['Tgl Terima',  $asset['received_date'] ? date('d M Y', strtotime($asset['received_date'])) : '—', 'text'],
+                                        ['Harga Beli',  $asset['purchase_price'] ? 'Rp ' . number_format($asset['purchase_price'], 0, ',', '.') : '—', 'text'],
+                                        ['Tgl Beli',    $asset['purchase_date'] ? date('d M Y', strtotime($asset['purchase_date'])) : '—', 'text'],
+                                    ];
+                                    @endphp
+                                    @foreach($details as [$dlabel, $dval, $dtype])
+                                        <div>
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ $dlabel }}</p>
+                                            @if($dlabel === 'Label' && $dval)
+                                                <span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full mt-0.5 inline-block">{{ $dval }}</span>
+                                            @elseif($dval && $dval !== '—')
+                                                <p class="text-sm font-semibold text-slate-700 mt-0.5 {{ $dtype === 'mono' ? 'font-mono' : '' }}">{{ $dval }}</p>
+                                            @else
+                                                <p class="text-xs text-slate-300 italic mt-0.5">Tidak ada</p>
+                                            @endif
+                                        </div>
+                                    @endforeach
+
+                                    @if($asset['notes'] ?? null)
+                                        <div class="col-span-2 sm:col-span-3">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Catatan</p>
+                                            <p class="text-xs text-slate-600 mt-0.5">{{ $asset['notes'] }}</p>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                {{-- Action buttons --}}
+                                <div class="flex flex-row sm:flex-col gap-2 items-start">
+                                    <a href="{{ route('staf-admin.asset-timeline', $asset['id']) }}"
+                                       class="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-600 bg-violet-50 hover:bg-violet-100 px-3 py-2 rounded-xl border border-violet-200 transition-colors whitespace-nowrap">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        Riwayat
+                                    </a>
+                                    @if($hasQr)
+                                        <a href="{{ route('staf-admin.print-label', ['id' => $asset['id']]) }}"
+                                           target="_blank"
+                                           class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl border border-indigo-200 transition-colors whitespace-nowrap">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                                            Cetak Label
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
 
-        @if(count($assets) > 0)
-            <x-pagination :total="count($assets)" />
-        @endif
+        <x-pagination :total="count($assets)" />
     @endif
 </div>
+
+@push('scripts')
+<script>
+function inventarisApp(total) {
+    return {
+        ...window.tablePaginationData(total),
+        expanded: null,
+        toggleExpand(idx) {
+            this.expanded = this.expanded === idx ? null : idx;
+        }
+    };
+}
+</script>
+@endpush
 @endsection
