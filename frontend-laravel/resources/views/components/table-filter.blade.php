@@ -1,8 +1,8 @@
 @props(['column', 'label' => '', 'options' => []])
 
-<div class="flex flex-col gap-1" {{ $attributes }}>
+<div class="flex items-center gap-2" {{ $attributes }}>
     @if($label)
-        <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider">{{ $label }}</label>
+        <label class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">{{ $label }}:</label>
     @endif
     <select :value="filters['{{ $column }}'] || ''"
             @change="setFilter('{{ $column }}', $el.value)" 

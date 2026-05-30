@@ -36,6 +36,10 @@ Route::middleware('frontend.auth')->group(function () {
         Route::post('/floors', [RoomManagementController::class, 'storeFloor'])->name('floors.store');
         Route::post('/room-types', [RoomManagementController::class, 'storeRoomType'])->name('room-types.store');
 
+        Route::put('/buildings/{id}', [RoomManagementController::class, 'updateBuilding'])->name('buildings.update');
+        Route::put('/floors/{id}', [RoomManagementController::class, 'updateFloor'])->name('floors.update');
+        Route::put('/room-types/{id}', [RoomManagementController::class, 'updateRoomType'])->name('room-types.update');
+
         Route::delete('/buildings/{id}', [RoomManagementController::class, 'destroyBuilding'])->name('buildings.destroy');
         Route::delete('/floors/{id}', [RoomManagementController::class, 'destroyFloor'])->name('floors.destroy');
         Route::delete('/room-types/{id}', [RoomManagementController::class, 'destroyRoomType'])->name('room-types.destroy');
