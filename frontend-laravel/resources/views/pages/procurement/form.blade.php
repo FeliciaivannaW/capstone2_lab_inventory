@@ -73,7 +73,7 @@
                 required
             />
 
-            @if(in_array($authUser['role'], ['staf_administrasi', 'kepala_laboratorium']))
+            @if($authUser['role'] === 'staf_administrasi')
                 <x-form.field
                     name="lab_id"
                     label="Laboratorium"
