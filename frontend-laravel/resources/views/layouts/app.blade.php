@@ -41,6 +41,7 @@
             indexMap: {},
             updateCounter: 0,
             filters: {},
+            searchQuery: '',
             get totalPages() { return Math.ceil(this.filteredTotalItems / this.perPage); },
             getPages() { return Array.from({length: this.totalPages}, (_, i) => i + 1); },
             showRow(index) {
@@ -137,8 +138,10 @@
                 }
             });
             
-            // Filter step using AND logic on data attributes
+            // Filter step using AND logic on data attributes and search query
             let visibleCount = 0;
+            const searchLower = (alpineData.searchQuery || '').toLowerCase();
+            
             groups.forEach(group => {
                 let matches = true;
                 for (const [key, filterValue] of Object.entries(alpineData.filters)) {
@@ -151,6 +154,14 @@
                         }
                     }
                 }
+                
+                if (matches && searchLower) {
+                    const textContent = group.main.innerText.toLowerCase();
+                    if (!textContent.includes(searchLower)) {
+                        matches = false;
+                    }
+                }
+                
                 group.matches = matches;
                 if (matches) visibleCount++;
             });

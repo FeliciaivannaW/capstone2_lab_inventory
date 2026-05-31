@@ -153,6 +153,50 @@ const createLabGroup = async (req, res) => {
   }
 };
 
+const updateLabGroup = async (req, res) => {
+  try {
+    const id = toPositiveInt(req.params.id, "ID grup lab");
+    const existing = await LaboratoryModel.findLabGroups();
+    const isExist = existing.some(g => g.id === id);
+    if (!isExist) {
+      return res.status(404).json({ status: "error", message: "Grup lab tidak ditemukan" });
+    }
+
+    const payload = {
+      laboratory_id: toPositiveInt(req.body.laboratory_id, "Laboratorium"),
+      name: String(req.body.name || "").trim(),
+      description: req.body.description ? String(req.body.description).trim() : null
+    };
+
+    if (!payload.name) {
+      return res.status(400).json({ status: "error", message: "Nama grup wajib diisi" });
+    }
+
+    await LaboratoryModel.updateGroup(id, payload);
+    res.json({ status: "success", message: "Grup lab berhasil diperbarui" });
+  } catch (error) {
+    console.error("[UPDATE LAB GROUP ERROR]", error);
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ status: "error", message: "Nama grup sudah ada pada lab tersebut" });
+    }
+    res.status(error.statusCode || 500).json({ status: "error", message: error.message || "Gagal memperbarui grup lab" });
+  }
+};
+
+const deleteLabGroup = async (req, res) => {
+  try {
+    const id = toPositiveInt(req.params.id, "ID grup lab");
+    await LaboratoryModel.deleteGroup(id);
+    res.json({ status: "success", message: "Grup lab berhasil dihapus" });
+  } catch (error) {
+    console.error("[DELETE LAB GROUP ERROR]", error);
+    if (error.code === "ER_ROW_IS_REFERENCED_2") {
+      return res.status(409).json({ status: "error", message: "Grup lab tidak dapat dihapus karena masih memiliki anggota user atau ruangan" });
+    }
+    res.status(error.statusCode || 500).json({ status: "error", message: "Gagal menghapus grup lab" });
+  }
+};
+
 const addUserToGroup = async (req, res) => {
   try {
     const groupId = toPositiveInt(req.params.groupId, "ID grup");
@@ -180,6 +224,55 @@ const addRoomToGroup = async (req, res) => {
   }
 };
 
+const getLabGroupDetails = async (req, res) => {
+  try {
+    const id = toPositiveInt(req.params.id, "ID grup lab");
+    const group = await LaboratoryModel.findGroupById(id);
+    if (!group) {
+      return res.status(404).json({ status: "error", message: "Grup lab tidak ditemukan" });
+    }
+
+    const [users, rooms] = await Promise.all([
+      LaboratoryModel.findGroupUsers(id),
+      LaboratoryModel.findGroupRooms(id)
+    ]);
+
+    res.json({
+      status: "success",
+      data: { ...group, users, rooms }
+    });
+  } catch (error) {
+    console.error("[GET LAB GROUP DETAILS ERROR]", error);
+    res.status(error.statusCode || 500).json({ status: "error", message: "Gagal mengambil detail grup lab" });
+  }
+};
+
+const removeUserFromGroup = async (req, res) => {
+  try {
+    const groupId = toPositiveInt(req.params.groupId, "ID grup");
+    const userId = toPositiveInt(req.params.userId, "ID user");
+
+    await LaboratoryModel.removeUserFromGroup(groupId, userId);
+    res.json({ status: "success", message: "User berhasil dihapus dari grup lab" });
+  } catch (error) {
+    console.error("[REMOVE USER FROM GROUP ERROR]", error);
+    res.status(error.statusCode || 500).json({ status: "error", message: "Gagal menghapus user dari grup lab" });
+  }
+};
+
+const removeRoomFromGroup = async (req, res) => {
+  try {
+    const groupId = toPositiveInt(req.params.groupId, "ID grup");
+    const roomId = toPositiveInt(req.params.roomId, "ID ruangan");
+
+    await LaboratoryModel.removeRoomFromGroup(groupId, roomId);
+    res.json({ status: "success", message: "Ruangan berhasil dihapus dari grup lab" });
+  } catch (error) {
+    console.error("[REMOVE ROOM FROM GROUP ERROR]", error);
+    res.status(error.statusCode || 500).json({ status: "error", message: "Gagal menghapus ruangan dari grup lab" });
+  }
+};
+
 module.exports = {
   getLaboratories,
   getLaboratoryOptions,
@@ -188,6 +281,11 @@ module.exports = {
   deleteLaboratory,
   getLabGroups,
   createLabGroup,
+  updateLabGroup,
+  deleteLabGroup,
   addUserToGroup,
-  addRoomToGroup
+  addRoomToGroup,
+  getLabGroupDetails,
+  removeUserFromGroup,
+  removeRoomFromGroup
 };
