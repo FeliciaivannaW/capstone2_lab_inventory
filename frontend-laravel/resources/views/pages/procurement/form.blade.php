@@ -69,7 +69,7 @@
                 label="Judul Draf"
                 type="text"
                 placeholder="Contoh: Pengadaan Lab Komputer Tahun 2025"
-                value="{{ $draft['title'] ?? '' }}"
+                :value="$draft['title'] ?? ''"
                 required
             />
 
@@ -79,7 +79,7 @@
                     label="Laboratorium"
                     type="select"
                     :options="$laboratories"
-                    value="{{ $draft['lab_id'] ?? '' }}"
+                    :value="$draft['lab_id'] ?? ''"
                     required
                 />
             @else
@@ -99,7 +99,7 @@
                 name="budget_year"
                 label="Tahun Anggaran"
                 type="number"
-                value="{{ $draft['budget_year'] ?? now()->year }}"
+                :value="$draft['budget_year'] ?? now()->year"
                 required
             />
 
@@ -108,7 +108,7 @@
                 label="Catatan (Opsional)"
                 type="textarea"
                 placeholder="Catatan atau penjelasan tambahan untuk draf ini..."
-                value="{{ $draft['notes'] ?? '' }}"
+                :value="$draft['notes'] ?? ''"
             />
         </div>
     </div>
@@ -159,60 +159,48 @@
 @if($isEdit && !$draft['is_locked'])
 @push('modals')
     <div x-data="{ open: false, loading: false }" id="addItemModalWrap">
-        <div x-show="open" x-cloak
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;">
-            <div style="position:absolute;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);" @click="open = false"></div>
-            <div style="position:relative;background:#fff;border-radius:1rem;box-shadow:0 25px 50px rgba(0,0,0,0.25);width:100%;max-width:32rem;padding:1.5rem;max-height:90vh;overflow-y:auto;">
-                <h3 class="text-base font-bold text-slate-900 mb-5">Tambah Item Pengadaan</h3>
+        <div x-show="open" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-0">
+            <!-- Backdrop -->
+            <div x-show="open" 
+                 x-transition:enter="transition ease-out duration-300" 
+                 x-transition:enter-start="opacity-0" 
+                 x-transition:enter-end="opacity-100" 
+                 x-transition:leave="transition ease-in duration-200" 
+                 x-transition:leave-start="opacity-100" 
+                 x-transition:leave-end="opacity-0" 
+                 class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" @click="open = false"></div>
+                 
+            <!-- Modal Content -->
+            <div x-show="open" 
+                 x-transition:enter="transition ease-out duration-300" 
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" 
+                 x-transition:leave="transition ease-in duration-200" 
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" 
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" 
+                 class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+                 
+                <h3 class="text-lg font-bold text-slate-900 mb-6">Tambah Item Pengadaan</h3>
 
                 <form id="addItemForm" @submit.prevent class="space-y-4">
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Nama Barang <span class="text-red-500">*</span></label>
-                        <input type="text" name="item_name" required placeholder="Nama barang yang akan dibeli"
-                               class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
-                    </div>
-
+                    <x-form.field name="item_name" label="Nama Barang" placeholder="Nama barang yang akan dibeli" required />
+                    
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Tipe <span class="text-red-500">*</span></label>
-                            <select name="item_type" required
-                                    class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
-                                <option value="">-- Pilih Tipe --</option>
-                                <option value="inventory">Inventaris (Aset Tetap)</option>
-                                <option value="bhp">BHP (Bahan Habis Pakai)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Jumlah <span class="text-red-500">*</span></label>
-                            <input type="number" name="quantity" min="1" required
-                                   class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
-                        </div>
+                        <x-form.field name="item_type" label="Tipe" type="select" :options="['inventory' => 'Inventaris (Aset Tetap)', 'bhp' => 'BHP (Bahan Habis Pakai)']" required />
+                        <x-form.field name="quantity" label="Jumlah" type="number" min="1" required />
                     </div>
 
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Harga Perkiraan (Rp) <span class="text-red-500">*</span></label>
-                        <input type="number" name="estimated_price" min="0" step="1000" required
-                               class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
-                    </div>
+                    <x-form.field name="estimated_price" label="Harga Perkiraan (Rp)" type="number" min="0" step="1000" required />
+                    <x-form.field name="purchase_link" label="Link Pembelian" type="url" placeholder="https://..." />
 
-                    <div>
-                        <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Link Pembelian</label>
-                        <input type="url" name="purchase_link" placeholder="https://..."
-                               class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
-                    </div>
-
-                    <div class="flex gap-3 pt-2">
-                        <button type="button" @click="open = false" class="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
-                        <button type="submit" :disabled="loading"
-                                class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl transition-colors">
+                    <div class="flex items-center gap-3 pt-4 border-t border-slate-100 mt-6">
+                        <button type="button" @click="open = false" class="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
+                        <button type="submit" :disabled="loading" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl transition-colors shadow-sm">
                             <span x-show="!loading">Tambah Item</span>
-                            <span x-show="loading">Menambahkan...</span>
+                            <span x-show="loading" class="flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                Menambahkan...
+                            </span>
                         </button>
                     </div>
                 </form>
