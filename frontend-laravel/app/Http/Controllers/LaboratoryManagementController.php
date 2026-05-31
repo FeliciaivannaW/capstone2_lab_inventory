@@ -79,6 +79,36 @@ class LaboratoryManagementController extends Controller
             : back()->withInput()->with('error', $result['message']);
     }
 
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'room_id' => 'required|integer',
+            'head_user_id' => 'nullable|integer',
+            'code' => 'required|string|max:50',
+            'name' => 'required|string|max:150',
+            'description' => 'nullable|string',
+        ]);
+
+        $result = $this->sendApiData("/laboratories/{$id}", $validated, 'PUT');
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function destroy($id)
+    {
+        $result = $this->sendApiData("/laboratories/{$id}", [], 'DELETE');
+        
+        if (request()->expectsJson()) {
+            return response()->json($result, $result['ok'] ? 200 : 400);
+        }
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->with('error', $result['message']);
+    }
+
     public function storeGroup(Request $request)
     {
         $validated = $request->validate([
@@ -92,6 +122,34 @@ class LaboratoryManagementController extends Controller
         return $result['ok']
             ? back()->with('success', $result['message'])
             : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function updateGroup(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'laboratory_id' => 'required|integer',
+            'name' => 'required|string|max:150',
+            'description' => 'nullable|string',
+        ]);
+
+        $result = $this->sendApiData("/lab-groups/{$id}", $validated, 'PUT');
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function destroyGroup($id)
+    {
+        $result = $this->sendApiData("/lab-groups/{$id}", [], 'DELETE');
+        
+        if (request()->expectsJson()) {
+            return response()->json($result, $result['ok'] ? 200 : 400);
+        }
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->with('error', $result['message']);
     }
 
     public function addGroupUser(Request $request, $groupId)
@@ -119,5 +177,44 @@ class LaboratoryManagementController extends Controller
         return $result['ok']
             ? back()->with('success', $result['message'])
             : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function getGroupDetails($id)
+    {
+        try {
+            $response = Http::withToken(session('auth_token'))->get($this->apiUrl() . "/lab-groups/{$id}/details");
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+            return response()->json(['status' => 'error', 'message' => 'Gagal mengambil detail grup'], 500);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function destroyGroupUser($groupId, $userId)
+    {
+        $result = $this->sendApiData("/lab-groups/{$groupId}/users/{$userId}", [], 'DELETE');
+
+        if (request()->expectsJson()) {
+            return response()->json($result, $result['ok'] ? 200 : 400);
+        }
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->with('error', $result['message']);
+    }
+
+    public function destroyGroupRoom($groupId, $roomId)
+    {
+        $result = $this->sendApiData("/lab-groups/{$groupId}/rooms/{$roomId}", [], 'DELETE');
+
+        if (request()->expectsJson()) {
+            return response()->json($result, $result['ok'] ? 200 : 400);
+        }
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->with('error', $result['message']);
     }
 }

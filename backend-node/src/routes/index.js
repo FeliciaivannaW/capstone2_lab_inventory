@@ -129,8 +129,13 @@ router.delete("/laboratories/:id", authMiddleware, roleMiddleware(["administrato
 
 router.get("/lab-groups", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.getLabGroups);
 router.post("/lab-groups", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.createLabGroup);
+router.put("/lab-groups/:id", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.updateLabGroup);
+router.delete("/lab-groups/:id", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.deleteLabGroup);
 router.post("/lab-groups/:groupId/users", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.addUserToGroup);
 router.post("/lab-groups/:groupId/rooms", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.addRoomToGroup);
+router.get("/lab-groups/:id/details", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.getLabGroupDetails);
+router.delete("/lab-groups/:groupId/users/:userId", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.removeUserFromGroup);
+router.delete("/lab-groups/:groupId/rooms/:roomId", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.removeRoomFromGroup);
 
 // ============================================================
 // BHP STOCK ROUTES (Staf Laboratorium only)

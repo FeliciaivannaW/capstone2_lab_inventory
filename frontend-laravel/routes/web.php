@@ -46,10 +46,17 @@ Route::middleware('frontend.auth')->group(function () {
 
         Route::get('/laboratories', [LaboratoryManagementController::class, 'index'])->name('laboratories');
         Route::post('/laboratories', [LaboratoryManagementController::class, 'store'])->name('laboratories.store');
+        Route::put('/laboratories/{id}', [LaboratoryManagementController::class, 'update'])->name('laboratories.update');
+        Route::delete('/laboratories/{id}', [LaboratoryManagementController::class, 'destroy'])->name('laboratories.destroy');
 
         Route::post('/lab-groups', [LaboratoryManagementController::class, 'storeGroup'])->name('lab-groups.store');
+        Route::put('/lab-groups/{id}', [LaboratoryManagementController::class, 'updateGroup'])->name('lab-groups.update');
+        Route::delete('/lab-groups/{id}', [LaboratoryManagementController::class, 'destroyGroup'])->name('lab-groups.destroy');
         Route::post('/lab-groups/{groupId}/users', [LaboratoryManagementController::class, 'addGroupUser'])->name('lab-groups.users.store');
         Route::post('/lab-groups/{groupId}/rooms', [LaboratoryManagementController::class, 'addGroupRoom'])->name('lab-groups.rooms.store');
+        Route::get('/lab-groups/{id}/details', [LaboratoryManagementController::class, 'getGroupDetails'])->name('lab-groups.details');
+        Route::delete('/lab-groups/{groupId}/users/{userId}', [LaboratoryManagementController::class, 'destroyGroupUser'])->name('lab-groups.users.destroy');
+        Route::delete('/lab-groups/{groupId}/rooms/{roomId}', [LaboratoryManagementController::class, 'destroyGroupRoom'])->name('lab-groups.rooms.destroy');
     });
 
     Route::get('/inventory', [DashboardController::class, 'inventory'])
