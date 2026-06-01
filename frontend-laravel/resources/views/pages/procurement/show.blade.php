@@ -39,6 +39,44 @@
     <span class="text-sm text-slate-600 font-semibold">{{ $draft['title'] }}</span>
 </div>
 
+{{-- Step indicator (Only for draft status) --}}
+@if($draft['status'] === 'draft')
+<div class="flex items-center gap-0 mb-8">
+    @php
+        $steps = [
+            ['label' => 'Info Dasar',    'desc' => 'Judul & tahun anggaran'],
+            ['label' => 'Tambah Item',   'desc' => 'Daftar barang pengadaan'],
+            ['label' => 'Review & Kirim','desc' => 'Finalisasi draf'],
+        ];
+        $currentStep = 3;
+    @endphp
+    @foreach($steps as $i => $step)
+        @php $sNum = $i + 1; $done = $sNum < $currentStep; $active = $sNum === $currentStep; @endphp
+        <div class="flex items-center {{ $i < count($steps)-1 ? 'flex-1' : '' }}">
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all
+                    {{ $done ? 'bg-indigo-600 text-white' : ($active ? 'bg-indigo-600 text-white ring-4 ring-indigo-100' : 'bg-slate-200 text-slate-500') }}">
+                    @if($done)
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    @else
+                        {{ $sNum }}
+                    @endif
+                </div>
+                <div class="hidden sm:block">
+                    <p class="text-xs font-bold {{ $active ? 'text-slate-900' : 'text-slate-400' }}">{{ $step['label'] }}</p>
+                    <p class="text-[0.65rem] text-slate-400">{{ $step['desc'] }}</p>
+                </div>
+            </div>
+            @if($i < count($steps) - 1)
+                <div class="flex-1 h-px mx-4 {{ $done ? 'bg-indigo-300' : 'bg-slate-200' }}"></div>
+            @endif
+        </div>
+    @endforeach
+</div>
+@endif
+
 {{-- Draft header card --}}
 <div class="glass-card rounded-2xl p-6 mb-6">
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
