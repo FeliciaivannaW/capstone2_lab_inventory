@@ -60,7 +60,7 @@ Route::middleware('frontend.auth')->group(function () {
     });
 
     Route::get('/inventory', [DashboardController::class, 'inventory'])
-        ->middleware('frontend.role:administrator,staf_administrasi,staf_laboratorium')
+        ->middleware('frontend.role:administrator,staf_administrasi,staf_laboratorium,kepala_laboratorium,ketua_program_studi')
         ->name('inventory');
 
     Route::get('/inventory/history', [DashboardController::class, 'inventoryHistory'])
