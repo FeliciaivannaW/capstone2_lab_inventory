@@ -184,12 +184,27 @@ class ProcurementController extends Controller
             'title' => 'required|string',
             'lab_id' => 'required|integer',
             'budget_year' => 'required|integer',
-            'notes' => 'nullable|string'
+            'notes' => 'nullable|string',
+            'items_json' => 'nullable|string'
         ]);
 
-        $result = $this->postApiData("/procurement/drafts/{$id}", $validated, 'PUT');
+        $updateData = [
+            'title' => $validated['title'],
+            'lab_id' => $validated['lab_id'],
+            'budget_year' => $validated['budget_year'],
+            'notes' => $validated['notes']
+        ];
+
+        $result = $this->postApiData("/procurement/drafts/{$id}", $updateData, 'PUT');
 
         if ($result['status'] === 'success') {
+            if (!empty($validated['items_json'])) {
+                $items = json_decode($validated['items_json'], true);
+                if (is_array($items)) {
+                    $this->postApiData("/procurement/drafts/{$id}/items/sync", ['items' => $items], 'PUT');
+                }
+            }
+
             return redirect()->route('procurement.show', $id)
                 ->with('success', 'Draf pengadaan berhasil diperbarui');
         }

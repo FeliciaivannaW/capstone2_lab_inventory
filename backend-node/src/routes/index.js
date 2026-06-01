@@ -198,6 +198,12 @@ router.post(
   roleMiddleware(["kepala_laboratorium", "staf_administrasi"]),
   procurementController.addProcurementItem
 );
+router.put(
+  "/procurement/drafts/:id/items/sync",
+  authMiddleware,
+  roleMiddleware(["kepala_laboratorium", "staf_administrasi"]),
+  procurementController.syncProcurementItems
+);
 router.patch(
   "/procurement/drafts/:id/items/:itemId",
   authMiddleware,

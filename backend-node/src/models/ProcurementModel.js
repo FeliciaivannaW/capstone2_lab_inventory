@@ -256,6 +256,36 @@ const ProcurementModel = {
   },
 
   /**
+   * Bulk sync draft items (replace all)
+   */
+  async syncItems(draftId, items, tx = null) {
+    const conn = tx || db;
+    await conn.query("DELETE FROM procurement_items WHERE draft_id = ?", [draftId]);
+
+    if (items && items.length > 0) {
+      const values = items.map(item => [
+        draftId,
+        item.item_name,
+        item.item_type,
+        item.quantity,
+        item.estimated_price,
+        item.purchase_link || null,
+        item.replacement_asset_id || null,
+        item.review_status || 'pending',
+        item.review_note || null,
+        item.created_at ? new Date(item.created_at) : new Date(),
+        item.reviewed_at ? new Date(item.reviewed_at) : null
+      ]);
+
+      await conn.query(`
+        INSERT INTO procurement_items 
+        (draft_id, item_name, item_type, quantity, estimated_price, purchase_link, replacement_asset_id, review_status, review_note, created_at, reviewed_at)
+        VALUES ?
+      `, [values]);
+    }
+  },
+
+  /**
    * Submit draft
    */
   async submitDraft(id, { status = 'submitted', submittedAt }, tx = null) {

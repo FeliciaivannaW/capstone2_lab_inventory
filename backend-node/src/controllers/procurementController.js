@@ -529,6 +529,52 @@ const updateProcurementItem = async (req, res, next) => {
   }
 };
 
+const syncProcurementItems = async (req, res, next) => {
+  try {
+    const { id: draftId } = req.params;
+    const { items } = req.body;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    const draft = await ProcurementModel.findDraftByIdForLock(draftId);
+
+    if (!draft) {
+      return res.status(404).json({
+        status: "error",
+        message: "Draf pengadaan tidak ditemukan"
+      });
+    }
+
+    if (draft.status !== 'draft' || draft.is_locked) {
+      return res.status(403).json({
+        status: "error",
+        message: "Tidak bisa mengubah item draf dalam status ini"
+      });
+    }
+
+    if (userRole !== 'staf_administrasi' && draft.created_by !== userId) {
+      return res.status(403).json({
+        status: "error",
+        message: "Anda tidak memiliki wewenang untuk mengubah draf ini"
+      });
+    }
+
+    await ProcurementModel.syncItems(draftId, items || []);
+
+    res.json({
+      status: "success",
+      message: "Item draf pengadaan berhasil disinkronisasi"
+    });
+  } catch (error) {
+    console.error("[PROCUREMENT SYNC ITEMS ERROR]", error);
+    res.status(500).json({
+      status: "error",
+      message: "Gagal menyinkronisasi item draf",
+      detail: error.message || "Kesalahan tidak diketahui"
+    });
+  }
+};
+
 module.exports = {
   getProcurementDrafts,
   getProcurementDraft,
@@ -540,5 +586,6 @@ module.exports = {
   deleteProcurementDraft,
   addProcurementItem,
   updateProcurementItem,
-  deleteProcurementItem
+  deleteProcurementItem,
+  syncProcurementItems
 };

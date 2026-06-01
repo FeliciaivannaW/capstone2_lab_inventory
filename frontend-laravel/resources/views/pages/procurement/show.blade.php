@@ -218,9 +218,6 @@
                         <x-sort-header field="qty">Qty</x-sort-header>
                         <x-sort-header field="price">Harga Perkiraan</x-sort-header>
                         <x-sort-header field="status">Status Review</x-sort-header>
-                        <x-sort-header field="reviewer">Reviewer</x-sort-header>
-                        <x-sort-header field="note">Catatan</x-sort-header>
-                        <x-sort-header field="link">Link</x-sort-header>
                         @if($canReview)
                             <th>Aksi</th>
                         @endif
@@ -228,7 +225,9 @@
                 </thead>
                 <tbody>
                     @foreach($draft['items'] as $index => $item)
-                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-status="{{ $item['review_status'] }}" data-filter-type="{{ $item['item_type'] }}">
+                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-status="{{ $item['review_status'] }}" data-filter-type="{{ $item['item_type'] }}"
+                            onclick='openDetailModal(@json($item))'
+                            class="cursor-pointer hover:bg-slate-50 transition-colors">
                             <td class="text-slate-400 font-mono text-xs">{{ $index + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $item['item_name'] }}</td>
                             <td>
@@ -250,33 +249,9 @@
                                 @endphp
                                 <span class="badge {{ $rstatus[0] }}">{{ $rstatus[1] }}</span>
                             </td>
-                            <td class="text-slate-500 text-xs">
-                                @if($item['reviewed_by_name'] ?? null)
-                                    <div>{{ $item['reviewed_by_name'] }}</div>
-                                    <div class="text-slate-400">{{ $item['reviewed_at'] ? date('d M Y', strtotime($item['reviewed_at'])) : '' }}</div>
-                                @else
-                                    <span class="text-slate-300">—</span>
-                                @endif
-                            </td>
-                            <td class="text-slate-500 text-xs max-w-[160px]">
-                                {{ $item['review_note'] ?? '—' }}
-                            </td>
-                            <td>
-                                @if($item['purchase_link'] ?? null)
-                                    <a href="{{ $item['purchase_link'] }}" target="_blank"
-                                       class="inline-flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 font-semibold transition-colors">
-                                        Lihat
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                                        </svg>
-                                    </a>
-                                @else
-                                    <span class="text-slate-300 text-xs">—</span>
-                                @endif
-                            </td>
                             @if($canReview && $item['review_status'] === 'pending')
                                 <td>
-                                    <button onclick="openReviewModal({{ $item['id'] }}, '{{ addslashes($item['item_name']) }}')"
+                                    <button onclick="event.stopPropagation(); openReviewModal({{ $item['id'] }}, '{{ addslashes($item['item_name']) }}')"
                                             class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors">
                                         Review
                                     </button>
@@ -298,12 +273,15 @@
 <div x-data="{
     reviewOpen: false, reviewItemId: null, reviewItemName: '',
     deleteOpen: false, finalizeOpen: false, submitOpen: false,
+    detailOpen: false, activeDetail: {},
     reviewStatus: '', reviewNote: '',
     loading: false,
     draftId: {{ $draft['id'] ?? 0 }},
 
     openReview(id, name) { this.reviewItemId = id; this.reviewItemName = name; this.reviewStatus = ''; this.reviewNote = ''; this.reviewOpen = true; },
     closeReview() { this.reviewOpen = false; },
+    openDetail(item) { this.activeDetail = item; this.detailOpen = true; },
+    closeDetail() { this.detailOpen = false; },
 
     isOk(d) { return d.success === true || d.status === 'success'; },
 
@@ -349,118 +327,260 @@
 }" id="modalsRoot">
 
     {{-- Review Modal --}}
-    <div x-show="reviewOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
-        <div class="absolute inset-0 bg-navy/60 backdrop-blur-sm" @click="closeReview()"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <h3 class="text-base font-bold text-slate-900 mb-1">Review Item Pengadaan</h3>
-            <p class="text-sm text-slate-500 mb-5" x-text="'Barang: ' + reviewItemName"></p>
+    <template x-teleport="body">
+        <div x-show="reviewOpen" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div x-show="reviewOpen" x-transition.opacity class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="closeReview()"></div>
+            <div x-show="reviewOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 m-auto">
+                <h3 class="text-base font-bold text-slate-900 mb-1">Review Item Pengadaan</h3>
+                <p class="text-sm text-slate-500 mb-5" x-text="'Barang: ' + reviewItemName"></p>
 
-            <div class="mb-4">
-                <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Status Review</label>
-                <div class="grid grid-cols-2 gap-3">
-                    <label class="relative cursor-pointer">
-                        <input type="radio" x-model="reviewStatus" value="approved" class="sr-only peer">
-                        <div class="flex items-center gap-2 p-3 rounded-xl border-2 border-slate-200 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 transition-all">
-                            <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            <span class="text-sm font-semibold text-slate-700">Setujui</span>
-                        </div>
-                    </label>
-                    <label class="relative cursor-pointer">
-                        <input type="radio" x-model="reviewStatus" value="rejected" class="sr-only peer">
-                        <div class="flex items-center gap-2 p-3 rounded-xl border-2 border-slate-200 peer-checked:border-red-500 peer-checked:bg-red-50 transition-all">
-                            <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                            </svg>
-                            <span class="text-sm font-semibold text-slate-700">Tolak</span>
-                        </div>
-                    </label>
+                <div class="mb-4">
+                    <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Status Review</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="relative cursor-pointer">
+                            <input type="radio" x-model="reviewStatus" value="approved" class="sr-only peer">
+                            <div class="flex items-center gap-2 p-3 rounded-xl border-2 border-slate-200 peer-checked:border-emerald-500 peer-checked:bg-emerald-50 transition-all">
+                                <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="text-sm font-semibold text-slate-700">Setujui</span>
+                            </div>
+                        </label>
+                        <label class="relative cursor-pointer">
+                            <input type="radio" x-model="reviewStatus" value="rejected" class="sr-only peer">
+                            <div class="flex items-center gap-2 p-3 rounded-xl border-2 border-slate-200 peer-checked:border-red-500 peer-checked:bg-red-50 transition-all">
+                                <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="text-sm font-semibold text-slate-700">Tolak</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Catatan (opsional)</label>
+                    <textarea x-model="reviewNote" rows="3"
+                              class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl resize-none focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                              placeholder="Tambahkan catatan..."></textarea>
+                </div>
+
+                <div class="flex gap-3">
+                    <button @click="closeReview()" class="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
+                    <button @click="submitReview()" :disabled="!reviewStatus"
+                            class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors">
+                        Simpan Review
+                    </button>
                 </div>
             </div>
-
-            <div class="mb-5">
-                <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Catatan (opsional)</label>
-                <textarea x-model="reviewNote" rows="3"
-                          class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl resize-none focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                          placeholder="Tambahkan catatan..."></textarea>
-            </div>
-
-            <div class="flex gap-3">
-                <button @click="closeReview()" class="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
-                <button @click="submitReview()" :disabled="!reviewStatus"
-                        class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors">
-                    Simpan Review
-                </button>
-            </div>
         </div>
-    </div>
+    </template>
 
     {{-- Delete Modal --}}
-    <div x-show="deleteOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
-        <div class="absolute inset-0 bg-navy/60 backdrop-blur-sm" @click="deleteOpen = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
-            <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                </svg>
-            </div>
-            <h3 class="text-base font-bold text-slate-900 mb-2">Hapus Draf Pengadaan?</h3>
-            <p class="text-sm text-slate-500 mb-6">Tindakan ini tidak dapat dibatalkan. Semua item dalam draf akan ikut terhapus.</p>
-            <div class="flex gap-3">
-                <button @click="deleteOpen = false" class="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
-                <form method="POST" action="{{ route('procurement.destroy', $draft['id']) }}" class="flex-1">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="w-full py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors">Ya, Hapus</button>
-                </form>
+    <template x-teleport="body">
+        <div x-show="deleteOpen" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div x-show="deleteOpen" x-transition.opacity class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="deleteOpen = false"></div>
+            <div x-show="deleteOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center m-auto">
+                <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-2">Hapus Draf Pengadaan?</h3>
+                <p class="text-sm text-slate-500 mb-6">Tindakan ini tidak dapat dibatalkan. Semua item dalam draf akan ikut terhapus.</p>
+                <div class="flex gap-3">
+                    <button @click="deleteOpen = false" class="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
+                    <form method="POST" action="{{ route('procurement.destroy', $draft['id']) }}" class="flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="w-full py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors">Ya, Hapus</button>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
+    </template>
 
     {{-- Submit Draf Modal --}}
-    <div x-show="submitOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="submitOpen = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
-            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-                </svg>
-            </div>
-            <h3 class="text-base font-bold text-slate-900 mb-2">Submit Draf ke Kaprodi?</h3>
-            <p class="text-sm text-slate-500 mb-6">Setelah di-submit, draf akan masuk antrian review Ketua Program Studi. Kamu masih bisa menambah item sebelum di-submit.</p>
-            <div class="flex gap-3">
-                <button @click="submitOpen = false" class="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
-                <button @click="submitDraft()" :disabled="loading"
-                        class="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors inline-flex items-center justify-center gap-2">
-                    <svg x-show="loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
-                    <span x-text="loading ? 'Memproses…' : 'Ya, Submit'"></span>
-                </button>
+    <template x-teleport="body">
+        <div x-show="submitOpen" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div x-show="submitOpen" x-transition.opacity class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="submitOpen = false"></div>
+            <div x-show="submitOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center m-auto">
+                <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                    </svg>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-2">Submit Draf ke Kaprodi?</h3>
+                <p class="text-sm text-slate-500 mb-6">Setelah di-submit, draf akan masuk antrian review Ketua Program Studi. Kamu masih bisa menambah item sebelum di-submit.</p>
+                <div class="flex gap-3">
+                    <button @click="submitOpen = false" class="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
+                    <button @click="submitDraft()" :disabled="loading"
+                            class="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors inline-flex items-center justify-center gap-2">
+                        <svg x-show="loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                        <span x-text="loading ? 'Memproses…' : 'Ya, Submit'"></span>
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    </template>
 
     {{-- Finalize Modal --}}
-    <div x-show="finalizeOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="finalizeOpen = false"></div>
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
-            <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mx-auto mb-4">
-                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                </svg>
-            </div>
-            <h3 class="text-base font-bold text-slate-900 mb-2">Finalisasi Draf?</h3>
-            <p class="text-sm text-slate-500 mb-6">Setelah difinalisasi, draf akan <strong>terkunci</strong> dan tidak bisa diubah lagi.</p>
-            <div class="flex gap-3">
-                <button @click="finalizeOpen = false" class="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
-                <button @click="submitFinalize()" :disabled="loading"
-                        class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors inline-flex items-center justify-center gap-2">
-                    <svg x-show="loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
-                    <span x-text="loading ? 'Memproses…' : 'Ya, Finalisasi'"></span>
-                </button>
+    <template x-teleport="body">
+        <div x-show="finalizeOpen" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div x-show="finalizeOpen" x-transition.opacity class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="finalizeOpen = false"></div>
+            <div x-show="finalizeOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center m-auto">
+                <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-2">Finalisasi Draf?</h3>
+                <p class="text-sm text-slate-500 mb-6">Setelah difinalisasi, draf akan <strong>terkunci</strong> dan tidak bisa diubah lagi.</p>
+                <div class="flex gap-3">
+                    <button @click="finalizeOpen = false" class="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
+                    <button @click="submitFinalize()" :disabled="loading"
+                            class="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors inline-flex items-center justify-center gap-2">
+                        <svg x-show="loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                        <span x-text="loading ? 'Memproses…' : 'Ya, Finalisasi'"></span>
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    </template>
+
+    {{-- Item Detail Modal --}}
+    <template x-teleport="body">
+        <div x-show="detailOpen" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div x-show="detailOpen" x-transition.opacity class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="closeDetail()"></div>
+            <div x-show="detailOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 m-auto">
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-base font-bold text-slate-900">Detail Item Pengadaan</h3>
+                    <button @click="closeDetail()" class="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Nama Barang</p>
+                        <p class="text-sm font-semibold text-slate-800" x-text="activeDetail.item_name"></p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Tipe Barang</p>
+                            <span class="badge" 
+                                  :class="activeDetail.item_type === 'inventory' ? 'badge-active' : 'badge-pending'" 
+                                  x-text="activeDetail.item_type === 'inventory' ? 'Inventaris' : 'BHP'"></span>
+                        </div>
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Jumlah (Qty)</p>
+                            <p class="text-sm font-semibold text-slate-700" x-text="activeDetail.quantity"></p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Harga Perkiraan</p>
+                            <p class="text-sm font-mono text-slate-700" x-text="'Rp ' + (activeDetail.estimated_price ? parseInt(activeDetail.estimated_price).toLocaleString('id-ID') : '0')"></p>
+                        </div>
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Link Pembelian</p>
+                            <template x-if="activeDetail.purchase_link">
+                                <a :href="activeDetail.purchase_link" target="_blank" class="inline-flex items-center gap-1 text-sm text-indigo-500 hover:text-indigo-700 font-semibold transition-colors">
+                                    Buka Tautan
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                </a>
+                            </template>
+                            <template x-if="!activeDetail.purchase_link">
+                                <span class="text-sm text-slate-400">—</span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100">
+                        <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Informasi Review</p>
+                        <div class="bg-slate-50 rounded-xl p-4 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-slate-500">Status</span>
+                                <span class="badge" 
+                                      :class="{
+                                          'badge-approved': activeDetail.review_status === 'approved',
+                                          'badge-rejected': activeDetail.review_status === 'rejected',
+                                          'badge-pending': activeDetail.review_status === 'pending'
+                                      }" 
+                                      x-text="activeDetail.review_status === 'approved' ? 'Disetujui' : (activeDetail.review_status === 'rejected' ? 'Ditolak' : 'Pending')">
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between border-t border-slate-200 pt-3">
+                                <span class="text-xs text-slate-500">Reviewer</span>
+                                <div class="text-right">
+                                    <template x-if="activeDetail.reviewed_by_name">
+                                        <div>
+                                            <p class="text-xs font-semibold text-slate-700" x-text="activeDetail.reviewed_by_name"></p>
+                                            <p class="text-[0.65rem] text-slate-400" x-text="activeDetail.reviewed_at ? new Date(activeDetail.reviewed_at).toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}) : ''"></p>
+                                        </div>
+                                    </template>
+                                    <template x-if="!activeDetail.reviewed_by_name">
+                                        <span class="text-sm text-slate-400">—</span>
+                                    </template>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-slate-200 pt-3">
+                                <span class="text-xs text-slate-500 block mb-1">Catatan</span>
+                                <template x-if="activeDetail.review_note">
+                                    <p class="text-xs text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 max-h-32 overflow-y-auto" x-text="activeDetail.review_note"></p>
+                                </template>
+                                <template x-if="!activeDetail.review_note">
+                                    <span class="text-sm text-slate-400">—</span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-slate-100 text-right">
+                    <button @click="closeDetail()" class="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </template>
 </div>
 
 @push('scripts')
@@ -472,6 +592,7 @@
     function openDeleteModal()   { document.getElementById('modalsRoot')._x_dataStack[0].deleteOpen   = true; }
     function openFinalizeModal() { document.getElementById('modalsRoot')._x_dataStack[0].finalizeOpen = true; }
     function openSubmitModal()   { document.getElementById('modalsRoot')._x_dataStack[0].submitOpen   = true; }
+    function openDetailModal(item) { document.getElementById('modalsRoot')._x_dataStack[0].openDetail(item); }
 </script>
 @endpush
 @endsection
