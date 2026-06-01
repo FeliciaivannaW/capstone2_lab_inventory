@@ -43,12 +43,13 @@
 @if($draft['status'] === 'draft')
 <div class="flex items-center gap-0 mb-8">
     @php
+        $hasItems = count($draft['items'] ?? []) > 0;
         $steps = [
             ['label' => 'Info Dasar',    'desc' => 'Judul & tahun anggaran'],
             ['label' => 'Tambah Item',   'desc' => 'Daftar barang pengadaan'],
             ['label' => 'Review & Kirim','desc' => 'Finalisasi draf'],
         ];
-        $currentStep = 3;
+        $currentStep = $hasItems ? 3 : 2;
     @endphp
     @foreach($steps as $i => $step)
         @php $sNum = $i + 1; $done = $sNum < $currentStep; $active = $sNum === $currentStep; @endphp
@@ -111,8 +112,9 @@
                 </button>
             @endif
             @if($canSubmitDraft)
-                <button onclick="openSubmitModal()"
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                <button {{ $hasItems ? 'onclick=openSubmitModal()' : 'disabled' }}
+                        class="inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-colors
+                               {{ $hasItems ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed' }}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                     </svg>
