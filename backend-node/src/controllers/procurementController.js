@@ -296,14 +296,7 @@ const deleteProcurementDraft = async (req, res, next) => {
       });
     }
 
-    const itemsCount = await ProcurementModel.countItemsInDraft(id);
-
-    if (itemsCount > 0) {
-      return res.status(400).json({
-        status: "error",
-        message: "Tidak bisa menghapus draf yang memiliki items. Hapus items terlebih dahulu."
-      });
-    }
+    // items count check removed to allow cascade deletion of drafts with items
 
     await ProcurementModel.deleteDraft(id);
 

@@ -226,11 +226,9 @@ const ProcurementModel = {
     return rows[0]?.count || 0;
   },
 
-  /**
-   * Delete procurement draft
-   */
   async deleteDraft(id, tx = null) {
     const conn = tx || db;
+    await conn.query("DELETE FROM procurement_items WHERE draft_id = ?", [id]);
     const [result] = await conn.query("DELETE FROM procurement_drafts WHERE id = ?", [id]);
     return result;
   },
