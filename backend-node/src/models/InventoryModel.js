@@ -4,7 +4,7 @@ const InventoryModel = {
   /**
    * Find inventory assets based on filters
    */
-  async findAll({ search, status, condition, label_status, lab_id, roomIds, receipt_id, sort } = {}) {
+  async findAll({ search, status, condition, label_status, lab_id, roomIds, labIds, receipt_id, sort } = {}) {
     let whereConditions = [];
     let params = [];
 
@@ -34,9 +34,15 @@ const InventoryModel = {
       params.push(lab_id);
     }
 
-    if (Array.isArray(roomIds) && roomIds.length > 0) {
+    if (Array.isArray(roomIds) && roomIds.length > 0 && Array.isArray(labIds) && labIds.length > 0) {
+      whereConditions.push("(ia.room_id IN (?) OR (ia.room_id IS NULL AND COALESCE(lproc.id, lroom.id) IN (?)))");
+      params.push(roomIds, labIds);
+    } else if (Array.isArray(roomIds) && roomIds.length > 0) {
       whereConditions.push("ia.room_id IN (?)");
       params.push(roomIds);
+    } else if (Array.isArray(labIds) && labIds.length > 0) {
+      whereConditions.push("(ia.room_id IS NULL AND COALESCE(lproc.id, lroom.id) IN (?))");
+      params.push(labIds);
     }
 
     if (receipt_id) {
@@ -373,7 +379,7 @@ const InventoryModel = {
     return result;
   },
 
-  async findConditionHistory({ search, condition, roomIds }) {
+  async findConditionHistory({ search, condition, roomIds, labIds }) {
     const whereConditions = [];
     const params = [];
 
@@ -387,9 +393,15 @@ const InventoryModel = {
       params.push(condition);
     }
 
-    if (Array.isArray(roomIds) && roomIds.length > 0) {
+    if (Array.isArray(roomIds) && roomIds.length > 0 && Array.isArray(labIds) && labIds.length > 0) {
+      whereConditions.push("(ia.room_id IN (?) OR (ia.room_id IS NULL AND l.id IN (?)))");
+      params.push(roomIds, labIds);
+    } else if (Array.isArray(roomIds) && roomIds.length > 0) {
       whereConditions.push("ia.room_id IN (?)");
       params.push(roomIds);
+    } else if (Array.isArray(labIds) && labIds.length > 0) {
+      whereConditions.push("(ia.room_id IS NULL AND l.id IN (?))");
+      params.push(labIds);
     }
 
     const whereClause = whereConditions.length ? `WHERE ${whereConditions.join(" AND ")}` : "";
@@ -412,6 +424,9 @@ const InventoryModel = {
       FROM asset_condition_logs acl
       JOIN inventory_assets ia ON acl.inventory_asset_id = ia.id
       JOIN item_catalogs ic ON ia.item_catalog_id = ic.id
+      LEFT JOIN procurement_items pi ON ia.procurement_item_id = pi.id
+      LEFT JOIN procurement_drafts pd ON pi.draft_id = pd.id
+      LEFT JOIN laboratories l ON pd.lab_id = l.id
       LEFT JOIN rooms r ON ia.room_id = r.id
       LEFT JOIN users u ON acl.updated_by = u.id
       ${whereClause}
