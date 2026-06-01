@@ -171,7 +171,7 @@
             <x-table-filter column="status" label="Status" :options="[
                 'selesai' => 'Diterima Lengkap',
                 'sebagian' => 'Sebagian',
-                'belum' => 'Belum'
+                'belum' => 'Belum Diterima'
             ]" />
             <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors pb-2.5 h-fit" x-cloak>
                 Reset Filter
@@ -205,7 +205,7 @@
                             $rsMeta = match($rs) {
                                 'selesai'  => ['Diterima Lengkap', 'bg-emerald-100 text-emerald-700','bg-emerald-500'],
                                 'sebagian' => ['Sebagian',         'bg-blue-100 text-blue-700',     'bg-blue-500'],
-                                default    => ['Belum',            'bg-amber-100 text-amber-700',   'bg-amber-400'],
+                                default    => ['Belum Diterima',   'bg-amber-100 text-amber-700',   'bg-amber-400'],
                             };
                         @endphp
                         <tr x-show="showRow({{ $i }})" x-cloak data-filter-type="{{ $item['item_type'] }}" data-filter-status="{{ $rs }}">

@@ -61,7 +61,20 @@ class DashboardController extends Controller
         $role = session('auth_user')['role'] ?? null;
 
         if ($role === 'staf_administrasi') {
-            return redirect()->route('staf-admin.dashboard');
+            $stats = $this->getApiData('/statistics/summary') ?: [];
+
+            $inv        = $stats['inventory']      ?? [];
+            $label      = $stats['label']          ?? [];
+            $bhp        = $stats['bhp']            ?? [];
+            $bhpLow     = $stats['bhpLowStock']    ?? [];
+            $proc       = $stats['procurement']    ?? [];
+            $recv       = $stats['reception']      ?? [];
+            $trend      = $stats['monthlyTrend']   ?? [];
+            $activity   = $stats['recentActivity'] ?? [];
+
+            return view('pages.staf-admin.dashboard', compact(
+                'inv', 'label', 'bhp', 'bhpLow', 'proc', 'recv', 'trend', 'activity'
+            ));
         }
 
         if ($role === 'kepala_laboratorium') {

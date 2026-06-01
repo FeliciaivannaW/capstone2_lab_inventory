@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Statistik & Dashboard')
+@section('title', 'Dashboard')
 
 @section('content')
 @php
@@ -34,7 +34,7 @@
 ══════════════════════════════════════ --}}
 <div class="flex items-start justify-between mb-6 flex-wrap gap-3">
     <div>
-        <h1 class="text-xl font-bold text-slate-900">Statistik & Dashboard</h1>
+        <h1 class="text-xl font-bold text-slate-900">Dashboard</h1>
         <p class="text-sm text-slate-500 mt-0.5">Selamat datang, <span class="font-semibold text-slate-700">{{ explode(' ', $userName)[0] }}</span> — ringkasan kondisi lab hari ini.</p>
     </div>
     <span class="text-xs text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl">{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</span>

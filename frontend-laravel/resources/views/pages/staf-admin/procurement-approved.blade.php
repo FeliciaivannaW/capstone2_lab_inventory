@@ -13,10 +13,6 @@
             Draf yang sudah difinalisasi oleh Kaprodi. Tinjau, lalu lanjut ke <strong class="text-emerald-600">Penerimaan Barang</strong>.
         </p>
     </div>
-    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-200">
-        <span class="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
-        Fitur 1 — Lihat Draf
-    </span>
 </div>
 
 {{-- Alerts --}}
@@ -68,6 +64,7 @@
 
 {{-- Table --}}
 <div class="glass-card rounded-2xl overflow-hidden" x-data="tablePagination({{ count($drafts) }})">
+    <div x-data="{ activeModal: null }">
     @php
         $labs = collect($drafts)->pluck('lab_name')->unique()->filter()->values()->toArray();
         $labOptions = count($labs) ? array_combine($labs, $labs) : [];
@@ -106,10 +103,7 @@
                         <x-sort-header field="num">#</x-sort-header>
                         <x-sort-header field="title">Judul Draf</x-sort-header>
                         <x-sort-header field="lab">Laboratorium</x-sort-header>
-                        <x-sort-header field="date">Tgl Finalisasi</x-sort-header>
                         <x-sort-header field="total" class="text-center">Total Item</x-sort-header>
-                        <x-sort-header field="received" class="text-center">Diterima</x-sort-header>
-                        <x-sort-header field="pending" class="text-center">Belum</x-sort-header>
                         <x-sort-header field="progress">Progress</x-sort-header>
                         <x-sort-header field="status">Status</x-sort-header>
                         <th>Aksi</th>
@@ -126,7 +120,7 @@
                                 default    => ['Menunggu Penerimaan','bg-amber-100 text-amber-700',   'bg-amber-400'],
                             };
                         @endphp
-                        <tr x-show="showRow({{ $index }})" x-cloak data-filter-lab="{{ $draft['lab_name'] }}" data-filter-status="{{ $rs }}">
+                        <tr @click="activeModal = 'detail_draft_{{ $draft['id'] }}'" class="cursor-pointer hover:bg-slate-50/50 transition-colors" x-show="showRow({{ $index }})" x-cloak data-filter-lab="{{ $draft['lab_name'] }}" data-filter-status="{{ $rs }}">
                             <td class="text-slate-400 font-mono text-xs">{{ $index + 1 }}</td>
                             <td class="font-semibold text-slate-800">{{ $draft['title'] }}</td>
                             <td>
@@ -135,19 +129,7 @@
                                     <span class="text-slate-600 text-xs">{{ $draft['lab_name'] }}</span>
                                 </div>
                             </td>
-                            <td>
-                                @if($draft['finalized_at'])
-                                    <p class="text-xs font-semibold text-slate-700">{{ date('d M Y', strtotime($draft['finalized_at'])) }}</p>
-                                    <p class="text-[0.65rem] text-slate-400">oleh {{ $draft['finalized_by_name'] ?? '-' }}</p>
-                                @else
-                                    <span class="text-slate-300 text-xs">—</span>
-                                @endif
-                            </td>
                             <td class="text-center font-semibold text-slate-700">{{ $draft['total_ordered'] ?? 0 }}</td>
-                            <td class="text-center font-semibold text-emerald-600">{{ $draft['total_received'] ?? 0 }}</td>
-                            <td class="text-center font-semibold {{ ($draft['total_pending'] ?? 0) > 0 ? 'text-amber-600' : 'text-slate-300' }}">
-                                {{ $draft['total_pending'] ?? 0 }}
-                            </td>
                             <td style="min-width:140px;">
                                 <div class="flex items-center gap-2">
                                     <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -163,6 +145,7 @@
                             </td>
                             <td>
                                 <a href="{{ route('staf-admin.procurement-approved.detail', $draft['id']) }}"
+                                   @click.stop
                                    class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition-colors">
                                     Lihat Detail
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,6 +154,103 @@
                                 </a>
                             </td>
                         </tr>
+
+                        {{-- Modal Detail Draf --}}
+                        <template x-teleport="body">
+                            <div x-show="activeModal === 'detail_draft_{{ $draft['id'] }}'" class="fixed inset-0 z-[999] flex items-center justify-center p-4" x-cloak>
+                                <div x-show="activeModal === 'detail_draft_{{ $draft['id'] }}'"
+                                     x-transition:enter="transition ease-out duration-300"
+                                     x-transition:enter-start="opacity-0"
+                                     x-transition:enter-end="opacity-100"
+                                     x-transition:leave="transition ease-in duration-200"
+                                     x-transition:leave-start="opacity-100"
+                                     x-transition:leave-end="opacity-0"
+                                     class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+                                     @click="activeModal = null">
+                                </div>
+
+                                <div x-show="activeModal === 'detail_draft_{{ $draft['id'] }}'"
+                                     x-transition:enter="transition ease-out duration-300"
+                                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                                     x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                                     x-transition:leave="transition ease-in duration-200"
+                                     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                                     class="relative w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
+                                    
+                                    <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                        <div>
+                                            <h3 class="text-lg font-bold text-slate-800">Detail Draf Pengadaan</h3>
+                                        </div>
+                                        <button type="button" @click="activeModal = null" class="text-slate-400 hover:text-slate-600">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                                        <div class="grid grid-cols-2 gap-6">
+                                            <div class="col-span-2">
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Judul Draf</p>
+                                                <p class="text-sm font-semibold text-slate-800">{{ $draft['title'] }}</p>
+                                            </div>
+                                            <div class="col-span-2">
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Laboratorium</p>
+                                                <div class="flex items-center gap-2 mt-0.5">
+                                                    <span class="badge badge-active text-[0.65rem]">{{ $draft['counter'] ?? $draft['lab_code'] ?? '' }}</span>
+                                                    <span class="text-sm font-semibold text-slate-800">{{ $draft['lab_name'] }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-span-2">
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Progress Penerimaan</p>
+                                                <div class="flex items-center gap-2 mt-1.5">
+                                                    <div class="w-full max-w-xs h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                        <div class="h-full {{ $rsMeta[2] }} rounded-full transition-all" style="width: {{ $draft['progress_pct'] ?? 0 }}%"></div>
+                                                    </div>
+                                                    <span class="text-[0.7rem] font-bold text-slate-600">{{ $draft['progress_pct'] ?? 0 }}%</span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Tgl Finalisasi</p>
+                                                <p class="text-sm font-semibold text-slate-800">{{ $draft['finalized_at'] ? date('d M Y', strtotime($draft['finalized_at'])) : '-' }}</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Oleh</p>
+                                                <p class="text-sm font-semibold text-slate-800">{{ $draft['finalized_by_name'] ?? '-' }}</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total Item</p>
+                                                <p class="text-sm font-semibold text-slate-800">{{ $draft['total_ordered'] ?? 0 }}</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Diterima</p>
+                                                <p class="text-sm font-semibold text-slate-800">{{ $draft['total_received'] ?? 0 }}</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Belum Diterima</p>
+                                                <p class="text-sm font-semibold text-slate-800">{{ $draft['total_pending'] ?? 0 }}</p>
+                                            </div>
+                                            <div>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.65rem] font-semibold {{ $rsMeta[1] }}">
+                                                    {{ $rsMeta[0] }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                                        <button type="button" @click="activeModal = null" class="px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                                            Tutup
+                                        </button>
+                                        <a href="{{ route('staf-admin.procurement-approved.detail', $draft['id']) }}" class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors">
+                                            Lihat Detail Lengkap
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
                     @endforeach
                 </tbody>
             </table>
@@ -179,6 +259,7 @@
         @if(count($drafts) > 0)
             <x-pagination :total="count($drafts)" />
         @endif
+    </div>
     @endif
 </div>
 @endsection

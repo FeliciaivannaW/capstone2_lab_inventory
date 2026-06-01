@@ -23,22 +23,36 @@
     <p class="text-sm text-slate-500 mt-1">Berikan nomor label dan foto QR/Barcode untuk setiap aset yang sudah diterima.</p>
 </div>
 
-{{-- Tabs --}}
-<div class="flex gap-1 bg-slate-100 rounded-xl p-1 mb-6 w-fit">
-    <a href="{{ route('staf-admin.inventory-label') }}?tab=unlabeled"
-       class="px-4 py-2 rounded-lg text-sm font-semibold transition-all {{ $tab === 'unlabeled' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">
-        Perlu Dilabel
-        @if($tab === 'unlabeled' && count($batches))
-            <span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full">{{ collect($batches)->sum('unlabeled_count') }}</span>
-        @endif
-    </a>
-    <a href="{{ route('staf-admin.inventory-label') }}?tab=labeled"
-       class="px-4 py-2 rounded-lg text-sm font-semibold transition-all {{ $tab === 'labeled' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">
-        Sudah Dilabel
-        @if($tab === 'labeled' && count($batches))
-            <span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full">{{ collect($batches)->sum('labeled_count') }}</span>
-        @endif
-    </a>
+{{-- Tabs and Search --}}
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div class="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
+        <a href="{{ route('staf-admin.inventory-label') }}?tab=unlabeled&search={{ request('search') }}"
+           class="px-4 py-2 rounded-lg text-sm font-semibold transition-all {{ $tab === 'unlabeled' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">
+            Perlu Dilabel
+            @if($tab === 'unlabeled' && count($batches))
+                <span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full">{{ $paginator ? $paginator->total() : collect($batches)->sum('unlabeled_count') }}</span>
+            @endif
+        </a>
+        <a href="{{ route('staf-admin.inventory-label') }}?tab=labeled&search={{ request('search') }}"
+           class="px-4 py-2 rounded-lg text-sm font-semibold transition-all {{ $tab === 'labeled' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">
+            Sudah Dilabel
+            @if($tab === 'labeled' && count($batches))
+                <span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full">{{ $paginator ? $paginator->total() : collect($batches)->sum('labeled_count') }}</span>
+            @endif
+        </a>
+    </div>
+
+    {{-- Search Form --}}
+    <form action="{{ route('staf-admin.inventory-label') }}" method="GET" class="relative w-full sm:w-72">
+        <input type="hidden" name="tab" value="{{ $tab }}">
+        <input type="text" name="search" value="{{ request('search') }}"
+               placeholder="Cari pengadaan atau lab..."
+               style="padding-left: 2.5rem;"
+               class="w-full pr-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all bg-white shadow-sm">
+        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+    </form>
 </div>
 
 @if(empty($batches))
@@ -88,16 +102,6 @@
                         Diterima {{ \Carbon\Carbon::parse($batch['received_date'])->locale('id')->isoFormat('D MMMM Y') }}
                         · {{ $batch['total_assets'] }} aset
                     </p>
-                    {{-- Progress bar --}}
-                    <div class="flex items-center gap-2 mt-2">
-                        <div class="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                            <div class="{{ $pct == 100 ? 'bg-emerald-500' : 'bg-indigo-400' }} h-full rounded-full transition-all"
-                                 style="width: {{ $pct }}%"></div>
-                        </div>
-                        <span class="text-[11px] font-bold {{ $pct == 100 ? 'text-emerald-600' : 'text-slate-500' }} flex-shrink-0">
-                            {{ $batch['labeled_count'] }}/{{ $batch['total_assets'] }} label
-                        </span>
-                    </div>
                 </div>
                 <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mt-1 transition-transform"
                      :class="openBatches.includes({{ $batch['receipt_id'] }}) ? 'rotate-180' : ''"
@@ -106,12 +110,45 @@
                 </svg>
             </div>
 
+            {{-- Header progress --}}
+            <div class="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 pb-5">
+                <div class="flex-1 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    @php
+                        $progress = $batch['total_assets'] > 0 
+                            ? round(($batch['labeled_count'] / $batch['total_assets']) * 100) 
+                            : 0;
+                    @endphp
+                    <div class="bg-indigo-500 h-full transition-all duration-500" style="width: {{ $progress }}%"></div>
+                </div>
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <p class="text-[11px] font-semibold text-slate-500 whitespace-nowrap">{{ $batch['labeled_count'] }}/{{ $batch['total_assets'] }} label</p>
+                    @if($tab === 'unlabeled' && $batch['unlabeled_count'] > 0)
+                        <button type="button" @click.stop="labelAll({{ $batch['receipt_id'] }}, {{ $batch['unlabeled_count'] }})"
+                                class="text-[10px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            Label Semua Sekaligus
+                        </button>
+                    @endif
+                </div>
+            </div>
+
             {{-- Asset list (expandable) --}}
             <div x-show="openBatches.includes({{ $batch['receipt_id'] }})" x-cloak
                  x-transition:enter="transition ease-out duration-150"
                  x-transition:enter-start="opacity-0"
                  x-transition:enter-end="opacity-100"
                  class="border-t border-slate-100">
+
+                {{-- Local search inside batch --}}
+                <div class="px-5 py-3 bg-slate-50/80 border-b border-slate-100" x-show="batchAssets[{{ $batch['receipt_id'] }}]?.length > 0">
+                    <div class="relative">
+                        <input type="text" x-model="searchAssets[{{ $batch['receipt_id'] }}]" 
+                               placeholder="Cari aset berdasarkan kode, nama, atau label..." 
+                               style="padding-left: 2.25rem;"
+                               class="w-full pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white shadow-sm">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                </div>
 
                 {{-- Loading state --}}
                 <div x-show="loadingBatch === {{ $batch['receipt_id'] }}" class="px-5 py-6 flex items-center justify-center gap-2 text-sm text-slate-400">
@@ -126,7 +163,7 @@
                 <template x-if="batchAssets[{{ $batch['receipt_id'] }}]">
                     <div>
                         <div class="divide-y divide-slate-50">
-                            <template x-for="asset in batchAssets[{{ $batch['receipt_id'] }}]" :key="asset.id">
+                            <template x-for="asset in filteredAssets({{ $batch['receipt_id'] }})" :key="asset.id">
                                 <div class="px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50/50 transition-colors">
                                     {{-- Status dot --}}
                                     <div class="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
@@ -166,7 +203,7 @@
                                     </div>
 
                                     {{-- Action button --}}
-                                    <button @click="openDrawer({ id: asset.id, asset_code: asset.asset_code, item_name: asset.item_name, label_number: asset.label_number, qr_code: asset.qr_code, photo_url: asset.photo_url }, {{ $batch['receipt_id'] }})"
+                                    <button @click="openDrawer({ id: asset.id, asset_code: asset.asset_code, item_name: asset.item_name, label_number: asset.label_number, qr_code: asset.qr_code, photo_url: asset.photo_url }, {{ $batch['receipt_id'] }}, '{{ $batch['lab_code'] }}')"
                                             class="flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
                                             :class="asset.label_number ? 'text-slate-500 bg-slate-100 hover:bg-slate-200' : 'text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200'">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,28 +214,18 @@
                                 </div>
                             </template>
                         </div>
-
-                        {{-- Batch footer: bulk action jika ada yang belum --}}
-                        <template x-if="batchAssets[{{ $batch['receipt_id'] }}]?.some(a => !a.label_number)">
-                            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                                <p class="text-xs text-slate-500">
-                                    <span x-text="batchAssets[{{ $batch['receipt_id'] }}]?.filter(a => !a.label_number).length"></span>
-                                    aset belum dilabel
-                                </p>
-                                <button @click="openBulkModal({{ $batch['receipt_id'] }})"
-                                        class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                    </svg>
-                                    Label Semua Sekaligus
-                                </button>
-                            </div>
-                        </template>
                     </div>
                 </template>
             </div>
         </div>
         @endforeach
+
+        {{-- Pagination --}}
+        @if(isset($paginator) && $paginator->hasPages())
+            <div class="mt-6">
+                {{ $paginator->links('pagination::tailwind') }}
+            </div>
+        @endif
 
         {{-- DRAWER: Form Label + QR --}}
         <template x-teleport="body">
@@ -239,7 +266,7 @@
                                target="_blank"
                                class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl border border-indigo-200 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2-2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                                 </svg>
                                 Cetak
                             </a>
@@ -264,7 +291,21 @@
                             </div>
                             {{-- Info --}}
                             <div class="flex-1 min-w-0">
-                                <p class="text-xs font-bold text-slate-700 mb-1">Preview QR Code</p>
+                                <div class="flex items-center justify-between mb-1">
+                                    <p class="text-xs font-bold text-slate-700">Preview QR Code</p>
+                                    <button type="button" @click="$refs.qrInput.click()" 
+                                            class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded border border-indigo-200 transition-colors">
+                                        Upload QR Manual
+                                    </button>
+                                </div>
+                                <input type="file" name="qr_photo" accept="image/*" x-ref="qrInput" class="hidden" @change="handleQrFile($event.target.files[0])">
+                                <template x-if="qrPreviewUrl">
+                                    <div class="mb-2 flex items-center justify-between bg-emerald-50 px-2 py-1.5 rounded-lg border border-emerald-200">
+                                        <span class="text-[10px] font-semibold text-emerald-700">QR Manual dipilih</span>
+                                        <button type="button" @click="qrPreviewUrl = null; $refs.qrInput.value = ''" class="text-[10px] text-red-500 hover:text-red-700">Batal</button>
+                                    </div>
+                                </template>
+                                
                                 <template x-if="form.label_number">
                                     <p class="text-[11px] text-slate-500">QR berisi: <code class="font-mono text-indigo-600" x-text="form.label_number"></code></p>
                                 </template>
@@ -273,7 +314,7 @@
                                 </template>
                                 <p class="text-[10px] text-slate-400 mt-2">QR akan di-generate otomatis saat simpan. Tidak perlu upload foto secara manual.</p>
                                 <template x-if="asset.qr_code">
-                                    <div class="mt-2">
+                                    <div class="mt-2 flex items-center gap-2">
                                         <a :href="asset.qr_code" target="_blank" download
                                            class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -323,7 +364,7 @@
                             </span>
                         </div>
                         <p x-show="labelStatus === 'taken'" class="text-[0.65rem] text-red-500 mt-1" x-text="labelMsg"></p>
-                        <p x-show="!labelStatus" class="text-[0.65rem] text-slate-400 mt-1.5">Format: <code class="font-mono bg-slate-100 px-1 rounded">LAB-[KODE]-[NO]</code></p>
+                        <p x-show="!labelStatus" class="text-[0.65rem] text-slate-400 mt-1.5">Format: <code class="font-mono bg-slate-100 px-1 rounded">LBL-[KODE]-[NO]</code></p>
                     </div>
 
                     {{-- Serial Number (opsional) --}}
@@ -367,8 +408,8 @@
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                                Foto Manual
-                                <span class="text-slate-400 font-normal normal-case ml-1">(opsional — override QR auto)</span>
+                                Foto Aset
+                                <span class="text-slate-400 font-normal normal-case ml-1">(opsional)</span>
                             </label>
                             <button type="button" x-show="previewUrl" @click="previewUrl = null; $refs.fileInput.value = ''"
                                     class="text-[11px] font-semibold text-red-500 hover:text-red-700 transition-colors">
@@ -381,22 +422,23 @@
                              @click="$refs.fileInput.click()"
                              :class="dragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-slate-50/60 hover:border-indigo-300 hover:bg-indigo-50/30'"
                              class="border-2 border-dashed rounded-xl p-3 cursor-pointer transition-all">
-                            <template x-if="previewUrl">
+                             
+                            <template x-if="previewUrl || asset.photo_url">
                                 <div class="flex items-center gap-3">
-                                    <img :src="previewUrl" class="w-16 h-16 rounded-lg object-cover border border-slate-200 flex-shrink-0">
+                                    <img :src="previewUrl || asset.photo_url" class="w-16 h-16 rounded-lg object-cover border border-slate-200 flex-shrink-0 bg-white">
                                     <div>
-                                        <p class="text-xs font-semibold text-emerald-700">Foto siap di-upload</p>
-                                        <p class="text-[11px] text-slate-400 mt-0.5">Akan menggantikan QR auto-generate</p>
+                                        <p class="text-xs font-semibold text-emerald-700" x-text="previewUrl ? 'Foto siap di-upload' : 'Foto Aset Tersimpan'"></p>
+                                        <p class="text-[11px] text-slate-400 mt-0.5" x-text="previewUrl ? 'Akan ditambahkan ke aset' : 'Klik/drag untuk mengganti foto'"></p>
                                     </div>
                                 </div>
                             </template>
-                            <template x-if="!previewUrl">
+                            <template x-if="!previewUrl && !asset.photo_url">
                                 <div class="flex items-center gap-3 py-1">
                                     <svg class="w-7 h-7 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                    <p class="text-xs text-slate-400">Klik atau drag foto barcode fisik · JPG, PNG · max 2MB</p>
+                                    <p class="text-xs text-slate-400">Klik atau drag foto wujud fisik aset · JPG, PNG · max 2MB</p>
                                 </div>
                             </template>
-                            <input type="file" name="qr_photo" accept="image/*" x-ref="fileInput" class="hidden"
+                            <input type="file" name="asset_photo" accept="image/*" x-ref="fileInput" class="hidden"
                                    @change="handleFile($event.target.files[0])">
                         </div>
                     </div>
@@ -425,6 +467,7 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 let _qrInstance = null;
 
@@ -450,10 +493,12 @@ function labelApp() {
         openBatches: [],
         loadingBatch: null,
         batchAssets: {},
+        searchAssets: {}, // Local search per batch
         drawerOpen: false,
         drawerLoading: false,
         dragging: false,
         previewUrl: null,
+        qrPreviewUrl: null,
         currentReceiptId: null,
         _assetId: 0,
         asset: {},
@@ -502,35 +547,67 @@ function labelApp() {
             this.loadingBatch = null;
         },
 
-        openDrawer(asset, receiptId) {
-            this._assetId = Number(asset.id);  // Primitive — tidak akan di-reset Alpine
+        filteredAssets(receiptId) {
+            const list = this.batchAssets[receiptId] || [];
+            const query = (this.searchAssets[receiptId] || '').toLowerCase();
+            if (!query) return list;
+            return list.filter(a => 
+                (a.asset_code || '').toLowerCase().includes(query) ||
+                (a.item_name || '').toLowerCase().includes(query) ||
+                (a.label_number || '').toLowerCase().includes(query)
+            );
+        },
+
+        openDrawer(asset, receiptId, labCode) {
+            this._assetId = Number(asset.id);
             this.asset = asset;
             this.form.label_number  = asset.label_number  || '';
             this.form.serial_number = asset.serial_number || '';
             this.form.room_id       = asset.room_id       ? String(asset.room_id) : '';
             this.previewUrl = null;
+            this.qrPreviewUrl = null;
+            if (this.$refs.qrInput) this.$refs.qrInput.value = '';
+            if (this.$refs.fileInput) this.$refs.fileInput.value = '';
+            
             this.drawerLoading = false;
             this.labelStatus = null;
             this.labelMsg = '';
             this.currentReceiptId = receiptId || null;
-
-            const parts = (asset.asset_code || '').split('-');
-            this.suggestedLabel = (parts.length >= 3 && parts[0] === 'INV')
-                ? `LAB-${parts[1]}-${parts[parts.length - 1]}`
-                : '';
+            this.suggestedLabel = '';
 
             this.drawerOpen = true;
             document.body.style.overflow = 'hidden';
 
+            if (!this.form.label_number && labCode) {
+                this.fetchNextLabel(labCode);
+            }
+
             this.$nextTick(() => {
-                renderQR(this.form.label_number || this.suggestedLabel);
+                renderQR(this.form.label_number);
                 if (this.form.label_number) this.checkLabel(this.form.label_number);
             });
+        },
+
+        async fetchNextLabel(labCode) {
+            try {
+                const token = document.querySelector('meta[name="auth-token"]')?.content;
+                const r = await fetch(`/api/next-label?lab_code=${labCode}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const d = await r.json();
+                if (d && d.label_number) {
+                    this.suggestedLabel = d.label_number;
+                    if (!this.form.label_number) renderQR(this.suggestedLabel);
+                }
+            } catch (err) {
+                console.error("Gagal mendapatkan saran label", err);
+            }
         },
 
         closeDrawer() {
             this.drawerOpen = false;
             this.previewUrl = null;
+            this.qrPreviewUrl = null;
             this.dragging = false;
             document.body.style.overflow = '';
         },
@@ -578,6 +655,12 @@ function labelApp() {
             this.previewUrl = URL.createObjectURL(f);
         },
 
+        handleQrFile(f) {
+            if (!f) return;
+            if (f.size > 2 * 1024 * 1024) { this.showToast('error', 'Ukuran file maksimal 2MB'); return; }
+            this.qrPreviewUrl = URL.createObjectURL(f);
+        },
+
         async submitDrawer() {
             if (!this.form.label_number?.trim()) { this.showToast('error', 'Nomor label wajib diisi'); return; }
             if (this.labelStatus === 'taken') { this.showToast('error', 'Nomor label sudah dipakai aset lain'); return; }
@@ -598,53 +681,83 @@ function labelApp() {
                 formData.append('room_id', this.form.room_id);
             }
 
+            if (this.$refs.qrInput?.files[0]) {
+                formData.append('qr_photo', this.$refs.qrInput.files[0]);
+            }
             if (this.$refs.fileInput?.files[0]) {
-                formData.append('qr_photo', this.$refs.fileInput.files[0]);
+                formData.append('asset_photo', this.$refs.fileInput.files[0]);
             }
 
             try {
-                const r = await fetch(`/staf-admin/inventory-label/${assetId}`, {
+                const r = await fetch(`/inventory-label/${assetId}`, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     body: formData
                 });
 
-                const d = await r.json();
+                const data = await r.json();
 
-                if (d.ok) {
-                    const newLabel   = d.label_number || this.form.label_number.trim();
-                    const newQrCode  = d.qr_code   || null;
-                    const newPhotoUrl = d.photo_url || null;
-
-                    // Update batchAssets reaktif pakai spread (wajib untuk Alpine reaktif)
-                    if (this.currentReceiptId && this.batchAssets[this.currentReceiptId]) {
-                        const list = this.batchAssets[this.currentReceiptId];
-                        const idx  = list.findIndex(a => a.id === this.asset.id);
-                        if (idx >= 0) {
-                            const updated = list.map((a, i) => i === idx
-                                ? { ...a, label_number: newLabel, qr_code: newQrCode, photo_url: newPhotoUrl }
-                                : a
-                            );
-                            // Spread object agar Alpine proxy detect perubahan
-                            this.batchAssets = { ...this.batchAssets, [this.currentReceiptId]: updated };
-                        }
-                    }
-
-                    // Update asset di drawer juga (untuk tombol Cetak)
-                    this.asset.label_number = newLabel;
-                    this.asset.qr_code      = newQrCode;
-                    this.asset.photo_url    = newPhotoUrl;
-
-                    this.showToast('success', `✓ Label "${newLabel}" tersimpan & QR di-generate`);
-                    this.closeDrawer();
+                if (data.ok) {
+                    this.showToast('success', 'Berhasil update label & foto QR');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
                 } else {
-                    this.showToast('error', d.message || 'Gagal menyimpan label');
+                    this.showToast('error', data.message || 'Gagal update label');
                 }
-            } catch(e) {
-                this.showToast('error', 'Terjadi kesalahan jaringan');
+            } catch (err) {
+                this.showToast('error', 'Terjadi kesalahan sistem');
+            } finally {
+                this.drawerLoading = false;
             }
+        },
 
-            this.drawerLoading = false;
+        async labelAll(receiptId, count) {
+            Swal.fire({
+                title: 'Label Semua Aset?',
+                text: `Anda akan melabeli dan membuat QR Code otomatis untuk ${count} aset sekaligus. Proses ini mungkin memakan waktu beberapa detik.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#4f46e5',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'Ya, Label Sekarang!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Memproses...',
+                        text: 'Mohon tunggu sebentar.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    try {
+                        const token = document.querySelector('meta[name="auth-token"]')?.content;
+                        const response = await fetch(`/api/inventory/batches/${receiptId}/label-all`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            Swal.fire('Berhasil!', data.message, 'success').then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            throw new Error(data.message || 'Terjadi kesalahan');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        Swal.fire('Gagal!', err.message, 'error');
+                    }
+                }
+            });
         },
 
         showToast(type, message) {

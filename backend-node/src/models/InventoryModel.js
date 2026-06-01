@@ -206,6 +206,20 @@ const InventoryModel = {
   },
 
   /**
+   * Get maximum sequence number for a lab (for generating codes)
+   */
+  async getMaxSequence(labCode, tx = null) {
+    const conn = tx || db;
+    const prefix = `LBL-${labCode}-`;
+    const [rows] = await conn.query(`
+      SELECT MAX(CAST(SUBSTRING(label_number, LENGTH(?) + 1) AS UNSIGNED)) AS max_seq
+      FROM inventory_assets
+      WHERE label_number LIKE ?
+    `, [prefix, prefix + '%']);
+    return rows[0]?.max_seq || 0;
+  },
+
+  /**
    * Insert a new inventory asset
    */
   async createAsset({ item_catalog_id, procurement_item_id, receipt_id, asset_code, received_date, status = 'received', asset_condition = 'baik' }, tx = null) {

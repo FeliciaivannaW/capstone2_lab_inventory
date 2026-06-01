@@ -319,6 +319,20 @@ const createGoodsReceipt = async (req, res, next) => {
     const createdAssets = [];
 
     if (item.item_type === 'inventory') {
+      // If it's a custom item not yet in the catalog, auto-create it
+      if (!item.item_catalog_id) {
+        const [catResult] = await connection.query(`
+          INSERT INTO item_catalogs (name, type, unit, created_at, updated_at)
+          VALUES (?, 'inventory', 'unit', NOW(), NOW())
+        `, [item.item_name]);
+        item.item_catalog_id = catResult.insertId;
+
+        // Link it back to the procurement_item
+        await connection.query(`
+          UPDATE procurement_items SET item_catalog_id = ? WHERE id = ?
+        `, [item.item_catalog_id, procurement_item_id]);
+      }
+
       // Create N inventory_asset records (one per unit received)
       // asset_code format: INV-{KODE_LAB}-{TAHUN}-{SEQ 3-digit, global per lab+year}
       const labCode   = (item.lab_code || 'LAB').toUpperCase();

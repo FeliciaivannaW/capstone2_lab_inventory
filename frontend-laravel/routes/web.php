@@ -131,7 +131,7 @@ Route::middleware('frontend.auth')->group(function () {
     Route::post('/api/procurement/{id}/return', [ProcurementController::class, 'returnDraft']);
     Route::post('/api/procurement/{id}/submit', [ProcurementController::class, 'submit']);
 
-    Route::prefix('staf-admin')->middleware('frontend.role:staf_administrasi')->group(function () {
+    Route::middleware('frontend.role:staf_administrasi')->group(function () {
         Route::get('/procurement-approved', [StafAdminController::class, 'procurementApproved'])->name('staf-admin.procurement-approved');
         Route::get('/procurement-approved/{id}', [StafAdminController::class, 'procurementApprovedDetail'])->name('staf-admin.procurement-approved.detail');
 
@@ -140,7 +140,9 @@ Route::middleware('frontend.auth')->group(function () {
         Route::post('/api/goods-receipt', [StafAdminController::class, 'storeGoodsReceipt'])->name('staf-admin.goods-receipt.store');
 
         Route::get('/api/label-check', [StafAdminController::class, 'labelCheck'])->name('staf-admin.label-check');
+        Route::get('/api/next-label', [StafAdminController::class, 'nextLabelApi'])->name('staf-admin.next-label');
         Route::get('/api/inventory/assets', [StafAdminController::class, 'inventoryAssetsApi'])->name('staf-admin.inventory-assets-api');
+        Route::post('/api/inventory/batches/{id}/label-all', [StafAdminController::class, 'labelAllAjax'])->name('staf-admin.label-all.ajax');
         Route::get('/print-label', [StafAdminController::class, 'printLabel'])->name('staf-admin.print-label');
         Route::get('/inventory-label', [StafAdminController::class, 'inventoryLabel'])->name('staf-admin.inventory-label');
         Route::get('/inventory-label/{id}/edit', [StafAdminController::class, 'inventoryLabelEdit'])->name('staf-admin.inventory-label.edit');
@@ -148,7 +150,7 @@ Route::middleware('frontend.auth')->group(function () {
         Route::post('/api/inventory-label/{id}', [StafAdminController::class, 'inventoryLabelUpdateAjax'])->name('staf-admin.inventory-label.ajax');
         Route::get('/api/rooms', [StafAdminController::class, 'roomsApi'])->name('staf-admin.rooms-api');
 
-        Route::get('/dashboard', [StafAdminController::class, 'dashboard'])->name('staf-admin.dashboard');
+
         Route::get('/asset-list', [StafAdminController::class, 'assetList'])->name('staf-admin.asset-list');
         Route::get('/asset-timeline/{id}', [StafAdminController::class, 'assetTimeline'])->name('staf-admin.asset-timeline');
         Route::get('/inventaris', [StafAdminController::class, 'inventaris'])->name('staf-admin.inventaris');
