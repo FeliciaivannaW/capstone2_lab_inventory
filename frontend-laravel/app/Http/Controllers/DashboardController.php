@@ -77,6 +77,21 @@ class DashboardController extends Controller
             ));
         }
 
+        if ($role === 'staf_laboratorium') {
+            $stats = $this->getApiData('/statistics/summary') ?: [];
+
+            $inv      = $stats['inventory']      ?? [];
+            $bhp      = $stats['bhp']            ?? [];
+            $bhpLow   = $stats['bhpLowStock']    ?? [];
+
+            $maintenanceLogs = $this->getApiData('/maintenance/logs') ?: [];
+            $recentMaintenance = array_slice($maintenanceLogs, 0, 5);
+
+            return view('pages.staf-lab.dashboard', compact(
+                'inv', 'bhp', 'bhpLow', 'recentMaintenance'
+            ));
+        }
+
         if ($role === 'kepala_laboratorium') {
             $drafts = $this->getApiData('/procurement/drafts', ['lab_id' => session('auth_user')['lab_id'] ?? null]) ?: [];
             
