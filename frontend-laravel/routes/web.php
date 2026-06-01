@@ -131,7 +131,7 @@ Route::middleware('frontend.auth')->group(function () {
     Route::post('/api/procurement/{id}/return', [ProcurementController::class, 'returnDraft']);
     Route::post('/api/procurement/{id}/submit', [ProcurementController::class, 'submit']);
 
-    Route::prefix('staf-admin')->middleware('frontend.role:staf_administrasi')->group(function () {
+    Route::middleware('frontend.role:staf_administrasi')->group(function () {
         Route::get('/procurement-approved', [StafAdminController::class, 'procurementApproved'])->name('staf-admin.procurement-approved');
         Route::get('/procurement-approved/{id}', [StafAdminController::class, 'procurementApprovedDetail'])->name('staf-admin.procurement-approved.detail');
 
@@ -148,7 +148,7 @@ Route::middleware('frontend.auth')->group(function () {
         Route::post('/api/inventory-label/{id}', [StafAdminController::class, 'inventoryLabelUpdateAjax'])->name('staf-admin.inventory-label.ajax');
         Route::get('/api/rooms', [StafAdminController::class, 'roomsApi'])->name('staf-admin.rooms-api');
 
-        Route::get('/dashboard', [StafAdminController::class, 'dashboard'])->name('staf-admin.dashboard');
+
         Route::get('/asset-list', [StafAdminController::class, 'assetList'])->name('staf-admin.asset-list');
         Route::get('/asset-timeline/{id}', [StafAdminController::class, 'assetTimeline'])->name('staf-admin.asset-timeline');
         Route::get('/inventaris', [StafAdminController::class, 'inventaris'])->name('staf-admin.inventaris');
