@@ -65,7 +65,29 @@ class DashboardController extends Controller
         }
 
         if ($role === 'kepala_laboratorium') {
-            return redirect()->route('procurement');
+            $drafts = $this->getApiData('/procurement/drafts', ['lab_id' => session('auth_user')['lab_id'] ?? null]) ?: [];
+            
+            $stats = [
+                'total' => count($drafts),
+                'draft' => 0,
+                'submitted' => 0,
+                'finalized' => 0,
+            ];
+            
+            $actionableDrafts = [];
+
+            foreach ($drafts as $draft) {
+                if ($draft['status'] === 'draft') {
+                    $stats['draft']++;
+                    $actionableDrafts[] = $draft;
+                } elseif ($draft['status'] === 'submitted') {
+                    $stats['submitted']++;
+                } elseif ($draft['status'] === 'finalized') {
+                    $stats['finalized']++;
+                }
+            }
+
+            return view('pages.dashboard-kalab', compact('drafts', 'stats', 'actionableDrafts'));
         }
 
         try {
