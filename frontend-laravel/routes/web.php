@@ -60,7 +60,7 @@ Route::middleware('frontend.auth')->group(function () {
     });
 
     Route::get('/inventory', [DashboardController::class, 'inventory'])
-        ->middleware('frontend.role:administrator,staf_administrasi,staf_laboratorium')
+        ->middleware('frontend.role:administrator,staf_administrasi,staf_laboratorium,kepala_laboratorium,ketua_program_studi')
         ->name('inventory');
 
     Route::get('/inventory/history', [DashboardController::class, 'inventoryHistory'])
@@ -128,6 +128,7 @@ Route::middleware('frontend.auth')->group(function () {
     Route::patch('/api/procurement/{draftId}/items/{itemId}', [ProcurementController::class, 'updateItem']);
     Route::post('/api/procurement/{draftId}/items/{itemId}/review', [ProcurementController::class, 'reviewItem']);
     Route::post('/api/procurement/{id}/finalize', [ProcurementController::class, 'finalize']);
+    Route::post('/api/procurement/{id}/return', [ProcurementController::class, 'returnDraft']);
     Route::post('/api/procurement/{id}/submit', [ProcurementController::class, 'submit']);
 
     Route::prefix('staf-admin')->middleware('frontend.role:staf_administrasi')->group(function () {

@@ -198,6 +198,12 @@ router.post(
   roleMiddleware(["kepala_laboratorium", "staf_administrasi"]),
   procurementController.addProcurementItem
 );
+router.put(
+  "/procurement/drafts/:id/items/sync",
+  authMiddleware,
+  roleMiddleware(["kepala_laboratorium", "staf_administrasi"]),
+  procurementController.syncProcurementItems
+);
 router.patch(
   "/procurement/drafts/:id/items/:itemId",
   authMiddleware,
@@ -222,6 +228,12 @@ router.post(
   roleMiddleware(["ketua_program_studi"]),
   procurementController.finalizeProcurementDraft
 );
+router.post(
+  "/procurement/drafts/:id/return",
+  authMiddleware,
+  roleMiddleware(["ketua_program_studi"]),
+  procurementController.returnProcurementDraft
+);
 
 // ============================================================
 // GOODS RECEIPT ROUTES
@@ -235,7 +247,7 @@ router.post("/goods-receipts", authMiddleware, roleMiddleware(["staf_administras
 // INVENTORY ASSET ROUTES
 // ============================================================
 router.get("/inventory/label-check", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.checkLabelAvailability);
-router.get("/inventory/assets", authMiddleware, roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium"]), inventoryController.getInventoryAssets);
+router.get("/inventory/assets", authMiddleware, roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium", "kepala_laboratorium", "ketua_program_studi"]), inventoryController.getInventoryAssets);
 router.get("/inventory/batches", authMiddleware, roleMiddleware(["staf_administrasi", "administrator"]), inventoryController.getInventoryBatches);
 router.get("/inventory/condition-history", authMiddleware, roleMiddleware(["staf_laboratorium"]), inventoryController.getConditionHistory);
 router.patch("/inventory/assets/:id/condition", authMiddleware, roleMiddleware(["staf_laboratorium"]), inventoryController.updateAssetCondition);

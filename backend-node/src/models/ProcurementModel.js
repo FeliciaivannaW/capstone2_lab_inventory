@@ -4,13 +4,18 @@ const ProcurementModel = {
   /**
    * Find procurement drafts based on filters
    */
-  async findDrafts({ status, budget_year, search, lab_id }) {
+  async findDrafts({ status, budget_year, search, lab_id, exclude_status }) {
     let whereConditions = [];
     let params = [];
 
     if (status) {
       whereConditions.push("pd.status = ?");
       params.push(status);
+    }
+
+    if (exclude_status) {
+      whereConditions.push("pd.status != ?");
+      params.push(exclude_status);
     }
 
     if (budget_year) {
@@ -119,6 +124,7 @@ const ProcurementModel = {
       SELECT
         pi.id,
         pi.item_name,
+        pi.item_description,
         pi.item_type,
         pi.quantity,
         pi.estimated_price,
@@ -126,13 +132,17 @@ const ProcurementModel = {
         pi.review_status,
         pi.review_note,
         pi.reviewed_at,
+        pi.replacement_asset_id,
         ur.name AS reviewed_by_name,
         ia.asset_code AS replacement_asset_code,
+        COALESCE(ic2.name, pi2.item_name) AS replacement_asset_name,
         ic.name AS catalog_name
       FROM procurement_items AS pi
       LEFT JOIN users AS ur ON pi.reviewed_by = ur.id
       LEFT JOIN inventory_assets AS ia ON pi.replacement_asset_id = ia.id
       LEFT JOIN item_catalogs AS ic ON pi.item_catalog_id = ic.id
+      LEFT JOIN item_catalogs AS ic2 ON ia.item_catalog_id = ic2.id
+      LEFT JOIN procurement_items AS pi2 ON ia.procurement_item_id = pi2.id
       WHERE pi.draft_id = ?
       ORDER BY pi.created_at ASC
     `, [draftId]);
@@ -191,6 +201,19 @@ const ProcurementModel = {
   },
 
   /**
+   * Return a procurement draft to the creator
+   */
+  async returnDraft(id, notes, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(`
+      UPDATE procurement_drafts 
+      SET status = 'draft', notes = ?
+      WHERE id = ?
+    `, [notes, id]);
+    return result;
+  },
+
+  /**
    * Create procurement draft
    */
   async createDraft({ labId, createdBy, title, budgetYear, notes, status = 'draft', createdAt }, tx = null) {
@@ -226,11 +249,9 @@ const ProcurementModel = {
     return rows[0]?.count || 0;
   },
 
-  /**
-   * Delete procurement draft
-   */
   async deleteDraft(id, tx = null) {
     const conn = tx || db;
+    await conn.query("DELETE FROM procurement_items WHERE draft_id = ?", [id]);
     const [result] = await conn.query("DELETE FROM procurement_drafts WHERE id = ?", [id]);
     return result;
   },
@@ -238,13 +259,13 @@ const ProcurementModel = {
   /**
    * Create a new procurement item
    */
-  async createItem({ draftId, itemName, itemType, quantity, estimatedPrice, purchaseLink, replacementAssetId, createdAt }, tx = null) {
+  async createItem({ draftId, itemName, itemDescription, itemType, quantity, estimatedPrice, purchaseLink, replacementAssetId, createdAt }, tx = null) {
     const conn = tx || db;
     const [result] = await conn.query(`
       INSERT INTO procurement_items 
-      (draft_id, item_name, item_type, quantity, estimated_price, purchase_link, replacement_asset_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [draftId, itemName, itemType, quantity, estimatedPrice, purchaseLink || null, replacementAssetId || null, createdAt]);
+      (draft_id, item_name, item_description, item_type, quantity, estimated_price, purchase_link, replacement_asset_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [draftId, itemName, itemDescription || null, itemType, quantity, estimatedPrice, purchaseLink || null, replacementAssetId || null, createdAt]);
     return result;
   },
 
@@ -255,6 +276,37 @@ const ProcurementModel = {
     const conn = tx || db;
     const [result] = await conn.query("DELETE FROM procurement_items WHERE id = ?", [itemId]);
     return result;
+  },
+
+  /**
+   * Bulk sync draft items (replace all)
+   */
+  async syncItems(draftId, items, tx = null) {
+    const conn = tx || db;
+    await conn.query("DELETE FROM procurement_items WHERE draft_id = ?", [draftId]);
+
+    if (items && items.length > 0) {
+      const values = items.map(item => [
+        draftId,
+        item.item_name,
+        item.item_description || null,
+        item.item_type,
+        item.quantity,
+        item.estimated_price,
+        item.purchase_link || null,
+        item.replacement_asset_id || null,
+        item.review_status || 'pending',
+        item.review_note || null,
+        item.created_at ? new Date(item.created_at) : new Date(),
+        item.reviewed_at ? new Date(item.reviewed_at) : null
+      ]);
+
+      await conn.query(`
+        INSERT INTO procurement_items 
+        (draft_id, item_name, item_description, item_type, quantity, estimated_price, purchase_link, replacement_asset_id, review_status, review_note, created_at, reviewed_at)
+        VALUES ?
+      `, [values]);
+    }
   },
 
   /**

@@ -37,14 +37,14 @@ const checkAssetRoomAccess = async (user, asset, assetId) => {
 
 const getInventoryAssets = async (req, res) => {
   try {
-    const { search, status, condition, label_status, lab_id, receipt_id } = req.query;
+    const { search, status, condition, label_status, lab_id, receipt_id, sort } = req.query;
     const roomIds = await getAccessibleRoomIdsForUser(req.user);
 
     if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0)) {
       return res.json({ success: true, data: [], message: "Data inventaris berhasil diambil" });
     }
 
-    const assets = await InventoryModel.findAll({ search, status, condition, label_status, lab_id, roomIds, receipt_id });
+    const assets = await InventoryModel.findAll({ search, status, condition, label_status, lab_id, roomIds, receipt_id, sort });
 
     res.json({ success: true, data: assets, message: "Data inventaris berhasil diambil" });
   } catch (error) {
