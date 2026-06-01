@@ -4,7 +4,17 @@ const ProcurementModel = require("../models/ProcurementModel");
 const getProcurementDrafts = async (req, res, next) => {
   try {
     const { status, budget_year, search, lab_id } = req.query;
-    const drafts = await ProcurementModel.findDrafts({ status, budget_year, search, lab_id });
+    const userRole = req.user?.role;
+    
+    let exclude_status = null;
+    if (userRole === 'ketua_program_studi') {
+      exclude_status = 'draft';
+      if (status === 'draft') {
+        return res.json({ status: "success", data: [] });
+      }
+    }
+
+    const drafts = await ProcurementModel.findDrafts({ status, budget_year, search, lab_id, exclude_status });
 
     res.json({
       status: "success",
@@ -29,6 +39,14 @@ const getProcurementDraft = async (req, res, next) => {
       return res.status(404).json({
         status: "error",
         message: "Draf pengadaan tidak ditemukan"
+      });
+    }
+
+    const userRole = req.user?.role;
+    if (userRole === 'ketua_program_studi' && draft.status === 'draft') {
+      return res.status(403).json({
+        status: "error",
+        message: "Draf belum di-submit untuk direview"
       });
     }
 
@@ -158,6 +176,56 @@ const finalizeProcurementDraft = async (req, res, next) => {
     res.status(500).json({
       status: "error",
       message: "Gagal menfinalisasi draf pengadaan",
+      detail: error.message || "Kesalahan tidak diketahui"
+    });
+  }
+};
+
+const returnProcurementDraft = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { return_note } = req.body;
+    const userId = req.user?.id;
+
+    const draft = await ProcurementModel.findDraftByIdForLock(id);
+
+    if (!draft) {
+      return res.status(404).json({
+        status: "error",
+        message: "Draf pengadaan tidak ditemukan"
+      });
+    }
+
+    if (draft.is_locked || draft.status === 'finalized') {
+      return res.status(403).json({
+        status: "error",
+        message: "Draf sudah terkunci atau sudah difinalisasi"
+      });
+    }
+
+    // append note
+    let newNotes = draft.notes || '';
+    if (return_note) {
+      const timestamp = new Date().toLocaleString('id-ID');
+      newNotes = (newNotes ? newNotes + "\n\n" : "") + `[Catatan Revisi Kaprodi - ${timestamp}]:\n${return_note}`;
+    }
+
+    await ProcurementModel.returnDraft(id, newNotes);
+
+    res.json({
+      status: "success",
+      message: "Draf pengadaan berhasil dikembalikan ke Kepala Lab",
+      data: {
+        draft_id: id,
+        status: 'draft',
+        notes: newNotes
+      }
+    });
+  } catch (error) {
+    console.error("[PROCUREMENT RETURN ERROR]", error);
+    res.status(500).json({
+      status: "error",
+      message: "Gagal mengembalikan draf pengadaan",
       detail: error.message || "Kesalahan tidak diketahui"
     });
   }
@@ -587,5 +655,6 @@ module.exports = {
   addProcurementItem,
   updateProcurementItem,
   deleteProcurementItem,
-  syncProcurementItems
+  syncProcurementItems,
+  returnProcurementDraft
 };

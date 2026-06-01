@@ -27,8 +27,17 @@
 @endphp
 
 {{-- Back + title --}}
-<div class="flex items-center gap-3 mb-6">
+<div class="flex items-center gap-3 mb-6" x-data="{
+    checkUnsaved(e) {
+        if(Object.keys(window.localReviews || {}).length > 0) {
+            if(!confirm('Ada review yang belum tersimpan. Yakin ingin kembali?')) {
+                e.preventDefault();
+            }
+        }
+    }
+}">
     <a href="{{ route('procurement') }}"
+       @click="checkUnsaved"
        class="flex items-center gap-1.5 text-sm text-slate-500 hover:text-indigo-600 transition-colors">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -101,10 +110,34 @@
         </div>
 
         {{-- Action buttons --}}
-        <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
+        @php
+            $hasItems = count($draft['items'] ?? []) > 0;
+            $hasRejected = collect($draft['items'] ?? [])->where('review_status', 'rejected')->count() > 0;
+            $canActuallySubmit = $hasItems && !$hasRejected;
+        @endphp
+        <div class="flex items-center gap-2 flex-shrink-0 flex-wrap" x-data="{
+            hasPending: true,
+            checkPending() {
+                const items = window.draftItemsList || [];
+                const locals = window.localReviews || {};
+                this.hasPending = items.some(i => {
+                    if (locals[i.id]) return locals[i.id].status === 'pending';
+                    return i.review_status === 'pending';
+                });
+            }
+        }" x-init="checkPending()" @review-updated.window="checkPending()">
             @if($canReview)
+                <button onclick="openReturnModal()"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                    </svg>
+                    Kembalikan Draf
+                </button>
                 <button onclick="openFinalizeModal()"
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                        :disabled="hasPending"
+                        :class="hasPending ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
+                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
@@ -112,9 +145,10 @@
                 </button>
             @endif
             @if($canSubmitDraft)
-                <button {{ $hasItems ? 'onclick=openSubmitModal()' : 'disabled' }}
+                <button {{ $canActuallySubmit ? 'onclick=openSubmitModal()' : 'disabled' }}
                         class="inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-colors
-                               {{ $hasItems ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed' }}">
+                               {{ $canActuallySubmit ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-300 cursor-not-allowed' }}"
+                        @if($hasRejected) title="Terdapat item yang ditolak. Hapus item tersebut sebelum mengirim draf." @endif>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                     </svg>
@@ -172,15 +206,29 @@
                 <p class="text-xs text-slate-400 mt-0.5">{{ count($draft['items'] ?? []) }} item dalam draf ini</p>
             </div>
             {{-- Item count badges --}}
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2" x-data="{
+                counts: { pending: 0, approved: 0, rejected: 0 },
+                updateCounts() {
+                    const items = window.draftItemsList || [];
+                    const locals = window.localReviews || {};
+                    let p = 0, a = 0, r = 0;
+                    items.forEach(i => {
+                        let stat = locals[i.id] ? locals[i.id].status : i.review_status;
+                        if(stat === 'pending') p++;
+                        else if(stat === 'approved') a++;
+                        else if(stat === 'rejected') r++;
+                    });
+                    this.counts = { pending: p, approved: a, rejected: r };
+                }
+            }" x-init="updateCounts()" @review-updated.window="updateCounts()">
                 <span class="badge badge-pending text-xs">
-                    {{ collect($draft['items'] ?? [])->where('review_status','pending')->count() }} pending
+                    <span x-text="counts.pending"></span> pending
                 </span>
                 <span class="badge badge-approved text-xs">
-                    {{ collect($draft['items'] ?? [])->where('review_status','approved')->count() }} disetujui
+                    <span x-text="counts.approved"></span> disetujui
                 </span>
                 <span class="badge badge-rejected text-xs">
-                    {{ collect($draft['items'] ?? [])->where('review_status','rejected')->count() }} ditolak
+                    <span x-text="counts.rejected"></span> ditolak
                 </span>
             </div>
         </div>
@@ -239,21 +287,33 @@
                             </td>
                             <td class="font-semibold text-slate-700">{{ $item['quantity'] }}</td>
                             <td class="text-slate-600 font-mono text-xs">Rp {{ number_format($item['estimated_price'], 0, ',', '.') }}</td>
-                            <td>
-                                @php
-                                    $rstatus = match($item['review_status']) {
-                                        'approved' => ['badge-approved','Disetujui'],
-                                        'rejected' => ['badge-rejected','Ditolak'],
-                                        default    => ['badge-pending','Pending'],
-                                    };
-                                @endphp
-                                <span class="badge {{ $rstatus[0] }}">{{ $rstatus[1] }}</span>
+                            <td x-data="{
+                                localStat: '{{ $item['review_status'] }}',
+                                updateStat(e) {
+                                    if(e.detail.id == {{ $item['id'] }}) {
+                                        this.localStat = e.detail.status;
+                                        $el.closest('tr').dataset.filterStatus = this.localStat;
+                                    }
+                                }
+                            }" @review-updated.window="updateStat">
+                                <span class="badge" 
+                                      :class="localStat === 'approved' ? 'badge-approved' : (localStat === 'rejected' ? 'badge-rejected' : 'badge-pending')"
+                                      x-text="localStat === 'approved' ? 'Disetujui' : (localStat === 'rejected' ? 'Ditolak' : 'Pending')">
+                                </span>
                             </td>
-                            @if($canReview && $item['review_status'] === 'pending')
-                                <td>
+                            @if($canReview)
+                                <td x-data="{
+                                    localStat: '{{ $item['review_status'] }}',
+                                    updateStat(e) {
+                                        if(e.detail.id == {{ $item['id'] }}) {
+                                            this.localStat = e.detail.status;
+                                        }
+                                    }
+                                }" @review-updated.window="updateStat">
                                     <button onclick="event.stopPropagation(); openReviewModal({{ $item['id'] }}, '{{ addslashes($item['item_name']) }}')"
-                                            class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors">
-                                        Review
+                                            class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                                            :class="localStat === 'pending' ? 'text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100' : 'text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200'">
+                                        <span x-text="localStat === 'pending' ? 'Review' : 'Edit Review'"></span>
                                     </button>
                                 </td>
                             @endif
@@ -272,44 +332,128 @@
 {{-- ── MODALS ── --}}
 <div x-data="{
     reviewOpen: false, reviewItemId: null, reviewItemName: '',
-    deleteOpen: false, finalizeOpen: false, submitOpen: false,
+    deleteOpen: false, finalizeOpen: false, submitOpen: false, returnOpen: false,
     detailOpen: false, activeDetail: {},
-    reviewStatus: '', reviewNote: '',
+    reviewStatus: '', reviewNote: '', returnNote: '',
     loading: false,
     draftId: {{ $draft['id'] ?? 0 }},
 
-    openReview(id, name) { this.reviewItemId = id; this.reviewItemName = name; this.reviewStatus = ''; this.reviewNote = ''; this.reviewOpen = true; },
+    openReview(id, name) { 
+        this.reviewItemId = id; 
+        this.reviewItemName = name; 
+        
+        let local = (window.localReviews || {})[id];
+        if (local) {
+            this.reviewStatus = local.status;
+            this.reviewNote = local.note || '';
+        } else {
+            this.reviewStatus = ''; 
+            this.reviewNote = ''; 
+        }
+        this.reviewOpen = true; 
+    },
     closeReview() { this.reviewOpen = false; },
-    openDetail(item) { this.activeDetail = item; this.detailOpen = true; },
+    openDetail(item) { 
+        let detail = JSON.parse(JSON.stringify(item));
+        let local = (window.localReviews || {})[detail.id];
+        if (local) {
+            detail.review_status = local.status;
+            detail.review_note = local.note;
+            detail.reviewed_by_name = '{{ $authUser['name'] }} (Belum Disimpan)';
+            detail.reviewed_at = new Date().toISOString();
+        }
+        this.activeDetail = detail; 
+        this.detailOpen = true; 
+    },
     closeDetail() { this.detailOpen = false; },
 
     isOk(d) { return d.success === true || d.status === 'success'; },
 
     async submitReview() {
-        this.loading = true;
-        const res = await fetch('/api/procurement/' + this.draftId + '/items/' + this.reviewItemId + '/review', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-            body: JSON.stringify({ review_status: this.reviewStatus, review_note: this.reviewNote })
-        });
-        const d = await res.json();
-        this.loading = false;
-        if (this.isOk(d)) location.reload();
-        else alert('Error: ' + (d.message || 'Gagal'));
+        if (!window.localReviews) window.localReviews = {};
+        window.localReviews[this.reviewItemId] = {
+            status: this.reviewStatus,
+            note: this.reviewNote
+        };
+        // dispatch event so table cells update
+        window.dispatchEvent(new CustomEvent('review-updated', {
+            detail: {
+                id: this.reviewItemId,
+                status: this.reviewStatus,
+                note: this.reviewNote
+            }
+        }));
         this.closeReview();
+    },
+
+    async saveAllLocalReviews() {
+        const locals = window.localReviews || {};
+        const keys = Object.keys(locals);
+        if (keys.length === 0) return true;
+        
+        const promises = keys.map(id => {
+            return fetch('/api/procurement/' + this.draftId + '/items/' + id + '/review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+                body: JSON.stringify({ review_status: locals[id].status, review_note: locals[id].note })
+            }).then(r => r.json());
+        });
+
+        try {
+            const results = await Promise.all(promises);
+            for (let d of results) {
+                if (!this.isOk(d)) throw new Error(d.message || 'Gagal menyimpan review');
+            }
+            return true;
+        } catch (e) {
+            alert('Error: ' + e.message);
+            return false;
+        }
     },
 
     async submitFinalize() {
         this.loading = true;
+        const saved = await this.saveAllLocalReviews();
+        if (!saved) {
+            this.loading = false;
+            return;
+        }
+
         const res = await fetch('/api/procurement/' + this.draftId + '/finalize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
         });
         const d = await res.json();
         this.loading = false;
-        if (this.isOk(d)) location.reload();
+        if (this.isOk(d)) {
+            window.localReviews = {};
+            window.location.href = '{{ route("procurement") }}';
+        }
         else alert('Error: ' + (d.message || 'Gagal'));
         this.finalizeOpen = false;
+    },
+
+    async submitReturn() {
+        this.loading = true;
+        const saved = await this.saveAllLocalReviews();
+        if (!saved) {
+            this.loading = false;
+            return;
+        }
+
+        const res = await fetch('/api/procurement/' + this.draftId + '/return', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+            body: JSON.stringify({ return_note: this.returnNote })
+        });
+        const d = await res.json();
+        this.loading = false;
+        if (this.isOk(d)) {
+            window.localReviews = {};
+            window.location.href = '{{ route("procurement") }}';
+        }
+        else alert('Error: ' + (d.message || 'Gagal'));
+        this.returnOpen = false;
     },
 
     async submitDraft() {
@@ -320,7 +464,10 @@
         });
         const d = await res.json();
         this.loading = false;
-        if (this.isOk(d)) location.reload();
+        if (this.isOk(d)) {
+            window.localReviews = {};
+            window.location.href = '{{ route("procurement") }}';
+        }
         else alert('Error: ' + (d.message || 'Gagal'));
         this.submitOpen = false;
     }
@@ -476,6 +623,43 @@
         </div>
     </template>
 
+    {{-- Return Modal --}}
+    <template x-teleport="body">
+        <div x-show="returnOpen" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div x-show="returnOpen" x-transition.opacity class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="returnOpen = false"></div>
+            <div x-show="returnOpen"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 text-center m-auto">
+                <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                    </svg>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-2">Kembalikan Draf ke Kepala Lab?</h3>
+                <p class="text-sm text-slate-500 mb-4">Draf akan dikembalikan dan Kepala Lab dapat merubah atau memperbaiki item di dalamnya.</p>
+                <div class="mb-6 text-left">
+                    <label class="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Catatan Revisi</label>
+                    <textarea x-model="returnNote" rows="3"
+                              class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl resize-none focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
+                              placeholder="Masukkan alasan atau catatan perbaikan..."></textarea>
+                </div>
+                <div class="flex gap-3">
+                    <button @click="returnOpen = false" class="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
+                    <button @click="submitReturn()" :disabled="loading || returnNote.trim() === ''"
+                            class="flex-1 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors inline-flex items-center justify-center gap-2">
+                        <svg x-show="loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                        <span x-text="loading ? 'Memproses…' : 'Kembalikan Draf'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
     {{-- Item Detail Modal --}}
     <template x-teleport="body">
         <div x-show="detailOpen" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -615,6 +799,7 @@
 
 @push('scripts')
 <script>
+    window.draftItemsList = @json($draft['items'] ?? []);
     // Bridge vanilla onclick calls → Alpine
     function openReviewModal(id, name) {
         document.getElementById('modalsRoot')._x_dataStack[0].openReview(id, name);
@@ -622,7 +807,19 @@
     function openDeleteModal()   { document.getElementById('modalsRoot')._x_dataStack[0].deleteOpen   = true; }
     function openFinalizeModal() { document.getElementById('modalsRoot')._x_dataStack[0].finalizeOpen = true; }
     function openSubmitModal()   { document.getElementById('modalsRoot')._x_dataStack[0].submitOpen   = true; }
+    function openReturnModal()   { 
+        document.getElementById('modalsRoot')._x_dataStack[0].returnNote = '';
+        document.getElementById('modalsRoot')._x_dataStack[0].returnOpen = true; 
+    }
     function openDetailModal(item) { document.getElementById('modalsRoot')._x_dataStack[0].openDetail(item); }
+
+    // Warn before leaving the page if there are unsaved reviews
+    window.addEventListener('beforeunload', function (e) {
+        if (Object.keys(window.localReviews || {}).length > 0) {
+            e.preventDefault();
+            e.returnValue = ''; // Required by Chrome
+        }
+    });
 </script>
 @endpush
 @endsection

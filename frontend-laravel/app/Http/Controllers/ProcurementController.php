@@ -262,6 +262,9 @@ class ProcurementController extends Controller
     public function submit(Request $request, $id)
     {
         $result = $this->postApiData("/procurement/drafts/{$id}/submit", [], 'PATCH');
+        if ($result['status'] === 'success') {
+            session()->flash('success', $result['message'] ?? 'Draf berhasil di-submit');
+        }
         return response()->json($result);
     }
 
@@ -312,6 +315,25 @@ class ProcurementController extends Controller
     public function finalize(Request $request, $id)
     {
         $result = $this->postApiData("/procurement/drafts/{$id}/finalize");
+        if ($result['status'] === 'success') {
+            session()->flash('success', $result['message'] ?? 'Draf berhasil difinalisasi');
+        }
+        return response()->json($result);
+    }
+
+    /**
+     * Return draft (API endpoint)
+     */
+    public function returnDraft(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'return_note' => 'nullable|string'
+        ]);
+
+        $result = $this->postApiData("/procurement/drafts/{$id}/return", $validated, 'POST');
+        if ($result['status'] === 'success') {
+            session()->flash('success', $result['message'] ?? 'Draf berhasil dikembalikan');
+        }
         return response()->json($result);
     }
 }

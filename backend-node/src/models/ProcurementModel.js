@@ -4,13 +4,18 @@ const ProcurementModel = {
   /**
    * Find procurement drafts based on filters
    */
-  async findDrafts({ status, budget_year, search, lab_id }) {
+  async findDrafts({ status, budget_year, search, lab_id, exclude_status }) {
     let whereConditions = [];
     let params = [];
 
     if (status) {
       whereConditions.push("pd.status = ?");
       params.push(status);
+    }
+
+    if (exclude_status) {
+      whereConditions.push("pd.status != ?");
+      params.push(exclude_status);
     }
 
     if (budget_year) {
@@ -192,6 +197,19 @@ const ProcurementModel = {
       SET status = ?, is_locked = ?, finalized_by = ?, finalized_at = ?
       WHERE id = ?
     `, [status, isLocked, finalizedBy, finalizedAt, id]);
+    return result;
+  },
+
+  /**
+   * Return a procurement draft to the creator
+   */
+  async returnDraft(id, notes, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(`
+      UPDATE procurement_drafts 
+      SET status = 'draft', notes = ?
+      WHERE id = ?
+    `, [notes, id]);
     return result;
   },
 

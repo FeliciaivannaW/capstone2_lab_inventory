@@ -228,6 +228,12 @@ router.post(
   roleMiddleware(["ketua_program_studi"]),
   procurementController.finalizeProcurementDraft
 );
+router.post(
+  "/procurement/drafts/:id/return",
+  authMiddleware,
+  roleMiddleware(["ketua_program_studi"]),
+  procurementController.returnProcurementDraft
+);
 
 // ============================================================
 // GOODS RECEIPT ROUTES

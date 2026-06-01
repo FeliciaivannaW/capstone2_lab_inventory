@@ -128,6 +128,7 @@ Route::middleware('frontend.auth')->group(function () {
     Route::patch('/api/procurement/{draftId}/items/{itemId}', [ProcurementController::class, 'updateItem']);
     Route::post('/api/procurement/{draftId}/items/{itemId}/review', [ProcurementController::class, 'reviewItem']);
     Route::post('/api/procurement/{id}/finalize', [ProcurementController::class, 'finalize']);
+    Route::post('/api/procurement/{id}/return', [ProcurementController::class, 'returnDraft']);
     Route::post('/api/procurement/{id}/submit', [ProcurementController::class, 'submit']);
 
     Route::prefix('staf-admin')->middleware('frontend.role:staf_administrasi')->group(function () {
