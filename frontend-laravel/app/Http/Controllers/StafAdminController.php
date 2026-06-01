@@ -429,9 +429,25 @@ class StafAdminController extends Controller
     {
         $tab           = $request->input('tab', 'unlabeled');
         $highlightBatch = $request->input('batch');
+        $search        = $request->input('search');
+        $page          = $request->input('page', 1);
 
         $labelStatus = $tab === 'labeled' ? 'labeled' : 'unlabeled';
-        $batches = $this->getApiData('/inventory/batches', ['label_status' => $labelStatus]) ?: [];
+        
+        try {
+            $response = Http::withToken(session('auth_token'))->get($this->apiUrl() . '/inventory/batches', [
+                'label_status' => $labelStatus,
+                'search'       => $search,
+                'page'         => $page,
+                'limit'        => 10
+            ]);
+            $resData = $response->json();
+            $batches = $resData['data'] ?? [];
+            $meta = $resData['meta'] ?? ['total' => count($batches), 'limit' => 10, 'page' => 1];
+        } catch (\Exception $e) {
+            $batches = [];
+            $meta = ['total' => 0, 'limit' => 10, 'page' => 1];
+        }
 
         // Jika ada highlight_batch, taruh batch itu di posisi pertama
         if ($highlightBatch) {
@@ -440,9 +456,19 @@ class StafAdminController extends Controller
             );
         }
 
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $batches,
+            $meta['total'],
+            $meta['limit'],
+            $meta['page'],
+            ['path' => route('staf-admin.inventory-label'), 'query' => $request->query()]
+        );
+
         return view('pages.staf-admin.inventory-label', [
             'batches'        => $batches,
+            'paginator'      => $paginator,
             'tab'            => $tab,
+            'search'         => $search,
             'highlightBatch' => $highlightBatch,
         ]);
     }

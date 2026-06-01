@@ -47,6 +47,32 @@ const uploadQr = multer({
 });
 
 // ============================================================
+// MULTER — Multiple upload (QR & Asset photo) for Label
+// ============================================================
+const labelMultiStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const isAsset = file.fieldname === 'asset_photo';
+    const dir = path.join(__dirname, isAsset ? "../../uploads/assets" : "../../uploads/qr");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const prefix = file.fieldname === 'asset_photo' ? "asset-" : "qr-";
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, prefix + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const uploadLabelMulti = multer({
+  storage: labelMultiStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Hanya file gambar (JPEG, PNG, WEBP) yang diperbolehkan"));
+  }
+});
+
+// ============================================================
 // MULTER — Asset photo upload
 // ============================================================
 const assetPhotoStorage = multer.diskStorage({
@@ -255,7 +281,7 @@ router.put("/inventory/assets/:id/condition", authMiddleware, roleMiddleware(["s
 router.get("/inventory/assets/:id", authMiddleware, roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium"]), inventoryController.getInventoryAsset);
 router.patch("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.updateAssetLabel);
 router.put("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.updateAssetLabel);
-router.post("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), uploadQr.single("qr_photo"), inventoryController.updateAssetLabel);
+router.post("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), uploadLabelMulti.fields([{ name: "qr_photo", maxCount: 1 }, { name: "asset_photo", maxCount: 1 }]), inventoryController.updateAssetLabel);
 router.get("/inventory/assets/:id/timeline", authMiddleware, roleMiddleware(["staf_administrasi", "administrator"]), inventoryController.getAssetTimeline);
 
 // ============================================================
