@@ -45,10 +45,7 @@
                 Barang bisa datang bertahap — catat sesuai kedatangannya.
             </p>
         </div>
-        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            Fitur 3 — Input Penerimaan
-        </span>
+
     </div>
 
     {{-- Summary band --}}
@@ -65,7 +62,7 @@
             <div class="glass-card rounded-2xl p-5 border {{ $bd }}">
                 <p class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-wider">{{ $label }}</p>
                 <p class="text-3xl font-bold {{ $tx }} mt-1 leading-none">{{ $val }}</p>
-                <p class="text-[0.7rem] text-slate-400 mt-2">draf pengadaan</p>
+                <p class="text-[0.7rem] text-slate-400 mt-2">Draf Pengadaan</p>
             </div>
         @endforeach
     </div>
@@ -99,7 +96,8 @@
             </svg>
             <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
                    placeholder="Cari nama draf…"
-                   class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                   style="padding-left: 2.25rem;"
+                   class="w-full pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
         </div>
 
         {{-- Status pills --}}
@@ -183,16 +181,16 @@
                                     <div class="h-full {{ $statusMeta[3] }} rounded-full" style="width: {{ $g['pct'] }}%"></div>
                                 </div>
                             </div>
-                            <a href="{{ route('staf-admin.procurement-approved.detail', $g['id']) }}"
+                            <a href="{{ route('staf-admin.goods-receipt', $g['id']) }}"
                                class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex-shrink-0">
-                                Detail →
+                                Detail Penerimaan →
                             </a>
                         </div>
                     </div>
 
                     {{-- Item cards --}}
                     <div x-show="open" x-collapse class="bg-slate-50/50 p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                        @foreach($g['items'] as $it)
+                        @forelse($g['items'] as $it)
                             @php
                                 $itemMeta = match($it['status']) {
                                     'selesai'  => ['Diterima Lengkap', 'border-emerald-200','bg-emerald-50','text-emerald-700','bg-emerald-500'],
@@ -283,7 +281,17 @@
                                     </div>
                                 @endif
                             </div>
-                        @endforeach
+                        @empty
+                            <div class="col-span-full py-10 text-center bg-white rounded-xl border border-dashed border-slate-200">
+                                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-50 mb-3">
+                                    <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                    </svg>
+                                </div>
+                                <h3 class="text-sm font-bold text-slate-800">Tidak Ada Item</h3>
+                                <p class="text-xs text-slate-500 mt-1">Pengadaan ini tidak memiliki item atau semua itemnya telah dihapus.</p>
+                            </div>
+                        @endforelse
                     </div>
                 </div>
             @endforeach
@@ -291,12 +299,21 @@
     @endif
 
     {{-- ───── Receipt Modal ───── --}}
-    <div x-show="modalOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
+    <template x-teleport="body">
+    <div x-show="modalOpen" 
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[9999] flex items-center justify-center p-4" style="display:none;">
+        
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="modalOpen = false"></div>
+        
         <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0 scale-95 translate-y-3"
-             x-transition:enter-end="opacity-100 scale-100 translate-y-0">
+             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+             x-transition:leave-end="opacity-0 scale-95 translate-y-3">
 
             <div class="flex items-start gap-3 mb-5">
                 <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -337,10 +354,11 @@
                                 Harga Beli / Unit
                             </label>
                             <div class="relative">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-semibold">Rp</span>
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-semibold">Rp</span>
                                 <input type="number" x-model="purchasePrice" min="0" step="1"
                                        placeholder="0"
-                                       class="w-full pl-8 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
+                                       style="padding-left: 2.5rem;"
+                                       class="w-full pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all">
                             </div>
                         </div>
                         <div>
@@ -377,6 +395,7 @@
             </div>
         </div>
     </div>
+    </template>
 
 </div>
 
@@ -406,7 +425,7 @@ function receiptIndexApp() {
             this.modalItemId = id;
             this.modalItemName = name;
             this.modalRemaining = ordered - received;
-            this.qtyReceived = this.modalRemaining;
+            this.qtyReceived = 1;
             this.receiptNote = '';
             this.purchasePrice = '';
             this.purchaseDate = '';
@@ -443,19 +462,20 @@ function receiptIndexApp() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
                     },
                     body: JSON.stringify(payload)
                 });
                 const d = await res.json();
-                if (d.status === 'success') {
+                if (res.ok && (d.ok || d.status === 'success' || d.status !== 'error')) {
                     this.modalOpen = false;
                     location.reload();
                 } else {
-                    this.showToast('Gagal: ' + (d.message || 'Terjadi kesalahan'), 'error');
+                    alert('Gagal: ' + (d.message || 'Terjadi kesalahan'));
                 }
             } catch (e) {
-                this.showToast('Terjadi kesalahan jaringan, coba lagi', 'error');
+                alert('Terjadi kesalahan jaringan, coba lagi');
             } finally {
                 this.loading = false;
             }

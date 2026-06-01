@@ -188,127 +188,99 @@
 
         {{-- Modal Terima Barang --}}
         <template x-teleport="body">
-        <div x-show="modalOpen" style="display:none;"
+        <div x-show="modalOpen" 
              x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
              x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-             class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+             class="fixed inset-0 z-[9999] flex items-center justify-center p-4" style="display:none;">
+            
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="modalOpen = false"></div>
+            
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 scale-95 translate-y-3"
+                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 scale-95 translate-y-3">
 
-            {{-- Backdrop --}}
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" @click="modalOpen = false"></div>
-
-            {{-- Modal card: flex col, max-h 90vh --}}
-            <div class="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col"
-                 style="max-height: 90vh;"
-                 x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                 x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
-
-                {{-- Header (fixed) --}}
-                <div class="flex-shrink-0 flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-bold text-slate-900">Catat Penerimaan</h3>
-                            <p class="text-xs text-slate-400 mt-0.5 truncate max-w-[200px]" x-text="modalItemName"></p>
-                        </div>
-                    </div>
-                    <button @click="modalOpen = false" class="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 transition-colors flex-shrink-0">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                <div class="flex items-start gap-3 mb-5">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-3l-2 3h-6l-2-3H4"/>
                         </svg>
-                    </button>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-base font-bold text-slate-900">Catat Penerimaan</h3>
+                        <p class="text-xs text-slate-500 mt-0.5 truncate" x-text="modalItemName"></p>
+                    </div>
                 </div>
 
-                {{-- Body (scrollable) --}}
-                <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                    {{-- Sisa info --}}
-                    <div class="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
-                        <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <p class="text-xs text-amber-700">Sisa yang perlu diterima: <strong x-text="modalRemaining"></strong> unit</p>
-                    </div>
-
+                <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+                        <label class="text-[0.7rem] font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
                             Tanggal Terima <span class="text-red-500">*</span>
                         </label>
-                        <input type="date" x-model="receivedDate" :max="today"
+                        <input type="date" x-model="receivedDate"
+                               max="{{ date('Y-m-d') }}"
+                               class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all">
+                    </div>
+                    <div>
+                        <label class="text-[0.7rem] font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
+                            Jumlah Diterima <span class="text-red-500">*</span>
+                            <span class="text-slate-400 font-normal normal-case" x-text="'(sisa: ' + modalRemaining + ')'"></span>
+                        </label>
+                        <input type="number" x-model="qtyReceived" :max="modalRemaining" min="1"
                                class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all">
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                            Jumlah Diterima <span class="text-red-500">*</span>
-                        </label>
-                        <div class="flex items-center gap-2">
-                            <button type="button" @click="qtyReceived = Math.max(1, (parseInt(qtyReceived)||1) - 1)"
-                                    class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 text-lg font-bold transition-colors">−</button>
-                            <input type="number" x-model="qtyReceived" :max="modalRemaining" min="1"
-                                   class="flex-1 px-3 py-2.5 text-sm text-center border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all font-bold">
-                            <button type="button" @click="qtyReceived = Math.min(modalRemaining, (parseInt(qtyReceived)||0) + 1)"
-                                    class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 text-lg font-bold transition-colors">+</button>
-                        </div>
-                        <div class="flex items-center justify-between mt-1.5">
-                            <p class="text-[11px] text-slate-400">Maks: <span x-text="modalRemaining"></span> unit</p>
-                            <button type="button" @click="qtyReceived = modalRemaining"
-                                    class="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
-                                Terima Semua
-                            </button>
-                        </div>
-                    </div>
-
-                    {{-- Harga & Tanggal Beli --}}
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                                Harga Beli <span class="text-slate-400 font-normal normal-case">(per unit, opsional)</span>
-                            </label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-semibold">Rp</span>
-                                <input type="number" x-model="purchasePrice" min="0" step="1000"
-                                       placeholder="0"
-                                       class="w-full pl-8 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all">
+                    {{-- Separator --}}
+                    <div class="border-t border-slate-100 pt-3">
+                        <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-3">Informasi Pembelian <span class="font-normal text-slate-300">(opsional)</span></p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[0.7rem] font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
+                                    Harga Beli / Unit
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-semibold">Rp</span>
+                                    <input type="number" x-model="purchasePrice" min="0" step="1"
+                                           placeholder="0"
+                                           style="padding-left: 2.5rem;"
+                                           class="w-full pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-[0.7rem] font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">
+                                    Tanggal Faktur
+                                </label>
+                                <input type="date" x-model="purchaseDate"
+                                       max="{{ date('Y-m-d') }}"
+                                       class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all">
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                                Tanggal Beli <span class="text-slate-400 font-normal normal-case">(opsional)</span>
-                            </label>
-                            <input type="date" x-model="purchaseDate"
-                                   class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all">
-                        </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-                            Catatan <span class="text-slate-400 font-normal normal-case">(opsional)</span>
-                        </label>
-                        <textarea x-model="receiptNote" rows="2"
-                                  placeholder="Kondisi barang saat diterima, nomor surat, dll..."
+                        <label class="text-[0.7rem] font-semibold text-slate-600 uppercase tracking-wider mb-1.5 block">Catatan</label>
+                        <textarea x-model="receiptNote" rows="2" placeholder="Kondisi barang saat diterima, nomor surat, dll..."
                                   class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl resize-none focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"></textarea>
                     </div>
                 </div>
 
-                {{-- Footer (fixed) --}}
-                <div class="flex-shrink-0 flex gap-3 px-6 py-4 border-t border-slate-100">
+                <div class="flex gap-3 mt-6">
                     <button @click="modalOpen = false"
                             class="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
                         Batal
                     </button>
                     <button @click="submitReceipt()" :disabled="submitting"
-                            class="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2">
-                        <svg x-show="submitting" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                            class="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors inline-flex items-center justify-center gap-2">
+                        <svg x-show="submitting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                         </svg>
-                        <span x-text="submitting ? 'Menyimpan...' : 'Simpan Penerimaan'"></span>
+                        <span x-text="submitting ? 'Menyimpan…' : 'Simpan'"></span>
                     </button>
                 </div>
-
             </div>
         </div>
         </template>
@@ -338,7 +310,7 @@ function receiptApp() {
             this.modalItemName  = name;
             this.modalRemaining = ordered - received;
             this.receivedDate   = new Date().toISOString().split('T')[0];
-            this.qtyReceived    = this.modalRemaining;
+            this.qtyReceived    = 1;
             this.receiptNote    = '';
             this.purchasePrice  = '';
             this.purchaseDate   = '';
@@ -368,6 +340,7 @@ function receiptApp() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
                     },
                     body: JSON.stringify({
@@ -378,7 +351,7 @@ function receiptApp() {
                     })
                 });
                 const d = await res.json();
-                if (d.ok || d.status === 'success') {
+                if (d.ok || d.status === 'success' || d.status !== 'error') {
                     this.modalOpen = false;
                     const receiptId = d.data?.receipt_id;
                     if (receiptId) {
