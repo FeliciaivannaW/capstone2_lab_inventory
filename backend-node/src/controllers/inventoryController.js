@@ -325,6 +325,88 @@ const updateAssetLabel = async (req, res) => {
   }
 };
 
+const labelAllAssets = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+    const { id: receipt_id } = req.params;
+
+    // 1. Dapatkan daftar aset yang belum dilabeli
+    const [assets] = await connection.query(`
+      SELECT ia.id, pd.budget_year, l.code AS lab_code
+      FROM inventory_assets AS ia
+      JOIN goods_receipts AS gr ON ia.receipt_id = gr.id
+      JOIN procurement_items AS pi ON gr.procurement_item_id = pi.id
+      JOIN procurement_drafts AS pd ON pi.draft_id = pd.id
+      JOIN laboratories AS l ON pd.lab_id = l.id
+      WHERE ia.receipt_id = ? AND (ia.label_number IS NULL OR ia.label_number = '')
+    `, [receipt_id]);
+
+    if (assets.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({ status: "error", message: "Tidak ada aset yang perlu dilabeli dalam pengadaan ini." });
+    }
+
+    const { budget_year: year, lab_code } = assets[0];
+    
+    // 2. Dapatkan seq terakhir
+    let maxSeq = await InventoryModel.getMaxSequence(lab_code, connection);
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const qrDir = path.join(__dirname, "../../uploads/qr");
+    if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
+
+    // 3. Loop update
+    for (const asset of assets) {
+      maxSeq++;
+      const seqStr = String(maxSeq).padStart(3, '0');
+      const label_number = `LBL-${lab_code}-${seqStr}`;
+
+      const qrFilename = `qr-label-${asset.id}-${Date.now()}.png`;
+      const qrFilepath = path.join(qrDir, qrFilename);
+
+      await QRCode.toFile(qrFilepath, label_number, {
+        width: 400,
+        margin: 2,
+        color: { dark: "#1e293b", light: "#ffffff" }
+      });
+      const qr_url = `${baseUrl}/uploads/qr/${qrFilename}`;
+
+      await InventoryModel.updateLabel(asset.id, {
+        label_number,
+        qr_url,
+        status: 'labeled'
+      }, connection);
+    }
+
+    await connection.commit();
+    res.json({ status: "success", message: `${assets.length} aset berhasil dilabeli.` });
+  } catch (error) {
+    await connection.rollback();
+    console.error("[LABEL ALL ERROR]", error);
+    res.status(500).json({ status: "error", message: "Gagal melabeli semua aset", detail: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+const getNextLabel = async (req, res) => {
+  try {
+    const { lab_code } = req.query;
+    if (!lab_code) {
+      return res.status(400).json({ status: "error", message: "Parameter lab_code wajib diisi" });
+    }
+    const maxSeq = await InventoryModel.getMaxSequence(lab_code);
+    const nextSeqStr = String(maxSeq + 1).padStart(3, '0');
+    const label_number = `LBL-${lab_code}-${nextSeqStr}`;
+    
+    res.json({ status: "success", data: { label_number } });
+  } catch (error) {
+    console.error("[GET NEXT LABEL ERROR]", error);
+    res.status(500).json({ status: "error", message: "Gagal mendapatkan saran label" });
+  }
+};
+
 const getAssetTimeline = async (req, res) => {
   try {
     const { id } = req.params;
@@ -619,7 +701,9 @@ module.exports = {
   getInventoryBatches,
   getInventoryAsset,
   updateAssetLabel,
+  labelAllAssets,
   checkLabelAvailability,
+  getNextLabel,
   getAssetTimeline,
   getConditionHistory,
   updateAssetCondition

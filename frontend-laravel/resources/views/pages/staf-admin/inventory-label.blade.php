@@ -102,22 +102,34 @@
                         Diterima {{ \Carbon\Carbon::parse($batch['received_date'])->locale('id')->isoFormat('D MMMM Y') }}
                         · {{ $batch['total_assets'] }} aset
                     </p>
-                    {{-- Progress bar --}}
-                    <div class="flex items-center gap-2 mt-2">
-                        <div class="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                            <div class="{{ $pct == 100 ? 'bg-emerald-500' : 'bg-indigo-400' }} h-full rounded-full transition-all"
-                                 style="width: {{ $pct }}%"></div>
-                        </div>
-                        <span class="text-[11px] font-bold {{ $pct == 100 ? 'text-emerald-600' : 'text-slate-500' }} flex-shrink-0">
-                            {{ $batch['labeled_count'] }}/{{ $batch['total_assets'] }} label
-                        </span>
-                    </div>
                 </div>
                 <svg class="w-4 h-4 text-slate-400 flex-shrink-0 mt-1 transition-transform"
                      :class="openBatches.includes({{ $batch['receipt_id'] }}) ? 'rotate-180' : ''"
                      fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
+            </div>
+
+            {{-- Header progress --}}
+            <div class="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 pb-5">
+                <div class="flex-1 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    @php
+                        $progress = $batch['total_assets'] > 0 
+                            ? round(($batch['labeled_count'] / $batch['total_assets']) * 100) 
+                            : 0;
+                    @endphp
+                    <div class="bg-indigo-500 h-full transition-all duration-500" style="width: {{ $progress }}%"></div>
+                </div>
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <p class="text-[11px] font-semibold text-slate-500 whitespace-nowrap">{{ $batch['labeled_count'] }}/{{ $batch['total_assets'] }} label</p>
+                    @if($tab === 'unlabeled' && $batch['unlabeled_count'] > 0)
+                        <button type="button" @click.stop="labelAll({{ $batch['receipt_id'] }}, {{ $batch['unlabeled_count'] }})"
+                                class="text-[10px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            Label Semua Sekaligus
+                        </button>
+                    @endif
+                </div>
             </div>
 
             {{-- Asset list (expandable) --}}
@@ -191,7 +203,7 @@
                                     </div>
 
                                     {{-- Action button --}}
-                                    <button @click="openDrawer({ id: asset.id, asset_code: asset.asset_code, item_name: asset.item_name, label_number: asset.label_number, qr_code: asset.qr_code, photo_url: asset.photo_url }, {{ $batch['receipt_id'] }})"
+                                    <button @click="openDrawer({ id: asset.id, asset_code: asset.asset_code, item_name: asset.item_name, label_number: asset.label_number, qr_code: asset.qr_code, photo_url: asset.photo_url }, {{ $batch['receipt_id'] }}, '{{ $batch['lab_code'] }}')"
                                             class="flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
                                             :class="asset.label_number ? 'text-slate-500 bg-slate-100 hover:bg-slate-200' : 'text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200'">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,23 +214,6 @@
                                 </div>
                             </template>
                         </div>
-
-                        {{-- Batch footer: bulk action jika ada yang belum --}}
-                        <template x-if="batchAssets[{{ $batch['receipt_id'] }}]?.some(a => !a.label_number)">
-                            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                                <p class="text-xs text-slate-500">
-                                    <span x-text="batchAssets[{{ $batch['receipt_id'] }}]?.filter(a => !a.label_number).length"></span>
-                                    aset belum dilabel
-                                </p>
-                                <button @click="openBulkModal({{ $batch['receipt_id'] }})"
-                                        class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                    </svg>
-                                    Label Semua Sekaligus
-                                </button>
-                            </div>
-                        </template>
                     </div>
                 </template>
             </div>
@@ -271,7 +266,7 @@
                                target="_blank"
                                class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl border border-indigo-200 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2-2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                                 </svg>
                                 Cetak
                             </a>
@@ -369,7 +364,7 @@
                             </span>
                         </div>
                         <p x-show="labelStatus === 'taken'" class="text-[0.65rem] text-red-500 mt-1" x-text="labelMsg"></p>
-                        <p x-show="!labelStatus" class="text-[0.65rem] text-slate-400 mt-1.5">Format: <code class="font-mono bg-slate-100 px-1 rounded">LAB-[KODE]-[NO]</code></p>
+                        <p x-show="!labelStatus" class="text-[0.65rem] text-slate-400 mt-1.5">Format: <code class="font-mono bg-slate-100 px-1 rounded">LBL-[KODE]-[NO]</code></p>
                     </div>
 
                     {{-- Serial Number (opsional) --}}
@@ -472,6 +467,7 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 let _qrInstance = null;
 
@@ -562,7 +558,7 @@ function labelApp() {
             );
         },
 
-        openDrawer(asset, receiptId) {
+        openDrawer(asset, receiptId, labCode) {
             this._assetId = Number(asset.id);
             this.asset = asset;
             this.form.label_number  = asset.label_number  || '';
@@ -577,19 +573,35 @@ function labelApp() {
             this.labelStatus = null;
             this.labelMsg = '';
             this.currentReceiptId = receiptId || null;
-
-            const parts = (asset.asset_code || '').split('-');
-            this.suggestedLabel = (parts.length >= 3 && parts[0] === 'INV')
-                ? `LAB-${parts[1]}-${parts[parts.length - 1]}`
-                : '';
+            this.suggestedLabel = '';
 
             this.drawerOpen = true;
             document.body.style.overflow = 'hidden';
 
+            if (!this.form.label_number && labCode) {
+                this.fetchNextLabel(labCode);
+            }
+
             this.$nextTick(() => {
-                renderQR(this.form.label_number || this.suggestedLabel);
+                renderQR(this.form.label_number);
                 if (this.form.label_number) this.checkLabel(this.form.label_number);
             });
+        },
+
+        async fetchNextLabel(labCode) {
+            try {
+                const token = document.querySelector('meta[name="auth-token"]')?.content;
+                const r = await fetch(`/api/next-label?lab_code=${labCode}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const d = await r.json();
+                if (d && d.label_number) {
+                    this.suggestedLabel = d.label_number;
+                    if (!this.form.label_number) renderQR(this.suggestedLabel);
+                }
+            } catch (err) {
+                console.error("Gagal mendapatkan saran label", err);
+            }
         },
 
         closeDrawer() {
@@ -677,48 +689,75 @@ function labelApp() {
             }
 
             try {
-                const r = await fetch(`/staf-admin/inventory-label/${assetId}`, {
+                const r = await fetch(`/inventory-label/${assetId}`, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     body: formData
                 });
 
-                const d = await r.json();
+                const data = await r.json();
 
-                if (d.ok) {
-                    const newLabel   = d.label_number || this.form.label_number.trim();
-                    const newQrCode  = d.qr_code   || null;
-                    const newPhotoUrl = d.photo_url || null;
-
-                    // Update batchAssets reaktif pakai spread (wajib untuk Alpine reaktif)
-                    if (this.currentReceiptId && this.batchAssets[this.currentReceiptId]) {
-                        const list = this.batchAssets[this.currentReceiptId];
-                        const idx  = list.findIndex(a => a.id === this.asset.id);
-                        if (idx >= 0) {
-                            const updated = list.map((a, i) => i === idx
-                                ? { ...a, label_number: newLabel, qr_code: newQrCode, photo_url: newPhotoUrl }
-                                : a
-                            );
-                            // Spread object agar Alpine proxy detect perubahan
-                            this.batchAssets = { ...this.batchAssets, [this.currentReceiptId]: updated };
-                        }
-                    }
-
-                    // Update asset di drawer juga (untuk tombol Cetak)
-                    this.asset.label_number = newLabel;
-                    this.asset.qr_code      = newQrCode;
-                    this.asset.photo_url    = newPhotoUrl;
-
-                    this.showToast('success', `✓ Label "${newLabel}" tersimpan & QR di-generate`);
-                    this.closeDrawer();
+                if (data.ok) {
+                    this.showToast('success', 'Berhasil update label & foto QR');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
                 } else {
-                    this.showToast('error', d.message || 'Gagal menyimpan label');
+                    this.showToast('error', data.message || 'Gagal update label');
                 }
-            } catch(e) {
-                this.showToast('error', 'Terjadi kesalahan jaringan');
+            } catch (err) {
+                this.showToast('error', 'Terjadi kesalahan sistem');
+            } finally {
+                this.drawerLoading = false;
             }
+        },
 
-            this.drawerLoading = false;
+        async labelAll(receiptId, count) {
+            Swal.fire({
+                title: 'Label Semua Aset?',
+                text: `Anda akan melabeli dan membuat QR Code otomatis untuk ${count} aset sekaligus. Proses ini mungkin memakan waktu beberapa detik.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#4f46e5',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'Ya, Label Sekarang!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Memproses...',
+                        text: 'Mohon tunggu sebentar.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    try {
+                        const token = document.querySelector('meta[name="auth-token"]')?.content;
+                        const response = await fetch(`/api/inventory/batches/${receiptId}/label-all`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            Swal.fire('Berhasil!', data.message, 'success').then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            throw new Error(data.message || 'Terjadi kesalahan');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        Swal.fire('Gagal!', err.message, 'error');
+                    }
+                }
+            });
         },
 
         showToast(type, message) {

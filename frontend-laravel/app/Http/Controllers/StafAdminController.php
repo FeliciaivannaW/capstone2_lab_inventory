@@ -683,6 +683,26 @@ class StafAdminController extends Controller
     }
 
     /**
+     * Proxies to GET /inventory/next-label on the Node.js API
+     */
+    public function nextLabelApi(Request $request)
+    {
+        $result = $this->getApiData('/inventory/next-label', [
+            'lab_code' => $request->query('lab_code', '')
+        ]);
+        return response()->json($result);
+    }
+
+    /**
+     * Proxies to POST /inventory/batches/{id}/label-all on Node.js API
+     */
+    public function labelAllAjax(Request $request, $id)
+    {
+        $result = $this->postApiData("/inventory/batches/{$id}/label-all", [], 'POST');
+        return response()->json($result);
+    }
+
+    /**
      * Proxies to GET /inventory/label-check on the Node.js API.
      */
     public function labelCheck(Request $request)

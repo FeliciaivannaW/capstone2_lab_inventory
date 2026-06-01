@@ -140,7 +140,9 @@ Route::middleware('frontend.auth')->group(function () {
         Route::post('/api/goods-receipt', [StafAdminController::class, 'storeGoodsReceipt'])->name('staf-admin.goods-receipt.store');
 
         Route::get('/api/label-check', [StafAdminController::class, 'labelCheck'])->name('staf-admin.label-check');
+        Route::get('/api/next-label', [StafAdminController::class, 'nextLabelApi'])->name('staf-admin.next-label');
         Route::get('/api/inventory/assets', [StafAdminController::class, 'inventoryAssetsApi'])->name('staf-admin.inventory-assets-api');
+        Route::post('/api/inventory/batches/{id}/label-all', [StafAdminController::class, 'labelAllAjax'])->name('staf-admin.label-all.ajax');
         Route::get('/print-label', [StafAdminController::class, 'printLabel'])->name('staf-admin.print-label');
         Route::get('/inventory-label', [StafAdminController::class, 'inventoryLabel'])->name('staf-admin.inventory-label');
         Route::get('/inventory-label/{id}/edit', [StafAdminController::class, 'inventoryLabelEdit'])->name('staf-admin.inventory-label.edit');

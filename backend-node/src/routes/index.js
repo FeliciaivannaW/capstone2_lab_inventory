@@ -282,6 +282,8 @@ router.get("/inventory/assets/:id", authMiddleware, roleMiddleware(["staf_admini
 router.patch("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.updateAssetLabel);
 router.put("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.updateAssetLabel);
 router.post("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), uploadLabelMulti.fields([{ name: "qr_photo", maxCount: 1 }, { name: "asset_photo", maxCount: 1 }]), inventoryController.updateAssetLabel);
+router.post("/inventory/batches/:id/label-all", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.labelAllAssets);
+router.get("/inventory/next-label", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.getNextLabel);
 router.get("/inventory/assets/:id/timeline", authMiddleware, roleMiddleware(["staf_administrasi", "administrator"]), inventoryController.getAssetTimeline);
 
 // ============================================================
