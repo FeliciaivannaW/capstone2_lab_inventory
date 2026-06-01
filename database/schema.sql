@@ -225,6 +225,7 @@ CREATE TABLE procurement_items (
     replacement_asset_id INT NULL,
     reviewed_by INT NULL,
     item_name VARCHAR(150) NOT NULL,
+    item_description TEXT,
     item_type ENUM('inventory', 'bhp') NOT NULL,
     quantity INT NOT NULL,
     estimated_price DECIMAL(12,2) NOT NULL,

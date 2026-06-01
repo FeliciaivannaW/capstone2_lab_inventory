@@ -56,7 +56,7 @@
             @endif
         </div>
         <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Siap Kirim</p>
-        <p class="text-3xl font-bold text-amber-600">{{ $stats['draft'] }}</p>
+        <p id="stat-draft" class="text-3xl font-bold text-amber-600">{{ $stats['draft'] }}</p>
         <p class="text-xs text-slate-400 mt-1">Berstatus draft</p>
     </div>
 
@@ -71,7 +71,7 @@
             </div>
         </div>
         <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Menunggu Review</p>
-        <p class="text-3xl font-bold text-sky-600">{{ $stats['submitted'] }}</p>
+        <p id="stat-submitted" class="text-3xl font-bold text-sky-600">{{ $stats['submitted'] }}</p>
         <p class="text-xs text-slate-400 mt-1">Di Kaprodi</p>
     </div>
 
@@ -118,14 +118,25 @@
             });
             const data = await res.json();
             if (data.status === 'success') {
-                window.showToast('Draf berhasil dikirim ke Kaprodi', 'success');
-                setTimeout(() => window.location.reload(), 1000);
+                const row = document.getElementById('draft-row-' + this.activeDraftId);
+                if (row) {
+                    row.style.opacity = '0';
+                    setTimeout(() => row.remove(), 300);
+                }
+                
+                const statDraft = document.getElementById('stat-draft');
+                if (statDraft) statDraft.innerText = Math.max(0, parseInt(statDraft.innerText) - 1);
+                
+                const statSubmitted = document.getElementById('stat-submitted');
+                if (statSubmitted) statSubmitted.innerText = parseInt(statSubmitted.innerText) + 1;
+                
+                this.submitting = null;
             } else {
-                window.showToast(data.message || 'Gagal mengirim draf', 'error');
+                alert(data.message || 'Gagal mengirim draf');
                 this.submitting = null;
             }
         } catch (e) {
-            window.showToast('Terjadi kesalahan', 'error');
+            alert('Terjadi kesalahan jaringan');
             this.submitting = null;
         }
     }
@@ -164,7 +175,7 @@
                 </thead>
                 <tbody>
                     @foreach($actionableDrafts as $index => $draft)
-                        <tr class="hover:bg-slate-50/50 transition-colors">
+                        <tr id="draft-row-{{ $draft['id'] }}" class="hover:bg-slate-50/50 transition-all duration-300">
                             <td class="text-slate-400 font-mono text-xs text-center">{{ $index + 1 }}</td>
                             <td>
                                 <div class="font-semibold text-slate-800">{{ $draft['title'] }}</div>

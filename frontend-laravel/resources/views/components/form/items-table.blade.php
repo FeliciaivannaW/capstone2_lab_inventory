@@ -32,7 +32,12 @@
                     <template x-for="(item, index) in items" :key="item.temp_id || item.id || index">
                         <tr class="hover:bg-slate-50/50 transition-colors">
                             <td class="text-center text-slate-400 font-mono text-xs" x-text="index + 1"></td>
-                            <td class="font-semibold text-slate-800" x-text="item.item_name"></td>
+                            <td>
+                                <div class="font-semibold text-slate-800" x-text="item.item_name"></div>
+                                <template x-if="item.item_description">
+                                    <div class="text-xs text-slate-500 mt-0.5 line-clamp-2" x-text="item.item_description" :title="item.item_description"></div>
+                                </template>
+                            </td>
                             <td class="text-slate-600 text-sm" x-text="item.item_type === 'inventory' ? 'Inventaris' : 'BHP'"></td>
                             <td class="text-slate-600 font-medium" x-text="item.quantity"></td>
                             <td class="text-slate-600 font-medium" x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(item.estimated_price)"></td>

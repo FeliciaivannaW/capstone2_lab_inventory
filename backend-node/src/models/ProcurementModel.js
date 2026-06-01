@@ -119,6 +119,7 @@ const ProcurementModel = {
       SELECT
         pi.id,
         pi.item_name,
+        pi.item_description,
         pi.item_type,
         pi.quantity,
         pi.estimated_price,
@@ -236,13 +237,13 @@ const ProcurementModel = {
   /**
    * Create a new procurement item
    */
-  async createItem({ draftId, itemName, itemType, quantity, estimatedPrice, purchaseLink, replacementAssetId, createdAt }, tx = null) {
+  async createItem({ draftId, itemName, itemDescription, itemType, quantity, estimatedPrice, purchaseLink, replacementAssetId, createdAt }, tx = null) {
     const conn = tx || db;
     const [result] = await conn.query(`
       INSERT INTO procurement_items 
-      (draft_id, item_name, item_type, quantity, estimated_price, purchase_link, replacement_asset_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [draftId, itemName, itemType, quantity, estimatedPrice, purchaseLink || null, replacementAssetId || null, createdAt]);
+      (draft_id, item_name, item_description, item_type, quantity, estimated_price, purchase_link, replacement_asset_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [draftId, itemName, itemDescription || null, itemType, quantity, estimatedPrice, purchaseLink || null, replacementAssetId || null, createdAt]);
     return result;
   },
 
@@ -266,6 +267,7 @@ const ProcurementModel = {
       const values = items.map(item => [
         draftId,
         item.item_name,
+        item.item_description || null,
         item.item_type,
         item.quantity,
         item.estimated_price,
@@ -279,7 +281,7 @@ const ProcurementModel = {
 
       await conn.query(`
         INSERT INTO procurement_items 
-        (draft_id, item_name, item_type, quantity, estimated_price, purchase_link, replacement_asset_id, review_status, review_note, created_at, reviewed_at)
+        (draft_id, item_name, item_description, item_type, quantity, estimated_price, purchase_link, replacement_asset_id, review_status, review_note, created_at, reviewed_at)
         VALUES ?
       `, [values]);
     }

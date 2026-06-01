@@ -487,8 +487,9 @@
                  x-transition:leave="transition ease-in duration-200"
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                 class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 m-auto">
-                <div class="flex items-center justify-between mb-5">
+                 class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg m-auto flex flex-col max-h-[90vh]">
+                <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                    <div class="flex items-center justify-between mb-5">
                     <h3 class="text-base font-bold text-slate-900">Detail Item Pengadaan</h3>
                     <button @click="closeDetail()" class="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -499,6 +500,16 @@
                     <div>
                         <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Nama Barang</p>
                         <p class="text-sm font-semibold text-slate-800" x-text="activeDetail.item_name"></p>
+                    </div>
+                    
+                    <div>
+                        <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Deskripsi / Spesifikasi</p>
+                        <template x-if="activeDetail.item_description">
+                            <p class="text-sm text-slate-600 whitespace-pre-wrap" x-text="activeDetail.item_description"></p>
+                        </template>
+                        <template x-if="!activeDetail.item_description">
+                            <span class="text-sm text-slate-400">—</span>
+                        </template>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -575,8 +586,10 @@
                     </div>
                 </div>
 
-                <div class="mt-6 pt-4 border-t border-slate-100 text-right">
-                    <button @click="closeDetail()" class="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Tutup</button>
+                </div>
+                
+                <div class="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl text-right">
+                    <button @click="closeDetail()" class="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors">Tutup</button>
                 </div>
             </div>
         </div>
