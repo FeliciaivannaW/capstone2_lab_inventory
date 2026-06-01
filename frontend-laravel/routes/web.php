@@ -87,6 +87,10 @@ Route::middleware('frontend.auth')->group(function () {
         ->middleware('frontend.role:staf_laboratorium')
         ->name('bhp.movement');
 
+    Route::get('/bhp/{id}/movements', [BhpController::class, 'getMovements'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('bhp.movements');
+
     Route::get('/maintenance', [MaintenanceController::class, 'index'])
         ->middleware('frontend.role:staf_laboratorium')
         ->name('maintenance');
