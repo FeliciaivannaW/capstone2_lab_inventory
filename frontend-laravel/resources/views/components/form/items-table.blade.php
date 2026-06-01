@@ -37,6 +37,12 @@
                                 <template x-if="item.item_description">
                                     <div class="text-xs text-slate-500 mt-0.5 line-clamp-2" x-text="item.item_description" :title="item.item_description"></div>
                                 </template>
+                                <template x-if="item.replacement_asset_name || item.replacement_asset_code">
+                                    <div class="text-[0.7rem] text-amber-700 mt-1 flex items-center gap-1 font-medium bg-amber-50/80 inline-flex px-1.5 py-0.5 rounded border border-amber-100/50">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                        <span x-text="'Ganti: ' + (item.replacement_asset_name || item.replacement_asset_code)"></span>
+                                    </div>
+                                </template>
                             </td>
                             <td class="text-slate-600 text-sm" x-text="item.item_type === 'inventory' ? 'Inventaris' : 'BHP'"></td>
                             <td class="text-slate-600 font-medium" x-text="item.quantity"></td>

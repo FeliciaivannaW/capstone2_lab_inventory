@@ -181,7 +181,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700 mb-1">Tipe <span class="text-red-500">*</span></label>
-                                <select x-model="activeItem.item_type" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors" required>
+                                <select x-model="activeItem.item_type" @change="if(activeItem.item_type === 'bhp') { activeItem.replacement_asset_id = null; activeItem.replacement_asset_name = ''; }" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors" required>
                                     <option value="inventory">Inventaris (Aset Tetap)</option>
                                     <option value="bhp">BHP (Bahan Habis Pakai)</option>
                                 </select>
@@ -189,6 +189,41 @@
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700 mb-1">Jumlah <span class="text-red-500">*</span></label>
                                 <input type="number" x-model.number="activeItem.quantity" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors" min="1" required>
+                            </div>
+                        </div>
+                        
+                        <div x-show="activeItem.item_type === 'inventory'" 
+                             x-data="replacementAssetSearch()" 
+                             x-init="$watch('itemModalOpen', val => { if(val) { initSearch() } })" 
+                             class="relative">
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Aset yang Digantikan (Opsional)</label>
+                            <div class="relative" @click.away="open = false">
+                                <input type="text" x-model="searchQuery" @focus="open = true; fetchAssets()" @input.debounce.300ms="fetchAssets()" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors" placeholder="Cari kode atau nama aset yang akan diganti...">
+                                
+                                <div x-show="open" x-transition.opacity class="absolute z-10 w-full mt-1 bg-white rounded-xl shadow-lg border border-slate-100 max-h-60 overflow-y-auto custom-scrollbar">
+                                    <template x-if="loading">
+                                        <div class="p-4 text-sm text-slate-500 text-center">Mencari...</div>
+                                    </template>
+                                    <template x-if="!loading && results.length === 0">
+                                        <div class="p-4 text-sm text-slate-500 text-center">Tidak ada aset ditemukan.</div>
+                                    </template>
+                                    <template x-for="asset in results" :key="asset.id">
+                                        <div @click="selectAsset(asset)" class="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between">
+                                            <div>
+                                                <div class="font-semibold text-sm text-slate-800" x-text="asset.item_name"></div>
+                                                <div class="text-xs text-slate-500 mt-0.5" x-text="asset.asset_code"></div>
+                                            </div>
+                                            <span class="px-2 py-0.5 rounded text-[0.65rem] font-medium uppercase whitespace-nowrap"
+                                                  :class="{
+                                                      'bg-red-100 text-red-700': asset.asset_condition === 'rusak_berat',
+                                                      'bg-orange-100 text-orange-700': asset.asset_condition === 'rusak_ringan',
+                                                      'bg-blue-100 text-blue-700': asset.asset_condition === 'maintenance',
+                                                      'bg-emerald-100 text-emerald-700': asset.asset_condition === 'baik',
+                                                      'bg-slate-100 text-slate-700': !['rusak_berat','rusak_ringan','maintenance','baik'].includes(asset.asset_condition)
+                                                  }" x-text="asset.asset_condition.replace('_', ' ')"></span>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                         </div>
 
@@ -325,7 +360,10 @@
                         item_type: 'inventory',
                         quantity: 1,
                         estimated_price: 0,
-                        purchase_link: ''
+                        purchase_link: '',
+                        replacement_asset_id: null,
+                        replacement_asset_name: '',
+                        replacement_asset_code: ''
                     };
                 }
                 this.itemModalOpen = true;
@@ -372,6 +410,58 @@
                 } else {
                     window.location.href = "{{ route('procurement') }}";
                 }
+            }
+        }));
+
+        Alpine.data('replacementAssetSearch', () => ({
+            open: false,
+            loading: false,
+            searchQuery: '',
+            results: [],
+            
+            initSearch() {
+                if (this.activeItem.replacement_asset_name || this.activeItem.replacement_asset_code) {
+                    this.searchQuery = this.activeItem.replacement_asset_name || this.activeItem.replacement_asset_code;
+                } else {
+                    this.searchQuery = '';
+                }
+                this.results = [];
+                this.open = false;
+            },
+
+            async fetchAssets() {
+                this.loading = true;
+                try {
+                    let url = '/api/inventory/assets?lab_id=' + (document.querySelector('select[name="lab_id"]')?.value || '');
+                    
+                    if (this.searchQuery.trim() === '' || (this.activeItem.replacement_asset_name && this.searchQuery === this.activeItem.replacement_asset_name)) {
+                        url += '&sort=condition';
+                    } else {
+                        url += '&search=' + encodeURIComponent(this.searchQuery);
+                    }
+                    
+                    const response = await fetch(url, {
+                        headers: { 
+                            'Authorization': 'Bearer {{ session("api_token") }}',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        this.results = data.data.slice(0, 15);
+                    }
+                } catch (e) {
+                    console.error('Error fetching replacement assets:', e);
+                }
+                this.loading = false;
+            },
+
+            selectAsset(asset) {
+                this.activeItem.replacement_asset_id = asset.id;
+                this.activeItem.replacement_asset_name = asset.item_name;
+                this.activeItem.replacement_asset_code = asset.asset_code;
+                this.searchQuery = asset.item_name;
+                this.open = false;
             }
         }));
     });

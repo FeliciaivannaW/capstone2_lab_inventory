@@ -512,6 +512,23 @@
                         </template>
                     </div>
 
+                    <template x-if="activeDetail.replacement_asset_name || activeDetail.replacement_asset_code">
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Aset yang Digantikan</p>
+                            <div class="bg-amber-50 border border-amber-100/60 rounded-xl p-3 flex items-center gap-3">
+                                <div class="p-2 bg-amber-100 text-amber-600 rounded-lg shrink-0">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-amber-900" x-text="activeDetail.replacement_asset_name || activeDetail.replacement_asset_code"></p>
+                                    <template x-if="activeDetail.replacement_asset_name && activeDetail.replacement_asset_code">
+                                        <p class="text-xs text-amber-700/80 font-medium mt-0.5" x-text="activeDetail.replacement_asset_code"></p>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Tipe Barang</p>

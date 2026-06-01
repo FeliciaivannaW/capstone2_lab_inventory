@@ -4,7 +4,7 @@ const InventoryModel = {
   /**
    * Find inventory assets based on filters
    */
-  async findAll({ search, status, condition, label_status, lab_id, roomIds, receipt_id } = {}) {
+  async findAll({ search, status, condition, label_status, lab_id, roomIds, receipt_id, sort } = {}) {
     let whereConditions = [];
     let params = [];
 
@@ -47,6 +47,20 @@ const InventoryModel = {
     const whereClause = whereConditions.length > 0
       ? "WHERE " + whereConditions.join(" AND ")
       : "";
+
+    let orderClause = "ORDER BY ia.receipt_id DESC, ia.id ASC";
+    if (sort === 'condition') {
+      orderClause = `
+        ORDER BY CASE ia.asset_condition
+          WHEN 'rusak_berat' THEN 1
+          WHEN 'rusak_ringan' THEN 2
+          WHEN 'dihapus' THEN 3
+          WHEN 'maintenance' THEN 4
+          WHEN 'baik' THEN 5
+          ELSE 6
+        END ASC, ia.receipt_id DESC, ia.id ASC
+      `;
+    }
 
     const [assets] = await db.query(`
       SELECT
@@ -91,7 +105,7 @@ const InventoryModel = {
       LEFT JOIN laboratories AS lproc  ON pd.lab_id = lproc.id
       LEFT JOIN goods_receipts AS gr   ON ia.receipt_id = gr.id
       ${whereClause}
-      ORDER BY ia.receipt_id DESC, ia.id ASC
+      ${orderClause}
     `, params);
 
     return assets;

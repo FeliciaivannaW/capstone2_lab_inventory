@@ -127,13 +127,17 @@ const ProcurementModel = {
         pi.review_status,
         pi.review_note,
         pi.reviewed_at,
+        pi.replacement_asset_id,
         ur.name AS reviewed_by_name,
         ia.asset_code AS replacement_asset_code,
+        COALESCE(ic2.name, pi2.item_name) AS replacement_asset_name,
         ic.name AS catalog_name
       FROM procurement_items AS pi
       LEFT JOIN users AS ur ON pi.reviewed_by = ur.id
       LEFT JOIN inventory_assets AS ia ON pi.replacement_asset_id = ia.id
       LEFT JOIN item_catalogs AS ic ON pi.item_catalog_id = ic.id
+      LEFT JOIN item_catalogs AS ic2 ON ia.item_catalog_id = ic2.id
+      LEFT JOIN procurement_items AS pi2 ON ia.procurement_item_id = pi2.id
       WHERE pi.draft_id = ?
       ORDER BY pi.created_at ASC
     `, [draftId]);
