@@ -141,67 +141,70 @@
     </div>
 </form>
 
-<div class="glass-card rounded-2xl overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-100">
+<div class="glass-card rounded-2xl overflow-hidden" x-data="{ showModal: false, activeAsset: {} }">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <p class="text-sm font-semibold text-slate-700">{{ count($assets ?? []) }} aset ditemukan</p>
+        @if(in_array($role ?? session('auth_user')['role'] ?? '', ['staf_laboratorium']))
+            <p class="text-xs text-slate-400">Klik baris untuk melihat detail dan edit kondisi</p>
+        @else
+            <p class="text-xs text-slate-400">Klik baris untuk melihat detail aset</p>
+        @endif
     </div>
 
     @if(empty($assets))
         <div class="flex flex-col items-center justify-center py-16 text-center">
             <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl mb-4">📦</div>
             <p class="text-sm font-medium text-slate-500">Belum ada data aset inventaris</p>
-            <p class="text-xs text-slate-400 mt-1">Coba cek seed database atau filter yang dipakai.</p>
+            <p class="text-xs text-slate-400 mt-1">Coba cek filter yang dipakai.</p>
         </div>
     @else
         <div class="overflow-x-auto">
             <table class="lv-table">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Kode Aset</th>
-                        <th>Nama Barang</th>
-                        <th>Kategori</th>
-                        <th>Lab</th>
-                        <th>Ruangan</th>
-                        <th>Label</th>
+                        <th class="w-12 text-center">#</th>
+                        <th>Barang</th>
+                        <th>Lokasi</th>
                         <th>Kondisi</th>
                         <th>Status</th>
-                        <th>Tgl Terima</th>
-                        <th>Aksi</th>
+                        <th class="w-10"></th>
                     </tr>
                 </thead>
-                <tbody x-data="{ editId: null }">
+                <tbody>
                     @foreach($assets as $i => $asset)
                         @php
                             $condition = $conditionMeta[$asset['asset_condition'] ?? ''] ?? ['label' => ucfirst($asset['asset_condition'] ?? '-'), 'class' => 'badge-draft'];
                             $status = $statusMeta[$asset['status'] ?? ''] ?? ['label' => ucfirst($asset['status'] ?? '-'), 'class' => 'bg-slate-100 text-slate-700 border-slate-200'];
                         @endphp
-                        <tr>
-                            <td class="text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
+                        <tr @click="activeAsset = JSON.parse($el.dataset.asset); showModal = true"
+                            data-asset="{{ json_encode([
+                                'id' => $asset['id'],
+                                'asset_code' => $asset['asset_code'] ?? '-',
+                                'item_name' => $asset['item_name'] ?? '-',
+                                'category_name' => $asset['category_name'] ?? '-',
+                                'lab_name' => $asset['lab_name'] ?? '-',
+                                'room_name' => $asset['room_name'] ?? '-',
+                                'room_code' => $asset['room_code'] ?? '',
+                                'label_number' => $asset['label_number'] ?? '',
+                                'asset_condition' => $asset['asset_condition'] ?? '',
+                                'status' => $asset['status'] ?? '',
+                                'received_date' => !empty($asset['received_date']) ? \Carbon\Carbon::parse($asset['received_date'])->format('d M Y') : '-',
+                                'condition_label' => $condition['label'],
+                                'condition_class' => $condition['class'],
+                                'status_label' => $status['label'],
+                                'status_class' => $status['class'],
+                            ]) }}"
+                            class="cursor-pointer hover:bg-slate-50/80 transition-colors">
+                            <td class="text-center text-slate-400 font-mono text-xs">{{ $i + 1 }}</td>
                             <td>
-                                <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
-                                    {{ $asset['asset_code'] ?? '-' }}
-                                </span>
-                            </td>
-                            <td class="font-semibold text-slate-800">{{ $asset['item_name'] ?? '-' }}</td>
-                            <td class="text-slate-500 text-xs">{{ $asset['category_name'] ?? '-' }}</td>
-                            <td class="text-slate-500 text-xs">{{ $asset['lab_name'] ?? '-' }}</td>
-                            <td class="text-slate-500 text-xs">
-                                {{ $asset['room_name'] ?? '-' }}
-                                @if(!empty($asset['room_code']))
-                                    <div class="font-mono text-[11px] text-slate-400">{{ $asset['room_code'] }}</div>
-                                @endif
+                                <div class="font-semibold text-slate-800">{{ $asset['item_name'] ?? '-' }}</div>
+                                <div class="text-xs font-mono text-slate-500 mt-0.5">{{ $asset['asset_code'] ?? '-' }}</div>
                             </td>
                             <td>
-                                @if(!empty($asset['label_number']))
-                                    <span class="inline-flex items-center px-2 py-0.5 text-[0.68rem] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md">
-                                        {{ $asset['label_number'] }}
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center px-2 py-0.5 text-[0.68rem] font-semibold bg-slate-100 text-slate-500 border border-slate-200 rounded-md">
-                                        Belum ada
-                                    </span>
-                                @endif
+                                <div class="font-medium text-slate-700 text-sm">{{ $asset['lab_name'] ?? '-' }}</div>
+                                <div class="text-xs text-slate-500 mt-0.5">
+                                    {{ $asset['room_name'] ?? '-' }} {{ !empty($asset['room_code']) ? '('.$asset['room_code'].')' : '' }}
+                                </div>
                             </td>
                             <td>
                                 <span class="badge {{ $condition['class'] }} text-xs">
@@ -213,45 +216,8 @@
                                     {{ $status['label'] }}
                                 </span>
                             </td>
-                            <td class="text-slate-500 text-xs">
-                                {{ !empty($asset['received_date']) ? \Carbon\Carbon::parse($asset['received_date'])->format('d M Y') : '-' }}
-                            </td>
-                            <td class="whitespace-nowrap">
-                                <button
-                                    type="button"
-                                    @click="editId = editId === {{ $asset['id'] }} ? null : {{ $asset['id'] }}"
-                                    class="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
-                                >
-                                    Edit Kondisi
-                                </button>
-                            </td>
-                        </tr>
-
-                        <tr x-show="editId === {{ $asset['id'] }}" x-cloak class="bg-slate-50">
-                            <td colspan="11">
-                                <form action="{{ route('inventory.condition.update', $asset['id']) }}" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-3 p-3">
-                                    @csrf
-                                    @method('PATCH')
-
-                                    <select name="asset_condition" class="rounded-xl border-slate-200 text-sm" required>
-                                        <option value="baik" {{ ($asset['asset_condition'] ?? '') === 'baik' ? 'selected' : '' }}>Baik</option>
-                                        <option value="rusak_ringan" {{ ($asset['asset_condition'] ?? '') === 'rusak_ringan' ? 'selected' : '' }}>Rusak Ringan</option>
-                                        <option value="rusak_berat" {{ ($asset['asset_condition'] ?? '') === 'rusak_berat' ? 'selected' : '' }}>Rusak Berat</option>
-                                        <option value="maintenance" {{ ($asset['asset_condition'] ?? '') === 'maintenance' ? 'selected' : '' }}>Maintenance</option>
-                                        <option value="dihapus" {{ ($asset['asset_condition'] ?? '') === 'dihapus' ? 'selected' : '' }}>Dihapus</option>
-                                        <option value="diganti" {{ ($asset['asset_condition'] ?? '') === 'diganti' ? 'selected' : '' }}>Diganti</option>
-                                    </select>
-
-                                    <input
-                                        name="note"
-                                        class="rounded-xl border-slate-200 text-sm"
-                                        placeholder="Catatan perubahan kondisi"
-                                    >
-
-                                    <button class="rounded-xl bg-indigo-600 text-white text-sm font-semibold px-4 py-2">
-                                        Simpan Kondisi
-                                    </button>
-                                </form>
+                            <td class="text-right text-slate-400">
+                                <svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                             </td>
                         </tr>
                     @endforeach
@@ -259,5 +225,133 @@
             </table>
         </div>
     @endif
+
+    <!-- Modal Detail & Edit -->
+    <template x-teleport="body">
+        <div x-show="showModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6" x-cloak>
+            <!-- Backdrop -->
+            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" 
+                 @click="showModal = false"
+                 x-show="showModal" x-transition.opacity.duration.300ms></div>
+            
+            <!-- Modal Content -->
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg m-auto flex flex-col max-h-[90vh]"
+                 x-show="showModal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                 
+                <!-- Header -->
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+                    <h3 class="text-lg font-bold text-slate-900">Detail Aset Inventaris</h3>
+                    <button @click="showModal = false" class="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Body -->
+                <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-5">
+                    <!-- Info Header -->
+                    <div>
+                        <h4 class="text-xl font-bold text-slate-800" x-text="activeAsset.item_name"></h4>
+                        <p class="font-mono text-sm text-slate-500 mt-1" x-text="activeAsset.asset_code"></p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Kategori</p>
+                            <p class="text-sm font-semibold text-slate-700" x-text="activeAsset.category_name"></p>
+                        </div>
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Tanggal Terima</p>
+                            <p class="text-sm font-semibold text-slate-700" x-text="activeAsset.received_date"></p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Laboratorium</p>
+                            <p class="text-sm font-semibold text-slate-700" x-text="activeAsset.lab_name"></p>
+                        </div>
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Ruangan</p>
+                            <p class="text-sm font-semibold text-slate-700">
+                                <span x-text="activeAsset.room_name"></span>
+                                <span class="text-slate-400 text-xs font-mono ml-1" x-show="activeAsset.room_code" x-text="'('+activeAsset.room_code+')'"></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Label Aset</p>
+                            <template x-if="activeAsset.label_number">
+                                <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md" x-text="activeAsset.label_number"></span>
+                            </template>
+                            <template x-if="!activeAsset.label_number">
+                                <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200 rounded-md">Belum berlabel</span>
+                            </template>
+                        </div>
+                        <div>
+                            <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
+                            <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border rounded-md" :class="activeAsset.status_class" x-text="activeAsset.status_label"></span>
+                        </div>
+                    </div>
+
+                    <!-- Edit Condition Section -->
+                    @if(in_array($role ?? session('auth_user')['role'] ?? '', ['staf_laboratorium']))
+                    <div class="pt-4 mt-2 border-t border-slate-200">
+                        <h5 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            Update Kondisi Aset
+                        </h5>
+                        
+                        <form :action="'/inventory/' + activeAsset.id + '/condition'" method="POST" class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                            @csrf
+                            @method('PATCH')
+                            
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Kondisi Baru</label>
+                                <select name="asset_condition" x-model="activeAsset.asset_condition" class="w-full rounded-xl border-slate-200 text-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 bg-white" required>
+                                    <option value="baik">Baik</option>
+                                    <option value="rusak_ringan">Rusak Ringan</option>
+                                    <option value="rusak_berat">Rusak Berat</option>
+                                    <option value="maintenance">Maintenance</option>
+                                    <option value="dihapus">Dihapus</option>
+                                    <option value="diganti">Diganti</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan Tambahan</label>
+                                <input name="note" class="w-full rounded-xl border-slate-200 text-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 bg-white" placeholder="Contoh: Terjatuh saat praktikum...">
+                            </div>
+                            
+                            <div class="pt-2 text-right">
+                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-xl text-sm transition-colors shadow-sm w-full sm:w-auto">
+                                    Simpan Perubahan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    @else
+                    <div class="pt-4 mt-2 border-t border-slate-200">
+                        <p class="text-[0.65rem] font-bold text-slate-400 uppercase tracking-wider mb-2">Kondisi Saat Ini</p>
+                        <span class="badge px-3 py-1 text-sm" :class="activeAsset.condition_class" x-text="activeAsset.condition_label"></span>
+                    </div>
+                    @endif
+                </div>
+                
+                <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end shrink-0 rounded-b-2xl">
+                    <button type="button" @click="showModal = false" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
 </div>
 @endsection
