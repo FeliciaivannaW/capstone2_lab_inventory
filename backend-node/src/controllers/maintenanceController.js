@@ -191,18 +191,21 @@ const createMaintenanceLog = async (req, res) => {
 
     const maintenanceId = result.insertId;
 
-    if (status !== "cancelled" && condition_after !== asset.asset_condition) {
-      const nextStatus =
-        condition_after === "maintenance" || status === "in_progress"
-          ? "maintenance"
-          : condition_after === "dihapus"
-            ? "disposed"
-            : condition_after === "diganti"
-              ? "replaced"
-              : asset.status === "received"
-                ? "received"
-                : "available";
+    const nextStatus =
+      status === "in_progress" || status === "planned"
+        ? "maintenance"
+        : condition_after === "dihapus"
+          ? "disposed"
+          : condition_after === "diganti"
+            ? "replaced"
+            : asset.status === "received"
+              ? "received"
+              : "available";
 
+    const statusChanged = nextStatus !== asset.status;
+    const conditionChanged = condition_after !== asset.asset_condition;
+
+    if (status !== "cancelled" && (statusChanged || conditionChanged)) {
       await MaintenanceModel.updateAssetStatus(
         Number(inventory_asset_id),
         condition_after,
@@ -210,13 +213,15 @@ const createMaintenanceLog = async (req, res) => {
         connection
       );
 
-      await InventoryModel.createConditionLog({
-        inventory_asset_id: Number(inventory_asset_id),
-        updated_by: req.user.id,
-        old_condition: asset.asset_condition,
-        new_condition: condition_after,
-        note: `Update dari maintenance #${maintenanceId}`
-      }, connection);
+      if (conditionChanged) {
+        await InventoryModel.createConditionLog({
+          inventory_asset_id: Number(inventory_asset_id),
+          updated_by: req.user.id,
+          old_condition: asset.asset_condition,
+          new_condition: condition_after,
+          note: `Update dari maintenance #${maintenanceId}`
+        }, connection);
+      }
     }
 
     if (status === "done") {
@@ -361,17 +366,25 @@ const updateMaintenanceLog = async (req, res) => {
       notes
     }, connection);
 
-    // If changing to done, deduct BHP and update asset condition
-    if (status === "done") {
-      if (condition_after !== asset.asset_condition) {
-        const nextStatus =
-          condition_after === "maintenance" ? "maintenance"
-            : condition_after === "dihapus" ? "disposed"
-              : condition_after === "diganti" ? "replaced"
-                : asset.status === "received" ? "received" : "available";
+    // Update asset condition and status based on the latest maintenance state
+    const nextStatus =
+      status === "in_progress" || status === "planned"
+        ? "maintenance"
+        : condition_after === "dihapus"
+          ? "disposed"
+          : condition_after === "diganti"
+            ? "replaced"
+            : asset.status === "received"
+              ? "received"
+              : "available";
 
-        await MaintenanceModel.updateAssetStatus(asset.id, condition_after, nextStatus, connection);
-        
+    const statusChanged = nextStatus !== asset.status;
+    const conditionChanged = condition_after !== asset.asset_condition;
+
+    if (statusChanged || conditionChanged) {
+      await MaintenanceModel.updateAssetStatus(asset.id, condition_after, nextStatus, connection);
+      
+      if (conditionChanged) {
         await InventoryModel.createConditionLog({
           inventory_asset_id: asset.id,
           updated_by: req.user.id,
@@ -380,6 +393,10 @@ const updateMaintenanceLog = async (req, res) => {
           note: `Update dari maintenance #${id}`
         }, connection);
       }
+    }
+
+    // If changing to done, deduct BHP
+    if (status === "done") {
 
       for (const usage of bhpUsages) {
         if (!usage || !usage.stock_id || !usage.quantity) continue;
@@ -450,7 +467,16 @@ const deleteMaintenanceLog = async (req, res) => {
       return res.status(400).json({ status: "error", message: "Log maintenance yang sudah selesai (done) tidak dapat dihapus untuk menjaga integritas stok BHP." });
     }
 
+    const asset = await MaintenanceModel.findAssetForMaintenance(existingLog.inventory_asset_id);
+
     await MaintenanceModel.deleteLog(id);
+
+    // Revert asset status if it was locked by this maintenance
+    if (existingLog.status === "in_progress" || existingLog.status === "planned") {
+      if (asset && asset.status === "maintenance") {
+        await MaintenanceModel.updateAssetStatus(asset.id, asset.asset_condition, "available");
+      }
+    }
 
     res.json({
       status: "success",
