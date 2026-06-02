@@ -384,7 +384,7 @@ const InventoryModel = {
     const params = [];
 
     if (search) {
-      whereConditions.push("(ia.asset_code LIKE ? OR ia.label_number LIKE ? OR ic.name LIKE ? OR acl.note LIKE ?)");
+      whereConditions.push("(ia.asset_code LIKE ? OR ia.label_number LIKE ? OR COALESCE(ic.name, pi.item_name) LIKE ? OR acl.note LIKE ?)");
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
@@ -417,13 +417,13 @@ const InventoryModel = {
         ia.asset_code,
         ia.label_number,
         ia.status,
-        ic.name AS item_name,
+        COALESCE(ic.name, pi.item_name) AS item_name,
         r.code AS room_code,
         r.name AS room_name,
         u.name AS updated_by_name
       FROM asset_condition_logs acl
       JOIN inventory_assets ia ON acl.inventory_asset_id = ia.id
-      JOIN item_catalogs ic ON ia.item_catalog_id = ic.id
+      LEFT JOIN item_catalogs ic ON ia.item_catalog_id = ic.id
       LEFT JOIN procurement_items pi ON ia.procurement_item_id = pi.id
       LEFT JOIN procurement_drafts pd ON pi.draft_id = pd.id
       LEFT JOIN laboratories l ON pd.lab_id = l.id
