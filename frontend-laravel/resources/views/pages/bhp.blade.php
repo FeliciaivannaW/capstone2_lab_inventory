@@ -114,17 +114,17 @@
             </div>
 
             <div class="flex flex-wrap items-center flex-1 justify-end gap-3 w-full">
+                <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl px-3 py-1.5 cursor-pointer hover:bg-slate-50 transition-colors shadow-sm h-[32px]">
+                    <input type="checkbox" @change="setFilter('lowStock', $event.target.checked ? '1' : '')" :checked="filters['lowStock'] === '1'" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5">
+                    Stok Rendah
+                </label>
+
                 <x-table-filter column="status" label="Status Stok" :options="[
                     'aman' => 'Aman',
                     'menipis' => 'Menipis',
                     'kritis' => 'Kritis',
                     'habis' => 'Habis'
                 ]" />
-
-                <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl px-3 py-1.5 cursor-pointer hover:bg-slate-50 transition-colors shadow-sm h-[32px]">
-                    <input type="checkbox" @change="setFilter('lowStock', $event.target.checked ? '1' : '')" :checked="filters['lowStock'] === '1'" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5">
-                    Stok Rendah
-                </label>
 
                 <x-table-filter column="lab" label="Laboratorium" :options="collect($laboratories)->pluck('name', 'id')->toArray()" />
 
