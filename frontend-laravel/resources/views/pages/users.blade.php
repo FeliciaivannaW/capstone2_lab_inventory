@@ -34,8 +34,20 @@
         $oldGroupIds = collect(old('lab_group_ids', []))->map(fn($id) => (string) $id)->toArray();
 
         $roleOptions = [];
+        $stafLabRoleId = '';
+        $kepalaLabRoleId = '';
+        $kaprodiRoleId = '';
         foreach($roles as $role) {
             $roleOptions[$role['id']] = ucwords(str_replace('_', ' ', $role['name']));
+            if ($role['name'] === 'staf_laboratorium') {
+                $stafLabRoleId = (string) $role['id'];
+            }
+            if ($role['name'] === 'kepala_laboratorium') {
+                $kepalaLabRoleId = (string) $role['id'];
+            }
+            if ($role['name'] === 'ketua_program_studi') {
+                $kaprodiRoleId = (string) $role['id'];
+            }
         }
 
         $labOptions = ['' => 'Tidak terkait lab'];
@@ -78,7 +90,7 @@
                     </button>
                 </div>
                 <div class="p-5 max-h-[calc(100vh-10rem)] overflow-y-auto">
-                    <form action="{{ route('users.store') }}" method="POST" class="space-y-4">
+                    <form action="{{ route('users.store') }}" method="POST" class="space-y-4" x-data="{ selectedRole: '{{ old('role_id', '') }}' }">
                         @csrf
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -92,15 +104,27 @@
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <x-form.field type="select" name="role_id" label="Role" :options="$roleOptions" value="{{ old('role_id') }}" required />
+                            <x-form.field type="select" name="role_id" label="Role" :options="$roleOptions" value="{{ old('role_id') }}" x-model="selectedRole" required />
                             <x-form.field type="select" name="status" label="Status" :options="$statusOptions" value="{{ old('status', 'active') }}" />
                         </div>
 
-                        <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ old('lab_id') }}" />
-                        <p class="text-[0.68rem] text-slate-400 -mt-3">Opsional. Dipakai sebagai lab utama user.</p>
+                        <div x-show="!['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)">
+                            <template x-if="selectedRole == '{{ $stafLabRoleId }}'">
+                                <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ old('lab_id') }}" />
+                            </template>
+                            <template x-if="selectedRole != '{{ $stafLabRoleId }}'">
+                                <x-form.field type="select" name="lab_id" label="Akses Lab" :options="$labOptions" value="{{ old('lab_id') }}" />
+                            </template>
+                            <p class="text-[0.68rem] text-slate-400 -mt-3">Opsional. Dipakai sebagai lab utama user.</p>
+                        </div>
+                        <div x-show="['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Lab</label>
+                            <input type="text" value="Semua Laboratorium" disabled class="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed">
+                            <p class="text-[0.68rem] text-amber-600 mt-1" x-text="selectedRole == '{{ $kepalaLabRoleId }}' ? 'Kepala Laboratorium memiliki akses ke seluruh laboratorium.' : 'Ketua Program Studi memiliki akses ke seluruh laboratorium.'"></p>
+                        </div>
 
                         <!-- Akses Grup Lab (Checkbox) -->
-                        <div>
+                        <div x-show="selectedRole == '{{ $stafLabRoleId }}'" x-cloak>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Grup Lab</label>
                             <div class="border border-slate-200 rounded-xl max-h-48 overflow-y-auto p-3 space-y-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full">
                                 @forelse($labGroups as $group)
@@ -121,11 +145,11 @@
                             <p class="text-[0.68rem] text-slate-400 mt-1">Centang satu atau lebih grup lab untuk memberikan akses.</p>
                         </div>
 
-                        <div class="pt-2 flex gap-3">
-                            <button type="button" @click="activeModal = null" class="flex-1 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold py-2.5 hover:bg-slate-200">
+                        <div class="sticky -bottom-5 bg-white py-4 mt-6 border-t border-slate-100 flex gap-3 -mx-5 -mb-5 px-5 z-10">
+                            <button type="button" @click="activeModal = null" class="flex-1 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold py-2.5 hover:bg-slate-200 transition-colors">
                                 Batal
                             </button>
-                            <button type="submit" class="flex-1 rounded-xl bg-indigo-600 text-white text-sm font-semibold py-2.5 hover:bg-indigo-700">
+                            <button type="submit" class="flex-1 rounded-xl bg-indigo-600 text-white text-sm font-semibold py-2.5 hover:bg-indigo-700 transition-colors">
                                 Simpan User
                             </button>
                         </div>
@@ -229,13 +253,21 @@
 
                             <td class="text-slate-500">
                                 <div>
-                                    <span class="text-xs font-semibold text-slate-400">Utama:</span>
-                                    {{ $user['laboratory_name'] ?? '—' }}
+                                    @if($user['role'] === 'staf_laboratorium')
+                                        <span class="text-xs font-semibold text-slate-400">Utama:</span>
+                                    @endif
+                                    @if(in_array($user['role'], ['kepala_laboratorium', 'ketua_program_studi']))
+                                        <span class="font-medium text-slate-700">Semua Laboratorium</span>
+                                    @else
+                                        {{ $user['laboratory_name'] ?? '—' }}
+                                    @endif
                                 </div>
-                                <div class="text-xs text-slate-400 mt-1">
-                                    <span class="font-semibold">Grup:</span>
-                                    {{ $user['lab_group_names'] ?? '—' }}
-                                </div>
+                                @if($user['role'] === 'staf_laboratorium')
+                                    <div class="text-xs text-slate-400 mt-1">
+                                        <span class="font-semibold">Grup:</span>
+                                        {{ $user['lab_group_names'] ?? '—' }}
+                                    </div>
+                                @endif
                             </td>
 
                             <td>
@@ -314,23 +346,33 @@
                                                 </span>
                                             </div>
                                             <div>
-                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Lab Utama</p>
-                                                <p class="text-sm font-semibold text-slate-800">{{ $user['laboratory_name'] ?? '—' }}</p>
-                                            </div>
-                                            <div class="col-span-2">
-                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Akses Grup Lab</p>
-                                                <div class="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                                                    @if(!empty($user['lab_group_names']))
-                                                        <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
-                                                            @foreach(explode(',', $user['lab_group_names']) as $gName)
-                                                                <li>{{ trim($gName) }}</li>
-                                                            @endforeach
-                                                        </ul>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                                    {{ $user['role'] === 'staf_laboratorium' ? 'Lab Utama' : 'Akses Lab' }}
+                                                </p>
+                                                <p class="text-sm font-semibold text-slate-800">
+                                                    @if(in_array($user['role'], ['kepala_laboratorium', 'ketua_program_studi']))
+                                                        Semua Laboratorium
                                                     @else
-                                                        <p class="text-sm text-slate-500 italic">Tidak memiliki akses grup lab.</p>
+                                                        {{ $user['laboratory_name'] ?? '—' }}
                                                     @endif
-                                                </div>
+                                                </p>
                                             </div>
+                                            @if($user['role'] === 'staf_laboratorium')
+                                                <div class="col-span-2">
+                                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Akses Grup Lab</p>
+                                                    <div class="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                                                        @if(!empty($user['lab_group_names']))
+                                                            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                                                                @foreach(explode(',', $user['lab_group_names']) as $gName)
+                                                                    <li>{{ trim($gName) }}</li>
+                                                                @endforeach
+                                                            </ul>
+                                                        @else
+                                                            <p class="text-sm text-slate-500 italic">Tidak memiliki akses grup lab.</p>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            @endif
                                         </div>
                                         <div class="pt-4 border-t border-slate-100">
                                             <button type="button" @click="activeModal = null" class="w-full rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold py-2.5 hover:bg-slate-200 transition-colors">
@@ -374,7 +416,7 @@
                                         </button>
                                     </div>
                                     <div class="p-5 max-h-[calc(100vh-10rem)] overflow-y-auto">
-                                        <form action="{{ route('users.update', $user['id']) }}" method="POST" class="space-y-4">
+                                        <form action="{{ route('users.update', $user['id']) }}" method="POST" class="space-y-4" x-data="{ selectedRole: '{{ $user['role_id'] }}' }">
                                             @csrf
                                             @method('PUT')
 
@@ -388,26 +430,26 @@
                                                 <x-form.field type="password" name="password" label="Password" placeholder="Kosongkan jika tidak diubah" />
                                             </div>
 
-                                            @php
-                                                $editRoleOptions = [];
-                                                foreach($roles as $role) {
-                                                    $editRoleOptions[$role['id']] = ucwords(str_replace('_', ' ', $role['name']));
-                                                }
-
-                                                $editLabOptions = ['' => 'Tidak terkait lab'];
-                                                foreach($laboratories as $lab) {
-                                                    $editLabOptions[$lab['id']] = $lab['name'];
-                                                }
-                                            @endphp
-
                                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <x-form.field type="select" name="role_id" label="Role" :options="$editRoleOptions" value="{{ $user['role_id'] }}" required />
-                                                <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$editLabOptions" value="{{ $user['lab_id'] ?? '' }}" />
+                                                <x-form.field type="select" name="role_id" label="Role" :options="$roleOptions" value="{{ $user['role_id'] }}" x-model="selectedRole" required />
+                                                <div x-show="!['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)">
+                                                    <template x-if="selectedRole == '{{ $stafLabRoleId }}'">
+                                                        <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
+                                                    </template>
+                                                    <template x-if="selectedRole != '{{ $stafLabRoleId }}'">
+                                                        <x-form.field type="select" name="lab_id" label="Akses Lab" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
+                                                    </template>
+                                                </div>
+                                                <div x-show="['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
+                                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Lab</label>
+                                                    <input type="text" value="Semua Laboratorium" disabled class="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed">
+                                                    <p class="text-[0.68rem] text-amber-600 mt-1">Terkunci (akses ke seluruh lab).</p>
+                                                </div>
                                                 <x-form.field type="select" name="status" label="Status" :options="$statusOptions" value="{{ $user['status'] }}" />
                                             </div>
 
                                             <!-- Akses Grup Lab (Checkbox) -->
-                                            <div>
+                                            <div x-show="selectedRole == '{{ $stafLabRoleId }}'" x-cloak>
                                                 <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Grup Lab</label>
                                                 <div class="border border-slate-200 rounded-xl max-h-48 overflow-y-auto p-3 space-y-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full">
                                                     @forelse($labGroups as $group)
@@ -428,11 +470,11 @@
                                                 <p class="text-[0.68rem] text-slate-400 mt-1">Centang satu atau lebih grup lab untuk memberikan akses.</p>
                                             </div>
 
-                                            <div class="pt-2 flex gap-3">
-                                                <button type="button" @click="activeModal = null" class="flex-1 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold py-2.5 hover:bg-slate-200">
+                                            <div class="sticky -bottom-5 bg-white py-4 mt-6 border-t border-slate-100 flex gap-3 -mx-5 -mb-5 px-5 z-10">
+                                                <button type="button" @click="activeModal = null" class="flex-1 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold py-2.5 hover:bg-slate-200 transition-colors">
                                                     Batal
                                                 </button>
-                                                <button type="submit" class="flex-1 rounded-xl bg-indigo-600 text-white text-sm font-semibold py-2.5 hover:bg-indigo-700">
+                                                <button type="submit" class="flex-1 rounded-xl bg-indigo-600 text-white text-sm font-semibold py-2.5 hover:bg-indigo-700 transition-colors">
                                                     Simpan Perubahan
                                                 </button>
                                             </div>

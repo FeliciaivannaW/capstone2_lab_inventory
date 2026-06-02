@@ -244,16 +244,6 @@ const createProcurementDraft = async (req, res, next) => {
       });
     }
 
-    if (userRole === 'kepala_laboratorium') {
-      const userLab = await UserModel.findRoleAndLabByUserId(userId);
-      if (!userLab || userLab.lab_id != lab_id) {
-        return res.status(403).json({
-          status: "error",
-          message: "Anda hanya bisa membuat draf untuk laboratorium Anda sendiri"
-        });
-      }
-    }
-
     const createdAt = new Date();
     const result = await ProcurementModel.createDraft({
       labId: lab_id,

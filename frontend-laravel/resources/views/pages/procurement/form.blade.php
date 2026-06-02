@@ -75,7 +75,7 @@
             <div class="p-6 space-y-5">
                 <x-form.field name="title" label="Judul Draf" type="text" placeholder="Contoh: Pengadaan Lab Komputer Tahun 2025" :value="$draft['title'] ?? ''" required />
 
-                @if($authUser['role'] === 'staf_administrasi')
+                @if(in_array($authUser['role'], ['staf_administrasi', 'kepala_laboratorium']))
                     <x-form.field name="lab_id" label="Laboratorium" type="select" :options="$laboratories" :value="$draft['lab_id'] ?? ''" required />
                 @else
                     <div class="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">

@@ -29,7 +29,7 @@ const login = async (req, res, next) => {
     if (user.status !== "active") {
       return res.status(403).json({
         status: "error",
-        message: "Akun tidak aktif"
+        message: "Akun Anda telah dinonaktifkan."
       });
     }
 

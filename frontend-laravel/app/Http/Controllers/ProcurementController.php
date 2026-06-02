@@ -68,7 +68,7 @@ class ProcurementController extends Controller
         $authUser = session('auth_user');
         $laboratories = [];
 
-        if ($authUser['role'] === 'staf_administrasi') {
+        if (in_array($authUser['role'], ['staf_administrasi', 'kepala_laboratorium'])) {
             $laboratories = $this->getApiData('/laboratories') ?: [];
             $laboratories = collect($laboratories)->pluck('name', 'id')->toArray();
         }
@@ -160,7 +160,7 @@ class ProcurementController extends Controller
         }
 
         $laboratories = [];
-        if ($authUser['role'] === 'staf_administrasi') {
+        if (in_array($authUser['role'], ['staf_administrasi', 'kepala_laboratorium'])) {
             $laboratories = $this->getApiData('/laboratories') ?: [];
             $laboratories = collect($laboratories)->pluck('name', 'id')->toArray();
         }

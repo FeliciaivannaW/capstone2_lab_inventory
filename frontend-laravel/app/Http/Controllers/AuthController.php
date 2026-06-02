@@ -42,7 +42,8 @@ class AuthController extends Controller
             ]);
 
             if (!$response->successful()) {
-                return back()->with('error', 'Email atau password salah.');
+                $errorMessage = $response->json('message') ?? 'Email atau password salah.';
+                return back()->with('error', $errorMessage);
             }
 
             $data = $response->json();
