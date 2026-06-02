@@ -93,7 +93,7 @@ class DashboardController extends Controller
         }
 
         if ($role === 'kepala_laboratorium') {
-            $drafts = $this->getApiData('/procurement/drafts', ['lab_id' => session('auth_user')['lab_id'] ?? null]) ?: [];
+            $drafts = $this->getApiData('/procurement/drafts') ?: [];
             
             $stats = [
                 'total' => count($drafts),
@@ -252,10 +252,6 @@ class DashboardController extends Controller
     {
         $authUser = session('auth_user');
         $params = [];
-
-        if (($authUser['role'] ?? '') === 'kepala_laboratorium' && !empty($authUser['lab_id'])) {
-            $params['lab_id'] = $authUser['lab_id'];
-        }
 
         $drafts = $this->getApiData('/procurement/drafts', $params);
 

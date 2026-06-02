@@ -35,10 +35,18 @@
 
         $roleOptions = [];
         $stafLabRoleId = '';
+        $kepalaLabRoleId = '';
+        $kaprodiRoleId = '';
         foreach($roles as $role) {
             $roleOptions[$role['id']] = ucwords(str_replace('_', ' ', $role['name']));
             if ($role['name'] === 'staf_laboratorium') {
                 $stafLabRoleId = (string) $role['id'];
+            }
+            if ($role['name'] === 'kepala_laboratorium') {
+                $kepalaLabRoleId = (string) $role['id'];
+            }
+            if ($role['name'] === 'ketua_program_studi') {
+                $kaprodiRoleId = (string) $role['id'];
             }
         }
 
@@ -100,8 +108,15 @@
                             <x-form.field type="select" name="status" label="Status" :options="$statusOptions" value="{{ old('status', 'active') }}" />
                         </div>
 
-                        <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ old('lab_id') }}" />
-                        <p class="text-[0.68rem] text-slate-400 -mt-3">Opsional. Dipakai sebagai lab utama user.</p>
+                        <div x-show="!['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)">
+                            <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ old('lab_id') }}" />
+                            <p class="text-[0.68rem] text-slate-400 -mt-3">Opsional. Dipakai sebagai lab utama user.</p>
+                        </div>
+                        <div x-show="['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Lab Utama</label>
+                            <input type="text" value="Semua Laboratorium" disabled class="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed">
+                            <p class="text-[0.68rem] text-amber-600 mt-1" x-text="selectedRole == '{{ $kepalaLabRoleId }}' ? 'Kepala Laboratorium memiliki akses ke seluruh laboratorium.' : 'Ketua Program Studi memiliki akses ke seluruh laboratorium.'"></p>
+                        </div>
 
                         <!-- Akses Grup Lab (Checkbox) -->
                         <div x-show="selectedRole == '{{ $stafLabRoleId }}'" x-cloak>
@@ -236,7 +251,11 @@
                                     @if($user['role'] === 'staf_laboratorium')
                                         <span class="text-xs font-semibold text-slate-400">Utama:</span>
                                     @endif
-                                    {{ $user['laboratory_name'] ?? '—' }}
+                                    @if(in_array($user['role'], ['kepala_laboratorium', 'ketua_program_studi']))
+                                        <span class="font-medium text-slate-700">Semua Laboratorium</span>
+                                    @else
+                                        {{ $user['laboratory_name'] ?? '—' }}
+                                    @endif
                                 </div>
                                 @if($user['role'] === 'staf_laboratorium')
                                     <div class="text-xs text-slate-400 mt-1">
@@ -322,8 +341,16 @@
                                                 </span>
                                             </div>
                                             <div>
-                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Lab Utama</p>
-                                                <p class="text-sm font-semibold text-slate-800">{{ $user['laboratory_name'] ?? '—' }}</p>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                                    {{ $user['role'] === 'staf_laboratorium' ? 'Lab Utama' : 'Akses Lab' }}
+                                                </p>
+                                                <p class="text-sm font-semibold text-slate-800">
+                                                    @if(in_array($user['role'], ['kepala_laboratorium', 'ketua_program_studi']))
+                                                        Semua Laboratorium
+                                                    @else
+                                                        {{ $user['laboratory_name'] ?? '—' }}
+                                                    @endif
+                                                </p>
                                             </div>
                                             @if($user['role'] === 'staf_laboratorium')
                                                 <div class="col-span-2">
@@ -400,7 +427,14 @@
 
                                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <x-form.field type="select" name="role_id" label="Role" :options="$roleOptions" value="{{ $user['role_id'] }}" x-model="selectedRole" required />
-                                                <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
+                                                <div x-show="!['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)">
+                                                    <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
+                                                </div>
+                                                <div x-show="['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
+                                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Lab Utama</label>
+                                                    <input type="text" value="Semua Laboratorium" disabled class="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed">
+                                                    <p class="text-[0.68rem] text-amber-600 mt-1">Terkunci (akses ke seluruh lab).</p>
+                                                </div>
                                                 <x-form.field type="select" name="status" label="Status" :options="$statusOptions" value="{{ $user['status'] }}" />
                                             </div>
 
