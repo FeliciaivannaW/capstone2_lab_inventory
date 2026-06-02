@@ -239,7 +239,7 @@
                 </div>
             </div>
 
-            <p class="text-center text-[0.7rem] text-slate-400 mt-5">© 2025 Labventory · All rights reserved</p>
+            <p class="text-center text-[0.7rem] text-slate-400 mt-5">© 2026 Labventory · All rights reserved</p>
         </div>
 
         {{-- ───────────── RIGHT: Branding Panel ───────────── --}}
