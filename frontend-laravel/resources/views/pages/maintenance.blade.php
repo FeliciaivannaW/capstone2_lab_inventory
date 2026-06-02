@@ -3,7 +3,24 @@
 @section('title', 'Log Maintenance')
 
 @section('content')
-<div x-data="{ activeModal: null }">
+<div x-data="{ 
+    activeModal: null, 
+    activeLog: null,
+    formatText(str) {
+        if (!str) return '-';
+        return str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    },
+    formatDate(str) {
+        if (!str) return '';
+        return str.split('T')[0];
+    },
+    statusClass(s) {
+        return { 'planned':'badge-draft', 'in_progress':'badge-active', 'done':'badge-approved', 'cancelled':'badge-rejected' }[s] || 'badge-draft';
+    },
+    condClass(c) {
+        return { 'baik':'badge-approved', 'rusak_ringan':'badge-pending', 'rusak_berat':'badge-rejected', 'maintenance':'badge-active', 'dihapus':'badge-rejected', 'diganti':'badge-draft' }[c] || 'badge-draft';
+    }
+}">
     <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-slate-900">Log Maintenance Inventaris</h1>
@@ -50,7 +67,7 @@
         </div>
         <div class="divide-y divide-slate-100">
             @forelse($logs as $log)
-                <div class="px-6 py-4 hover:bg-slate-50 transition-colors">
+                <div class="px-6 py-4 hover:bg-slate-50 transition-colors cursor-pointer" @click='activeLog = @json($log); activeModal = "detail_maintenance"'>
                     <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                         <div>
                             <div class="flex items-center gap-2 flex-wrap mb-1">
@@ -268,6 +285,337 @@
                         </button>
                         <button type="submit" class="flex-1 rounded-xl bg-indigo-600 text-white text-sm font-semibold py-2.5 hover:bg-indigo-700 transition-colors shadow-sm">
                             Simpan Maintenance
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+    <!-- Modal Detail Maintenance -->
+    <template x-teleport="body">
+        <div x-show="activeModal === 'detail_maintenance'" class="fixed inset-0 z-[999] flex items-center justify-center p-4" x-cloak>
+            <div x-show="activeModal === 'detail_maintenance'"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+                 @click="activeModal = null">
+            </div>
+
+            <div x-show="activeModal === 'detail_maintenance'"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 scale-95 translate-y-4"
+                 class="relative bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+                 
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+                    <div>
+                        <h3 class="font-bold text-slate-800">Detail Log Maintenance</h3>
+                    </div>
+                    <button @click="activeModal = null" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="p-6 overflow-y-auto flex-1 text-sm space-y-4">
+                    <div class="mb-2">
+                        <p class="text-xs font-semibold text-slate-500 mb-1">Aset Inventaris</p>
+                        <div class="w-full rounded-xl border border-slate-200 bg-slate-50 text-sm px-4 py-3 text-slate-800 font-bold flex flex-col items-start gap-1">
+                            <span class="font-mono text-[0.65rem] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md leading-none" x-text="activeLog?.asset_code"></span>
+                            <span x-text="activeLog?.item_name"></span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">Status</p>
+                            <span class="badge" :class="statusClass(activeLog?.status)" x-text="formatText(activeLog?.status)"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">Tanggal</p>
+                            <span class="font-bold text-slate-800 flex items-center gap-1 mt-1">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <span x-text="formatDate(activeLog?.maintenance_date)"></span>
+                            </span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">Kondisi Sebelum</p>
+                            <span class="badge" :class="condClass(activeLog?.condition_before)" x-text="formatText(activeLog?.condition_before)"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">Kondisi Akhir</p>
+                            <span class="badge" :class="condClass(activeLog?.condition_after)" x-text="formatText(activeLog?.condition_after)"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">Laboratorium / Ruangan</p>
+                            <span class="font-bold text-slate-800" x-text="activeLog?.room_name || 'Tanpa Ruangan'"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">Teknisi</p>
+                            <span class="font-bold text-slate-800" x-text="activeLog?.performed_by_name"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 mb-1">Biaya</p>
+                            <span class="font-bold text-slate-800" x-text="'Rp ' + (activeLog?.cost || 0).toLocaleString('id-ID')"></span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 mb-1">Masalah</p>
+                        <p class="text-slate-700" x-text="activeLog?.issue_description || '-'"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 mb-1">Tindakan</p>
+                        <p class="text-slate-700" x-text="activeLog?.action_taken || '-'"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 mb-1">Catatan</p>
+                        <p class="text-slate-700" x-text="activeLog?.notes || '-'"></p>
+                    </div>
+
+                    <div class="rounded-xl bg-slate-50 border border-slate-100 p-4">
+                        <p class="text-xs font-bold text-slate-700 mb-2">BHP yang dipakai</p>
+                        <template x-if="activeLog?.bhp_usages?.length > 0">
+                            <ul class="space-y-1">
+                                <template x-for="usage in activeLog.bhp_usages">
+                                    <li class="text-xs text-slate-600 flex items-center gap-1.5">
+                                        <svg class="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                        <span x-text="usage.item_name"></span> 
+                                        <span class="font-bold">(-<span x-text="usage.quantity"></span> <span x-text="usage.unit"></span>)</span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </template>
+                        <template x-if="!activeLog?.bhp_usages?.length">
+                            <p class="text-xs text-slate-400">Tidak ada BHP yang dicatat.</p>
+                        </template>
+                    </div>
+                </div>
+                
+                <div class="p-6 border-t border-slate-100 bg-white flex gap-3 shrink-0 items-center justify-between">
+                    <div>
+                        <template x-if="activeLog?.status !== 'done'">
+                            <form :action="'/maintenance/' + activeLog?.id" method="POST" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin menghapus log maintenance ini?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-sm font-bold text-red-500 hover:text-red-700 transition-colors">Hapus Log</button>
+                            </form>
+                        </template>
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="button" @click="activeModal = null" class="rounded-xl bg-slate-100 border border-slate-100 text-slate-700 text-sm font-semibold px-5 py-2 hover:bg-slate-200 transition-colors">Tutup</button>
+                        <button type="button" @click="activeModal = 'edit_maintenance'" class="rounded-xl bg-indigo-600 text-white text-sm font-semibold px-5 py-2 hover:bg-indigo-700 transition-colors shadow-sm">Edit Log</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Modal Edit Maintenance -->
+    <template x-teleport="body">
+        <div x-show="activeModal === 'edit_maintenance'" class="fixed inset-0 z-[999] flex items-center justify-center p-4" x-cloak>
+            <div x-show="activeModal === 'edit_maintenance'"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+                 @click="activeModal = null">
+            </div>
+
+            <div x-show="activeModal === 'edit_maintenance'"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 scale-95 translate-y-4"
+                 class="relative bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]"
+                 x-data="{
+                     bhpRows: [],
+                     bhpStocks: @js($stocks),
+                     initEditData() {
+                         if (activeLog && activeLog.status !== 'done') {
+                             this.bhpRows = (activeLog.bhp_usages || []).map(u => ({ stock_id: u.stock_id, quantity: u.quantity }));
+                         } else {
+                             this.bhpRows = [];
+                         }
+                     },
+                     addBhpRow() {
+                         this.bhpRows.push({ stock_id: '', quantity: 1 });
+                     },
+                     removeBhpRow(index) {
+                         this.bhpRows.splice(index, 1);
+                     }
+                 }"
+                 x-init="
+                     $watch('activeModal', (val) => {
+                         if (val === 'edit_maintenance') {
+                             initEditData();
+                         }
+                     });
+                 ">
+                
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+                    <div>
+                        <h3 class="font-bold text-slate-800">Edit Log Maintenance</h3>
+                        <template x-if="activeLog?.status === 'done'">
+                            <p class="text-xs text-amber-600 font-semibold mt-1">Data sudah berstatus Done. Hanya Catatan yang dapat diubah.</p>
+                        </template>
+                        <template x-if="activeLog?.status !== 'done'">
+                            <p class="text-xs text-slate-500">Perbarui informasi maintenance</p>
+                        </template>
+                    </div>
+                    <button @click="activeModal = null" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <form :action="'/maintenance/' + activeLog?.id" method="POST" class="flex flex-col flex-1 min-h-0">
+                    @csrf
+                    @method('PUT')
+                    <div class="p-6 overflow-y-auto space-y-4">
+                        
+                        <!-- 1. Aset Inventaris (Read-only) -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Aset Inventaris (Tidak dapat diubah)</label>
+                            <div class="w-full rounded-xl border border-slate-200 bg-slate-100 text-sm px-4 py-3 text-slate-600 font-semibold flex flex-col items-start gap-1">
+                                <span class="font-mono text-[0.65rem] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md leading-none" x-text="activeLog?.asset_code"></span>
+                                <span x-text="activeLog?.item_name"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- 2. Tanggal + Status -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Tanggal</label>
+                                <input type="date" name="maintenance_date" :value="formatDate(activeLog?.maintenance_date)" class="w-full rounded-xl border-slate-200 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed read-only:bg-slate-100 read-only:text-slate-500 read-only:cursor-not-allowed" :readonly="activeLog?.status === 'done'" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Status</label>
+                                <select name="status" :value="activeLog?.status" class="w-full rounded-xl border-slate-200 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed" :disabled="activeLog?.status === 'done'" required>
+                                    <option value="planned">Planned</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="done">Done</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                                <!-- Required if disabled to pass value -->
+                                <template x-if="activeLog?.status === 'done'">
+                                    <input type="hidden" name="status" value="done">
+                                </template>
+                            </div>
+                        </div>
+                        
+                        <!-- 3. Masalah -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Masalah</label>
+                            <textarea name="issue_description" :value="activeLog?.issue_description" rows="2" class="w-full rounded-xl border-slate-200 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed read-only:bg-slate-100 read-only:text-slate-500 read-only:cursor-not-allowed" :readonly="activeLog?.status === 'done'"></textarea>
+                        </div>
+                        
+                        <!-- 4. Tindakan -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Tindakan</label>
+                            <textarea name="action_taken" :value="activeLog?.action_taken" rows="2" class="w-full rounded-xl border-slate-200 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed read-only:bg-slate-100 read-only:text-slate-500 read-only:cursor-not-allowed" :readonly="activeLog?.status === 'done'"></textarea>
+                        </div>
+                        
+                        <!-- 5. Kondisi Akhir + Biaya -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Kondisi Akhir</label>
+                                <select name="condition_after" :value="activeLog?.condition_after" class="w-full rounded-xl border-slate-200 text-sm disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed" :disabled="activeLog?.status === 'done'" required>
+                                    <option value="baik">Baik</option>
+                                    <option value="rusak_ringan">Rusak Ringan</option>
+                                    <option value="rusak_berat">Rusak Berat</option>
+                                    <option value="maintenance">Maintenance</option>
+                                    <option value="dihapus">Dihapus</option>
+                                    <option value="diganti">Diganti</option>
+                                </select>
+                                <template x-if="activeLog?.status === 'done'">
+                                    <input type="hidden" name="condition_after" :value="activeLog?.condition_after">
+                                </template>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Biaya</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400 pointer-events-none select-none">Rp</span>
+                                    <input type="number" min="0" name="cost" :value="activeLog?.cost || 0" class="w-full rounded-xl border-slate-200 text-sm !pl-9 disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed read-only:bg-slate-100 read-only:text-slate-500 read-only:cursor-not-allowed" :readonly="activeLog?.status === 'done'">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 6. BHP yang Dipakai (Dynamic) - HANYA BISA DIEDIT JIKA BELUM DONE -->
+                        <template x-if="activeLog?.status !== 'done'">
+                            <div class="rounded-xl bg-amber-50 border border-amber-200 p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <p class="text-xs font-bold text-amber-800">BHP yang dipakai</p>
+                                    <button type="button" @click="addBhpRow()" class="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 transition-colors bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-lg">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                        Tambah BHP
+                                    </button>
+                                </div>
+                                
+                                <div x-show="bhpRows.length === 0" class="text-center py-3">
+                                    <p class="text-xs text-amber-600/70">Belum ada BHP yang dicatat.</p>
+                                </div>
+
+                                <template x-for="(row, index) in bhpRows" :key="index">
+                                    <div class="flex items-start gap-2 mb-2 last:mb-0">
+                                        <select :name="'bhp_stock_id[]'" x-model="row.stock_id" class="flex-1 rounded-xl border-amber-200 text-xs bg-white" required>
+                                            <option value="" disabled>Pilih BHP</option>
+                                            <template x-for="stock in bhpStocks" :key="stock.id">
+                                                <option :value="stock.id" x-text="stock.item_name + ' — stok ' + stock.current_stock + ' ' + stock.unit"></option>
+                                            </template>
+                                        </select>
+                                        <input type="number" min="1" :name="'bhp_quantity[]'" x-model="row.quantity" class="w-20 rounded-xl border-amber-200 text-xs text-center bg-white" placeholder="Qty" required>
+                                        <button type="button" @click="removeBhpRow(index)" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Hapus">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <!-- Tampilkan teks jika status sudah done -->
+                        <template x-if="activeLog?.status === 'done'">
+                            <div class="rounded-xl bg-slate-50 border border-slate-200 p-4">
+                                <p class="text-xs font-bold text-slate-500 mb-2">BHP yang dipakai (Sudah Final)</p>
+                                <template x-if="activeLog?.bhp_usages?.length > 0">
+                                    <ul class="space-y-1">
+                                        <template x-for="usage in activeLog.bhp_usages">
+                                            <li class="text-xs text-slate-500 flex items-center gap-1.5">
+                                                <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                <span x-text="usage.item_name"></span> 
+                                                <span class="font-bold">(-<span x-text="usage.quantity"></span> <span x-text="usage.unit"></span>)</span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </template>
+                                <template x-if="!activeLog?.bhp_usages?.length">
+                                    <p class="text-xs text-slate-400">Tidak ada BHP yang dicatat.</p>
+                                </template>
+                            </div>
+                        </template>
+
+                        <!-- 7. Catatan -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Catatan</label>
+                            <textarea name="notes" :value="activeLog?.notes" rows="2" class="w-full rounded-xl border-slate-200 text-sm" placeholder="Tambahkan catatan tambahan jika diperlukan..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 border-t border-slate-100 bg-white flex gap-3 shrink-0">
+                        <button type="button" @click="activeModal = null" class="flex-1 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold py-2.5 hover:bg-slate-200 transition-colors">
+                            Batal
+                        </button>
+                        <button type="submit" class="flex-1 rounded-xl bg-indigo-600 text-white text-sm font-semibold py-2.5 hover:bg-indigo-700 transition-colors shadow-sm">
+                            Simpan Perubahan
                         </button>
                     </div>
                 </form>

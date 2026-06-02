@@ -99,6 +99,14 @@ Route::middleware('frontend.auth')->group(function () {
         ->middleware('frontend.role:staf_laboratorium')
         ->name('maintenance.store');
 
+    Route::put('/maintenance/{id}', [MaintenanceController::class, 'update'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('maintenance.update');
+
+    Route::delete('/maintenance/{id}', [MaintenanceController::class, 'destroy'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('maintenance.destroy');
+
     Route::get('/procurement', [DashboardController::class, 'procurement'])
         ->middleware('frontend.role:administrator,kepala_laboratorium,ketua_program_studi,staf_administrasi')
         ->name('procurement');

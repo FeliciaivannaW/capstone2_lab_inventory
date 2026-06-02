@@ -178,6 +178,8 @@ router.get("/bhp/stocks/:id/movements", authMiddleware, roleMiddleware(["staf_la
 // ============================================================
 router.get("/maintenance/logs", authMiddleware, roleMiddleware(["staf_laboratorium"]), maintenanceController.getMaintenanceLogs);
 router.post("/maintenance/logs", authMiddleware, roleMiddleware(["staf_laboratorium"]), maintenanceController.createMaintenanceLog);
+router.put("/maintenance/logs/:id", authMiddleware, roleMiddleware(["staf_laboratorium"]), maintenanceController.updateMaintenanceLog);
+router.delete("/maintenance/logs/:id", authMiddleware, roleMiddleware(["staf_laboratorium"]), maintenanceController.deleteMaintenanceLog);
 
 // ============================================================
 // PROCUREMENT DRAFT ROUTES
