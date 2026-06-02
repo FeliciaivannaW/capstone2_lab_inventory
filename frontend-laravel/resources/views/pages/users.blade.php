@@ -109,11 +109,16 @@
                         </div>
 
                         <div x-show="!['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)">
-                            <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ old('lab_id') }}" />
+                            <template x-if="selectedRole == '{{ $stafLabRoleId }}'">
+                                <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ old('lab_id') }}" />
+                            </template>
+                            <template x-if="selectedRole != '{{ $stafLabRoleId }}'">
+                                <x-form.field type="select" name="lab_id" label="Akses Lab" :options="$labOptions" value="{{ old('lab_id') }}" />
+                            </template>
                             <p class="text-[0.68rem] text-slate-400 -mt-3">Opsional. Dipakai sebagai lab utama user.</p>
                         </div>
                         <div x-show="['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">Lab Utama</label>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Lab</label>
                             <input type="text" value="Semua Laboratorium" disabled class="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed">
                             <p class="text-[0.68rem] text-amber-600 mt-1" x-text="selectedRole == '{{ $kepalaLabRoleId }}' ? 'Kepala Laboratorium memiliki akses ke seluruh laboratorium.' : 'Ketua Program Studi memiliki akses ke seluruh laboratorium.'"></p>
                         </div>
@@ -428,10 +433,15 @@
                                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <x-form.field type="select" name="role_id" label="Role" :options="$roleOptions" value="{{ $user['role_id'] }}" x-model="selectedRole" required />
                                                 <div x-show="!['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)">
-                                                    <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
+                                                    <template x-if="selectedRole == '{{ $stafLabRoleId }}'">
+                                                        <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
+                                                    </template>
+                                                    <template x-if="selectedRole != '{{ $stafLabRoleId }}'">
+                                                        <x-form.field type="select" name="lab_id" label="Akses Lab" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
+                                                    </template>
                                                 </div>
                                                 <div x-show="['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
-                                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Lab Utama</label>
+                                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Lab</label>
                                                     <input type="text" value="Semua Laboratorium" disabled class="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed">
                                                     <p class="text-[0.68rem] text-amber-600 mt-1">Terkunci (akses ke seluruh lab).</p>
                                                 </div>
