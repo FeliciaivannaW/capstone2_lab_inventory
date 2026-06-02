@@ -134,9 +134,11 @@ class BhpController extends Controller
 
     public function movement(Request $request, $id)
     {
+        $minQty = $request->input('movement_type') === 'adjustment' ? 0 : 1;
+        
         $validated = $request->validate([
             'movement_type' => 'required|in:in,out,adjustment',
-            'quantity' => 'required|integer|min:1',
+            'quantity' => 'required|integer|min:' . $minQty,
             'note' => 'nullable|string|max:1000',
         ]);
 

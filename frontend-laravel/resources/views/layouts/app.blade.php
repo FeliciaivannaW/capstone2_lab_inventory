@@ -379,6 +379,8 @@
         .badge-finalized { background:#F0FDF4; color:#16A34A; }
         .badge-pending   { background:#FFFBEB; color:#D97706; }
         .badge-active    { background:#EEF2FF; color:#6366F1; }
+        .badge-critical  { background:#FFF7ED; color:#EA580C; }
+        .badge-empty     { background:#FEF2F2; color:#DC2626; border: 1px solid #FECACA; }
 
         .glass-card {
             background: rgba(255,255,255,0.85);
