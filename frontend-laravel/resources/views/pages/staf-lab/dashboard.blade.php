@@ -147,6 +147,18 @@
                     </div>
                 @endforeach
             </div>
+
+            <div class="w-full mt-5 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-start gap-3">
+                <div class="mt-0.5 w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-700">Panduan Tindakan</p>
+                    <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">Aset yang berada dalam kondisi <span class="text-amber-600 font-medium">Rusak Ringan</span> atau <span class="text-red-600 font-medium">Rusak Berat</span> disarankan untuk segera ditindaklanjuti ke log maintenance.</p>
+                </div>
+            </div>
         </div>
         @else
             <div class="flex flex-col items-center justify-center py-12 text-center">
@@ -271,7 +283,7 @@
                             </div>
                             <div class="flex-1 min-w-0 pt-0.5">
                                 <div class="flex justify-between items-start mb-1">
-                                    <p class="text-sm font-bold text-slate-800 truncate">{{ $log['asset_name'] ?? 'Aset Tidak Diketahui' }}</p>
+                                    <p class="text-sm font-bold text-slate-800 truncate">{{ $log['item_name'] ?? 'Aset Tidak Diketahui' }}</p>
                                     <span class="text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap {{ $stColor }}">{{ $stLabel }}</span>
                                 </div>
                                 <p class="text-xs text-slate-500 truncate mb-1">{{ $log['issue_description'] ?? 'Tidak ada deskripsi' }}</p>

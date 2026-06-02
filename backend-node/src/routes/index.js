@@ -296,7 +296,7 @@ router.post("/upload/asset-photo", authMiddleware, roleMiddleware(["staf_adminis
 // ============================================================
 // STATISTICS ROUTES
 // ============================================================
-router.get("/statistics/summary", authMiddleware, roleMiddleware(["staf_administrasi", "administrator"]), statisticsController.getSummary);
+router.get("/statistics/summary", authMiddleware, roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium"]), statisticsController.getSummary);
 
 router.get("/admin-only", authMiddleware, roleMiddleware(["administrator"]), (req, res) => {
   res.json({ status: "success", message: "Halaman khusus administrator" });
