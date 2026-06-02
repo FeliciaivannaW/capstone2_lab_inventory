@@ -30,7 +30,7 @@ Through this system, laboratory items can be monitored from the moment they are 
 | 📦 Asset Digitalization | Digital recording of laboratory assets and consumables in one centralized system |
 | 🛒 Item Procurement | Annual item purchasing draft submission system with purchase reference links |
 | 🔄 Lifecycle Tracking | Tracking item history from procurement, maintenance, replacement, to disposal |
-| 🏷️ Inventory Update | Label numbering and QR/Barcode photo allocation for each asset |
+| 🏷️ Smart Inventory Update | Auto-generation of Asset Codes (e.g., `INV-LAB-PROG-1-2025-001`) and Label Numbers (`LBL-LAB-PROG-1-001`), along with QR/Barcode generation for each asset |
 | 📉 Stock Management | Automatic deduction of consumable stock when items are used during maintenance |
 
 ---
@@ -298,7 +298,8 @@ To test all the features of the **Labventory** system sequentially from start to
   1. Go to the **Penerimaan Barang** (Goods Receipt) menu. The draft with status `finalized` will appear here.
   2. When the physical items arrive, click **Terima Barang** (Receive Goods). Enter the receipt number, item arrival date, and upload a receipt invoice photo.
   3. Go to the **Update Label & Foto** (Update Label & Photo) menu.
-  4. The system will automatically split the received procurement items into individual asset units. Enter the **Label Number** of the physical asset and upload a **QR/Barcode Photo** for each unit of the asset to officially register it into the system. Once saved, the asset status will automatically be updated to `active`.
+  4. The system will automatically split the received procurement items into individual asset units. The **Asset Code** (`INV-{KODE_LAB}-{TAHUN}-{SEQ}`) and **Label Number** (`LBL-{KODE_LAB}-{SEQ}`) will be automatically generated for each unit. 
+  5. The Administrative Staff can review the generated labels, optionally upload a physical **QR/Barcode Photo**, and confirm them to officially register the assets into the system. Once saved, the asset status will automatically be updated to `available` and ready for use in the laboratory.
 
 ### 4. Phase 4: Asset Maintenance & Consumables Usage (Role: Laboratory Staff)
 * **Login:** `staflab@example.com` / `password123`

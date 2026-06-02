@@ -161,12 +161,12 @@ JOIN item_catalogs
 WHERE item_catalogs.type = 'bhp';
 
 INSERT INTO inventory_assets (item_catalog_id, room_id, asset_code, label_number, serial_number, purchase_price, purchase_date, received_date, asset_condition, status, photo_url, notes) VALUES
-((SELECT id FROM item_catalogs WHERE name = 'PC Desktop'), (SELECT id FROM rooms WHERE code = 'H08-A03'), 'INV-PC-PROG1-001', 'LBL-PROG1-001', 'PCP1001', 8500000, '2025-01-15', '2025-01-20', 'baik', 'available', NULL, 'PC untuk praktikum programming'),
-((SELECT id FROM item_catalogs WHERE name = 'PC Desktop'), (SELECT id FROM rooms WHERE code = 'H08-A03'), 'INV-PC-PROG1-002', 'LBL-PROG1-002', 'PCP1002', 8500000, '2025-01-15', '2025-01-20', 'maintenance', 'maintenance', NULL, 'PC sedang dicek karena lambat'),
-((SELECT id FROM item_catalogs WHERE name = 'Monitor'), (SELECT id FROM rooms WHERE code = 'H08-A03'), 'INV-MON-PROG1-001', 'LBL-MON-PROG1-001', 'MON1001', 1700000, '2025-01-15', '2025-01-20', 'baik', 'available', NULL, 'Monitor untuk PC programming'),
-((SELECT id FROM item_catalogs WHERE name = 'Router'), (SELECT id FROM rooms WHERE code = 'H08-A02'), 'INV-RTR-NET-001', 'LBL-NET-001', 'RTR1001', 2500000, '2025-02-10', '2025-02-15', 'baik', 'available', NULL, 'Router praktikum jaringan'),
-((SELECT id FROM item_catalogs WHERE name = 'Switch'), (SELECT id FROM rooms WHERE code = 'H08-A02'), 'INV-SW-NET-001', 'LBL-NET-002', 'SW1001', 3200000, '2025-02-10', '2025-02-15', 'rusak_ringan', 'available', NULL, 'Switch perlu pengecekan port'),
-((SELECT id FROM item_catalogs WHERE name = 'Access Point'), (SELECT id FROM rooms WHERE code = 'H08-B06'), 'INV-AP-SRV-001', 'LBL-SRV-001', 'AP1001', 1200000, '2025-03-05', '2025-03-09', 'baik', 'available', NULL, 'Access point cadangan server room');
+((SELECT id FROM item_catalogs WHERE name = 'PC Desktop'), (SELECT id FROM rooms WHERE code = 'H08-A03'), 'INV-LAB-PROG-1-2025-001', 'LBL-LAB-PROG-1-001', 'PCP1001', 8500000, '2025-01-15', '2025-01-20', 'baik', 'available', NULL, 'PC untuk praktikum programming'),
+((SELECT id FROM item_catalogs WHERE name = 'PC Desktop'), (SELECT id FROM rooms WHERE code = 'H08-A03'), 'INV-LAB-PROG-1-2025-002', 'LBL-LAB-PROG-1-002', 'PCP1002', 8500000, '2025-01-15', '2025-01-20', 'maintenance', 'maintenance', NULL, 'PC sedang dicek karena lambat'),
+((SELECT id FROM item_catalogs WHERE name = 'Monitor'), (SELECT id FROM rooms WHERE code = 'H08-A03'), 'INV-LAB-PROG-1-2025-003', 'LBL-LAB-PROG-1-003', 'MON1001', 1700000, '2025-01-15', '2025-01-20', 'baik', 'available', NULL, 'Monitor untuk PC programming'),
+((SELECT id FROM item_catalogs WHERE name = 'Router'), (SELECT id FROM rooms WHERE code = 'H08-A02'), 'INV-LAB-COMNET-2025-001', 'LBL-LAB-COMNET-001', 'RTR1001', 2500000, '2025-02-10', '2025-02-15', 'baik', 'available', NULL, 'Router praktikum jaringan'),
+((SELECT id FROM item_catalogs WHERE name = 'Switch'), (SELECT id FROM rooms WHERE code = 'H08-A02'), 'INV-LAB-COMNET-2025-002', 'LBL-LAB-COMNET-002', 'SW1001', 3200000, '2025-02-10', '2025-02-15', 'rusak_ringan', 'available', NULL, 'Switch perlu pengecekan port'),
+((SELECT id FROM item_catalogs WHERE name = 'Access Point'), (SELECT id FROM rooms WHERE code = 'H08-B06'), 'INV-H08-B06-2025-001', 'LBL-H08-B06-001', 'AP1001', 1200000, '2025-03-05', '2025-03-09', 'baik', 'available', NULL, 'Access point cadangan server room');
 INSERT INTO inventory_assets (
     item_catalog_id,
     room_id,
@@ -181,21 +181,21 @@ INSERT INTO inventory_assets (
     photo_url,
     notes
 ) VALUES
-((SELECT id FROM item_catalogs WHERE name = 'Keyboard'), (SELECT id FROM rooms WHERE code = 'H08-A04'), 'INV-KB-PROG2-001', 'LBL-PROG2-KB-001', 'KBP2001', 250000, '2025-02-01', '2025-02-08', 'baik', 'available', NULL, 'Keyboard untuk Programming Lab 2'),
-((SELECT id FROM item_catalogs WHERE name = 'Mouse'), (SELECT id FROM rooms WHERE code = 'H08-A04'), 'INV-MS-PROG2-001', 'LBL-PROG2-MS-001', 'MSP2001', 150000, '2025-02-01', '2025-02-08', 'baik', 'available', NULL, 'Mouse untuk Programming Lab 2'),
-((SELECT id FROM item_catalogs WHERE name = 'Monitor'), (SELECT id FROM rooms WHERE code = 'H08-A04'), 'INV-MON-PROG2-001', NULL, 'MON2001', 1750000, '2025-02-01', '2025-02-08', 'baik', 'received', NULL, 'Monitor baru belum diberi label'),
-((SELECT id FROM item_catalogs WHERE name = 'Meja Komputer'), (SELECT id FROM rooms WHERE code = 'H08-C03'), 'INV-DESK-DB-001', 'LBL-DB-DSK-001', 'DSK3001', 1200000, '2025-01-12', '2025-01-18', 'baik', 'available', NULL, 'Meja komputer untuk Database Lab'),
-((SELECT id FROM item_catalogs WHERE name = 'Kursi Laboratorium'), (SELECT id FROM rooms WHERE code = 'H08-C04'), 'INV-CHR-MM-001', NULL, 'CHR4001', 450000, '2025-03-01', '2025-03-06', 'baik', 'labeled', NULL, 'Kursi laboratorium multimedia'),
-((SELECT id FROM item_catalogs WHERE name = 'PC Desktop'), (SELECT id FROM rooms WHERE code = 'FTI-201'), 'INV-PC-AI-001', 'LBL-AI-001', 'PCAI001', 9200000, '2025-03-15', '2025-03-21', 'baik', 'available', NULL, 'PC untuk AI Lab'),
-((SELECT id FROM item_catalogs WHERE name = 'Monitor'), (SELECT id FROM rooms WHERE code = 'FTI-201'), 'INV-MON-AI-001', 'LBL-AI-MON-001', 'MONAI001', 1800000, '2025-03-15', '2025-03-21', 'rusak_ringan', 'maintenance', NULL, 'Monitor AI Lab sedang dicek');
+((SELECT id FROM item_catalogs WHERE name = 'Keyboard'), (SELECT id FROM rooms WHERE code = 'H08-A04'), 'INV-LAB-PROG-2-2025-001', 'LBL-LAB-PROG-2-001', 'KBP2001', 250000, '2025-02-01', '2025-02-08', 'baik', 'available', NULL, 'Keyboard untuk Programming Lab 2'),
+((SELECT id FROM item_catalogs WHERE name = 'Mouse'), (SELECT id FROM rooms WHERE code = 'H08-A04'), 'INV-LAB-PROG-2-2025-002', 'LBL-LAB-PROG-2-002', 'MSP2001', 150000, '2025-02-01', '2025-02-08', 'baik', 'available', NULL, 'Mouse untuk Programming Lab 2'),
+((SELECT id FROM item_catalogs WHERE name = 'Monitor'), (SELECT id FROM rooms WHERE code = 'H08-A04'), 'INV-LAB-PROG-2-2025-003', NULL, 'MON2001', 1750000, '2025-02-01', '2025-02-08', 'baik', 'received', NULL, 'Monitor baru belum diberi label'),
+((SELECT id FROM item_catalogs WHERE name = 'Meja Komputer'), (SELECT id FROM rooms WHERE code = 'H08-C03'), 'INV-LAB-DB-2025-001', 'LBL-LAB-DB-001', 'DSK3001', 1200000, '2025-01-12', '2025-01-18', 'baik', 'available', NULL, 'Meja komputer untuk Database Lab'),
+((SELECT id FROM item_catalogs WHERE name = 'Kursi Laboratorium'), (SELECT id FROM rooms WHERE code = 'H08-C04'), 'INV-LAB-MM-2025-001', NULL, 'CHR4001', 450000, '2025-03-01', '2025-03-06', 'baik', 'labeled', NULL, 'Kursi laboratorium multimedia'),
+((SELECT id FROM item_catalogs WHERE name = 'PC Desktop'), (SELECT id FROM rooms WHERE code = 'FTI-201'), 'INV-LAB-AI-2025-001', 'LBL-LAB-AI-001', 'PCAI001', 9200000, '2025-03-15', '2025-03-21', 'baik', 'available', NULL, 'PC untuk AI Lab'),
+((SELECT id FROM item_catalogs WHERE name = 'Monitor'), (SELECT id FROM rooms WHERE code = 'FTI-201'), 'INV-LAB-AI-2025-002', 'LBL-LAB-AI-002', 'MONAI001', 1800000, '2025-03-15', '2025-03-21', 'rusak_ringan', 'maintenance', NULL, 'Monitor AI Lab sedang dicek');
 
 INSERT INTO maintenance_logs (inventory_asset_id, performed_by, maintenance_date, issue_description, action_taken, condition_before, condition_after, status, cost, notes) VALUES
-((SELECT id FROM inventory_assets WHERE asset_code = 'INV-PC-PROG1-002'), (SELECT id FROM users WHERE email = 'staflab@example.com'), '2025-05-20', 'PC lambat dan suhu cepat panas', 'Membersihkan debu dan mengganti thermal paste', 'maintenance', 'baik', 'done', 50000, 'Maintenance selesai dan stok thermal paste berkurang'),
-((SELECT id FROM inventory_assets WHERE asset_code = 'INV-SW-NET-001'), (SELECT id FROM users WHERE email = 'staflab.jaringan@example.com'), '2025-05-22', 'Beberapa port switch tidak stabil', 'Membersihkan port dan merapikan kabel LAN', 'rusak_ringan', 'baik', 'done', 25000, 'Maintenance selesai dan kabel LAN terpakai');
+((SELECT id FROM inventory_assets WHERE asset_code = 'INV-LAB-PROG-1-2025-002'), (SELECT id FROM users WHERE email = 'staflab@example.com'), '2025-05-20', 'PC lambat dan suhu cepat panas', 'Membersihkan debu dan mengganti thermal paste', 'maintenance', 'baik', 'done', 50000, 'Maintenance selesai dan stok thermal paste berkurang'),
+((SELECT id FROM inventory_assets WHERE asset_code = 'INV-LAB-COMNET-2025-002'), (SELECT id FROM users WHERE email = 'staflab.jaringan@example.com'), '2025-05-22', 'Beberapa port switch tidak stabil', 'Membersihkan port dan merapikan kabel LAN', 'rusak_ringan', 'baik', 'done', 25000, 'Maintenance selesai dan kabel LAN terpakai');
 
 INSERT INTO asset_condition_logs (inventory_asset_id, updated_by, old_condition, new_condition, note) VALUES
-((SELECT id FROM inventory_assets WHERE asset_code = 'INV-PC-PROG1-002'), (SELECT id FROM users WHERE email = 'staflab@example.com'), 'maintenance', 'baik', 'Kondisi membaik setelah maintenance'),
-((SELECT id FROM inventory_assets WHERE asset_code = 'INV-SW-NET-001'), (SELECT id FROM users WHERE email = 'staflab.jaringan@example.com'), 'rusak_ringan', 'baik', 'Port switch sudah dicek');
+((SELECT id FROM inventory_assets WHERE asset_code = 'INV-LAB-PROG-1-2025-002'), (SELECT id FROM users WHERE email = 'staflab@example.com'), 'maintenance', 'baik', 'Kondisi membaik setelah maintenance'),
+((SELECT id FROM inventory_assets WHERE asset_code = 'INV-LAB-COMNET-2025-002'), (SELECT id FROM users WHERE email = 'staflab.jaringan@example.com'), 'rusak_ringan', 'baik', 'Port switch sudah dicek');
 
 INSERT INTO bhp_stock_movements (stock_id, maintenance_id, performed_by, movement_type, quantity, movement_date, note) VALUES
 ((SELECT bs.id FROM bhp_stocks bs JOIN laboratories l ON bs.lab_id = l.id JOIN item_catalogs ic ON bs.item_catalog_id = ic.id WHERE l.code = 'LAB-PROG-1' AND ic.name = 'Thermal Paste'), (SELECT id FROM maintenance_logs WHERE notes = 'Maintenance selesai dan stok thermal paste berkurang'), (SELECT id FROM users WHERE email = 'staflab@example.com'), 'maintenance_usage', 1, '2025-05-20 10:30:00', 'Thermal paste digunakan saat maintenance PC'),
