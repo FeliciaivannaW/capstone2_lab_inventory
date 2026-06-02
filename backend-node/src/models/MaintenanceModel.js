@@ -121,6 +121,44 @@ const MaintenanceModel = {
     return result;
   },
 
+  async findLogById(logId, tx = null) {
+    const conn = tx || db;
+    const [logs] = await conn.query(`
+      SELECT ml.*,
+             COALESCE(lproc.id, lroom.id) AS lab_id
+      FROM maintenance_logs ml
+      JOIN inventory_assets ia ON ml.inventory_asset_id = ia.id
+      LEFT JOIN rooms r ON ia.room_id = r.id
+      LEFT JOIN laboratories lroom ON r.id = lroom.room_id
+      LEFT JOIN procurement_items pi ON ia.procurement_item_id = pi.id
+      LEFT JOIN procurement_drafts pd ON pi.draft_id = pd.id
+      LEFT JOIN laboratories lproc ON pd.lab_id = lproc.id
+      WHERE ml.id = ?
+      LIMIT 1
+      FOR UPDATE
+    `, [logId]);
+    return logs[0] || null;
+  },
+
+  async updateLog(logId, { maintenanceDate, issueDescription, actionTaken, conditionAfter, status, cost, notes }, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(`
+      UPDATE maintenance_logs
+      SET maintenance_date = ?, issue_description = ?, action_taken = ?,
+          condition_after = ?, status = ?, cost = ?, notes = ?
+      WHERE id = ?
+    `, [maintenanceDate, issueDescription, actionTaken, conditionAfter, status, cost, notes, logId]);
+    return result;
+  },
+
+  async deleteLog(logId, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(`
+      DELETE FROM maintenance_logs WHERE id = ?
+    `, [logId]);
+    return result;
+  },
+
   async updateAssetStatus(assetId, condition, status, tx = null) {
     const conn = tx || db;
     const [result] = await conn.query(`

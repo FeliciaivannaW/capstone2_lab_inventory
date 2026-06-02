@@ -87,6 +87,10 @@ Route::middleware('frontend.auth')->group(function () {
         ->middleware('frontend.role:staf_laboratorium')
         ->name('bhp.movement');
 
+    Route::get('/bhp/{id}/movements', [BhpController::class, 'getMovements'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('bhp.movements');
+
     Route::get('/maintenance', [MaintenanceController::class, 'index'])
         ->middleware('frontend.role:staf_laboratorium')
         ->name('maintenance');
@@ -94,6 +98,14 @@ Route::middleware('frontend.auth')->group(function () {
     Route::post('/maintenance', [MaintenanceController::class, 'store'])
         ->middleware('frontend.role:staf_laboratorium')
         ->name('maintenance.store');
+
+    Route::put('/maintenance/{id}', [MaintenanceController::class, 'update'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('maintenance.update');
+
+    Route::delete('/maintenance/{id}', [MaintenanceController::class, 'destroy'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('maintenance.destroy');
 
     Route::get('/procurement', [DashboardController::class, 'procurement'])
         ->middleware('frontend.role:administrator,kepala_laboratorium,ketua_program_studi,staf_administrasi')

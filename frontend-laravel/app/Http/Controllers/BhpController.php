@@ -134,16 +134,24 @@ class BhpController extends Controller
 
     public function movement(Request $request, $id)
     {
+        $minQty = $request->input('movement_type') === 'adjustment' ? 0 : 1;
+        
         $validated = $request->validate([
             'movement_type' => 'required|in:in,out,adjustment',
-            'quantity' => 'required|integer|min:1',
+            'quantity' => 'required|integer|min:' . $minQty,
             'note' => 'nullable|string|max:1000',
         ]);
 
-        $result = $this->sendApiData("/bhp/stocks/{$id}/movement", $validated);
+        $result = $this->sendApiData("/bhp/stocks/{$id}/movements", $validated);
 
         return $result['ok']
             ? back()->with('success', $result['message'])
             : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function getMovements(Request $request, $id)
+    {
+        $movements = $this->getApiData("/bhp/stocks/{$id}/movements") ?: [];
+        return response()->json($movements);
     }
 }

@@ -39,12 +39,18 @@ const getInventoryAssets = async (req, res) => {
   try {
     const { search, status, condition, label_status, lab_id, receipt_id, sort } = req.query;
     const roomIds = await getAccessibleRoomIdsForUser(req.user);
+    
+    let labIds = null;
+    if (req.user?.role === "staf_laboratorium") {
+      labIds = await LabAccessModel.findAccessibleLabIds(req.user.id);
+      labIds = labIds.map(id => Number(id));
+    }
 
-    if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0)) {
+    if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0) && (!labIds || labIds.length === 0)) {
       return res.json({ success: true, data: [], message: "Data inventaris berhasil diambil" });
     }
 
-    const assets = await InventoryModel.findAll({ search, status, condition, label_status, lab_id, roomIds, receipt_id, sort });
+    const assets = await InventoryModel.findAll({ search, status, condition, label_status, lab_id, roomIds, labIds, receipt_id, sort });
 
     res.json({ success: true, data: assets, message: "Data inventaris berhasil diambil" });
   } catch (error) {
@@ -532,8 +538,14 @@ const getAssetTimeline = async (req, res) => {
 const getConditionHistory = async (req, res) => {
   try {
     const roomIds = await getAccessibleRoomIdsForUser(req.user);
+    
+    let labIds = null;
+    if (req.user?.role === "staf_laboratorium") {
+      labIds = await LabAccessModel.findAccessibleLabIds(req.user.id);
+      labIds = labIds.map(id => Number(id));
+    }
 
-    if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0)) {
+    if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0) && (!labIds || labIds.length === 0)) {
       return res.json({
         success: true,
         data: [],
@@ -544,7 +556,8 @@ const getConditionHistory = async (req, res) => {
     const history = await InventoryModel.findConditionHistory({
       search: req.query.search,
       condition: req.query.condition,
-      roomIds
+      roomIds,
+      labIds
     });
 
     res.json({

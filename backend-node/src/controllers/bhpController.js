@@ -183,8 +183,15 @@ const adjustStock = async (req, res) => {
   const connection = await db.getConnection();
   try {
     const stockId = parsePositiveInt(req.params.id, "ID stok");
-    const quantity = parsePositiveInt(req.body.quantity, "Jumlah");
     const movementType = req.body.movement_type;
+    const isAdjustment = movementType === "adjustment";
+    const parsedQty = Number(req.body.quantity);
+
+    if (!Number.isInteger(parsedQty) || parsedQty < 0 || (!isAdjustment && parsedQty === 0)) {
+      return res.status(400).json({ status: "error", message: isAdjustment ? "Jumlah tidak boleh negatif" : "Jumlah harus lebih dari 0" });
+    }
+    const quantity = parsedQty;
+    
     const note = req.body.note || null;
 
     if (!["in", "out", "adjustment"].includes(movementType)) {
