@@ -247,19 +247,26 @@
                             <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <p class="text-xs font-semibold text-slate-400 uppercase mb-1">Aset</p>
-                                        <p class="font-bold text-slate-800" x-text="activeLog.item_name || '-'"></p>
-                                        <div class="flex items-center gap-2 mt-1">
-                                            <span class="font-mono text-xs font-bold bg-white px-2 py-1 rounded-md border border-slate-200" x-text="activeLog.asset_code || '-'"></span>
+                                        <p class="text-xs font-semibold text-slate-400 uppercase mb-1.5">Aset</p>
+                                        <p class="font-bold text-slate-800 text-sm leading-snug mb-1.5" x-text="activeLog.item_name || '-'"></p>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="font-mono text-[0.7rem] font-bold bg-white px-2 py-1 rounded-md border border-slate-200 whitespace-nowrap" x-text="activeLog.asset_code || '-'"></span>
                                             <template x-if="activeLog.label_number">
-                                                <span class="text-xs text-slate-500" x-text="activeLog.label_number"></span>
+                                                <span class="font-mono text-[0.7rem] text-slate-500 bg-slate-100 px-2 py-1 rounded-md border border-slate-200 whitespace-nowrap" x-text="activeLog.label_number"></span>
                                             </template>
                                         </div>
                                     </div>
                                     <div>
                                         <p class="text-xs font-semibold text-slate-400 uppercase mb-1">Ruangan</p>
-                                        <p class="font-semibold text-slate-800" x-text="activeLog.room_name || '-'"></p>
-                                        <p class="text-xs text-slate-500 font-mono" x-text="activeLog.room_code || '-'"></p>
+                                        <template x-if="activeLog.room_name">
+                                            <div>
+                                                <p class="font-semibold text-slate-800" x-text="activeLog.room_name"></p>
+                                                <p class="text-xs text-slate-500 font-mono" x-text="activeLog.room_code || '-'"></p>
+                                            </div>
+                                        </template>
+                                        <template x-if="!activeLog.room_name">
+                                            <p class="text-sm italic text-slate-400">Belum ada ruangan</p>
+                                        </template>
                                     </div>
                                 </div>
                             </div>
