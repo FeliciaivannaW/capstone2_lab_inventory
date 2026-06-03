@@ -41,6 +41,7 @@
             indexMap: {},
             updateCounter: 0,
             filters: {},
+            searchQuery: '',
             get totalPages() { return Math.ceil(this.filteredTotalItems / this.perPage); },
             getPages() { return Array.from({length: this.totalPages}, (_, i) => i + 1); },
             showRow(index) {
@@ -137,8 +138,10 @@
                 }
             });
             
-            // Filter step using AND logic on data attributes
+            // Filter step using AND logic on data attributes and search query
             let visibleCount = 0;
+            const searchLower = (alpineData.searchQuery || '').toLowerCase();
+            
             groups.forEach(group => {
                 let matches = true;
                 for (const [key, filterValue] of Object.entries(alpineData.filters)) {
@@ -151,6 +154,14 @@
                         }
                     }
                 }
+                
+                if (matches && searchLower) {
+                    const textContent = group.main.innerText.toLowerCase();
+                    if (!textContent.includes(searchLower)) {
+                        matches = false;
+                    }
+                }
+                
                 group.matches = matches;
                 if (matches) visibleCount++;
             });
@@ -368,6 +379,8 @@
         .badge-finalized { background:#F0FDF4; color:#16A34A; }
         .badge-pending   { background:#FFFBEB; color:#D97706; }
         .badge-active    { background:#EEF2FF; color:#6366F1; }
+        .badge-critical  { background:#FFF7ED; color:#EA580C; }
+        .badge-empty     { background:#FEF2F2; color:#DC2626; border: 1px solid #FECACA; }
 
         .glass-card {
             background: rgba(255,255,255,0.85);
@@ -502,42 +515,18 @@
 
             {{-- Staf Administrasi --}}
             @if($role === 'staf_administrasi')
-                {{-- ── TUGAS UTAMA (3 fitur sesuai requirement) ── --}}
-                <div class="nav-section sidebar-label">Tugas Utama</div>
+                <div class="nav-section sidebar-label">Operasi Utama</div>
 
-                {{-- Fitur 1 --}}
-                <a href="{{ route('staf-admin.procurement-approved') }}" class="nav-link {{ request()->routeIs('staf-admin.procurement-approved*') ? 'active' : '' }}">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <span class="sidebar-label">Draf Disetujui</span>
-                </a>
-
-                {{-- Fitur 3 --}}
-                <a href="{{ route('staf-admin.goods-receipt-index') }}" class="nav-link {{ request()->routeIs('staf-admin.goods-receipt*') ? 'active' : '' }}">
+                {{-- Penerimaan Logistik (Alur Tahap 1 - 3) --}}
+                <a href="{{ route('staf-admin.procurement-approved') }}" class="nav-link {{ request()->routeIs('staf-admin.procurement-approved*', 'staf-admin.goods-receipt*', 'staf-admin.inventory-label*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-3l-2 3h-6l-2-3H4"/>
                     </svg>
-                    <span class="sidebar-label">Penerimaan Barang</span>
+                    <span class="sidebar-label">Penerimaan Logistik</span>
                 </a>
 
-                {{-- Fitur 2 --}}
-                <a href="{{ route('staf-admin.inventory-label') }}" class="nav-link {{ request()->routeIs('staf-admin.inventory-label*') ? 'active' : '' }}">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                    </svg>
-                    <span class="sidebar-label">Update Label & Foto</span>
-                </a>
+                <div class="nav-section sidebar-label">Inventaris</div>
 
-                {{-- ── PELENGKAP (informasi tambahan) ── --}}
-                <div class="nav-section sidebar-label">Lainnya</div>
-
-                <a href="{{ route('staf-admin.dashboard') }}" class="nav-link {{ request()->routeIs('staf-admin.dashboard') ? 'active' : '' }}">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                    <span class="sidebar-label">Statistik</span>
-                </a>
                 <a href="{{ route('staf-admin.asset-list') }}" class="nav-link {{ request()->routeIs('staf-admin.asset*') ? 'active' : '' }}">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -635,6 +624,44 @@
     {{-- ───── MAIN CONTENT ───── --}}
     <main :class="sidebarOpen ? 'ml-60' : 'ml-16'"
           class="min-h-screen pt-14 transition-all duration-250">
+        
+        {{-- Flash Messages --}}
+        @if(session('success') || session('error'))
+            <div x-data="{ show: true }" x-show="show" 
+                 x-init="setTimeout(() => show = false, 5000)"
+                 class="fixed top-20 right-6 z-[999] p-4 rounded-xl shadow-lg border backdrop-blur-md max-w-sm flex items-start gap-3
+                        {{ session('success') ? 'bg-emerald-50/90 border-emerald-200' : 'bg-red-50/90 border-red-200' }}"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-x-4"
+                 x-transition:enter-end="opacity-100 translate-x-0"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-x-0"
+                 x-transition:leave-end="opacity-0 translate-x-4">
+                <div class="flex-shrink-0 mt-0.5">
+                    @if(session('success'))
+                        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                    @else
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    @endif
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-semibold {{ session('success') ? 'text-emerald-800' : 'text-red-800' }}">
+                        {{ session('success') ? 'Berhasil' : 'Gagal' }}
+                    </p>
+                    <p class="text-xs mt-1 {{ session('success') ? 'text-emerald-600' : 'text-red-600' }}">
+                        {{ session('success') ?? session('error') }}
+                    </p>
+                </div>
+                <button @click="show = false" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+        @endif
+
         <div class="content-animate p-6 lg:p-8">
             @yield('content')
         </div>

@@ -1,0 +1,833 @@
+-- MySQL dump 10.13  Distrib 8.0.30, for Win64 (x86_64)
+--
+-- Host: localhost    Database: lab_inventory_db
+-- ------------------------------------------------------
+-- Server version	8.0.30
+
+CREATE DATABASE IF NOT EXISTS `lab_inventory_db`;
+USE `lab_inventory_db`;
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `asset_condition_logs`
+--
+
+DROP TABLE IF EXISTS `asset_condition_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `asset_condition_logs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `inventory_asset_id` int NOT NULL,
+  `updated_by` int NOT NULL,
+  `old_condition` enum('baik','rusak_ringan','rusak_berat','maintenance','dihapus','diganti') DEFAULT NULL,
+  `new_condition` enum('baik','rusak_ringan','rusak_berat','maintenance','dihapus','diganti') NOT NULL,
+  `note` text,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_asset_condition_logs_asset` (`inventory_asset_id`),
+  KEY `fk_asset_condition_logs_updated_by` (`updated_by`),
+  CONSTRAINT `fk_asset_condition_logs_asset` FOREIGN KEY (`inventory_asset_id`) REFERENCES `inventory_assets` (`id`),
+  CONSTRAINT `fk_asset_condition_logs_updated_by` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `asset_condition_logs`
+--
+
+LOCK TABLES `asset_condition_logs` WRITE;
+/*!40000 ALTER TABLE `asset_condition_logs` DISABLE KEYS */;
+INSERT INTO `asset_condition_logs` VALUES (1,2,5,'maintenance','baik','Kondisi membaik setelah maintenance','2026-05-31 04:58:29'),(2,5,7,'rusak_ringan','baik','Port switch sudah dicek','2026-05-31 04:58:29'),(3,1,5,'baik','rusak_berat','PC ketumpahan air minum mahasiswa','2026-06-01 13:01:54'),(4,14,4,'baik','baik','Label assigned','2026-06-01 20:40:50'),(5,14,4,'baik','baik','Label assigned','2026-06-01 21:10:19'),(6,19,5,'baik','rusak_ringan','Update dari maintenance #3','2026-06-02 08:55:24'),(7,20,5,'baik','rusak_ringan','Update dari maintenance #4','2026-06-02 09:07:15');
+/*!40000 ALTER TABLE `asset_condition_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `asset_disposals`
+--
+
+DROP TABLE IF EXISTS `asset_disposals`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `asset_disposals` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `inventory_asset_id` int NOT NULL,
+  `disposed_by` int NOT NULL,
+  `disposal_date` date NOT NULL,
+  `reason` text NOT NULL,
+  `disposal_note` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_asset_disposals_asset` (`inventory_asset_id`),
+  KEY `fk_asset_disposals_disposed_by` (`disposed_by`),
+  CONSTRAINT `fk_asset_disposals_asset` FOREIGN KEY (`inventory_asset_id`) REFERENCES `inventory_assets` (`id`),
+  CONSTRAINT `fk_asset_disposals_disposed_by` FOREIGN KEY (`disposed_by`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `asset_disposals`
+--
+
+LOCK TABLES `asset_disposals` WRITE;
+/*!40000 ALTER TABLE `asset_disposals` DISABLE KEYS */;
+/*!40000 ALTER TABLE `asset_disposals` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `bhp_stock_movements`
+--
+
+DROP TABLE IF EXISTS `bhp_stock_movements`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `bhp_stock_movements` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `stock_id` int NOT NULL,
+  `procurement_item_id` int DEFAULT NULL,
+  `receipt_id` int DEFAULT NULL,
+  `maintenance_id` int DEFAULT NULL,
+  `performed_by` int NOT NULL,
+  `movement_type` enum('in','out','adjustment','maintenance_usage') NOT NULL,
+  `quantity` int NOT NULL,
+  `movement_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `note` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_bhp_stock_movements_stock` (`stock_id`),
+  KEY `fk_bhp_stock_movements_procurement_item` (`procurement_item_id`),
+  KEY `fk_bhp_stock_movements_receipt` (`receipt_id`),
+  KEY `fk_bhp_stock_movements_maintenance` (`maintenance_id`),
+  KEY `fk_bhp_stock_movements_performed_by` (`performed_by`),
+  CONSTRAINT `fk_bhp_stock_movements_maintenance` FOREIGN KEY (`maintenance_id`) REFERENCES `maintenance_logs` (`id`),
+  CONSTRAINT `fk_bhp_stock_movements_performed_by` FOREIGN KEY (`performed_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_bhp_stock_movements_procurement_item` FOREIGN KEY (`procurement_item_id`) REFERENCES `procurement_items` (`id`),
+  CONSTRAINT `fk_bhp_stock_movements_receipt` FOREIGN KEY (`receipt_id`) REFERENCES `goods_receipts` (`id`),
+  CONSTRAINT `fk_bhp_stock_movements_stock` FOREIGN KEY (`stock_id`) REFERENCES `bhp_stocks` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `bhp_stock_movements`
+--
+
+LOCK TABLES `bhp_stock_movements` WRITE;
+/*!40000 ALTER TABLE `bhp_stock_movements` DISABLE KEYS */;
+INSERT INTO `bhp_stock_movements` VALUES (1,7,NULL,NULL,1,5,'maintenance_usage',1,'2025-05-20 10:30:00','Thermal paste digunakan saat maintenance PC','2026-05-31 04:58:29'),(2,4,NULL,NULL,2,7,'maintenance_usage',5,'2025-05-22 13:00:00','Kabel LAN digunakan saat maintenance switch','2026-05-31 04:58:29'),(3,8,NULL,NULL,NULL,5,'out',10,'2026-06-02 05:47:29','Penggantian kabel LAN di Lab Prog 1','2026-06-02 05:47:29'),(4,5,NULL,NULL,NULL,5,'adjustment',0,'2026-06-02 07:43:44',NULL,'2026-06-02 07:43:44'),(5,8,NULL,NULL,NULL,5,'in',5,'2026-06-02 07:44:37',NULL,'2026-06-02 07:44:37'),(6,7,NULL,NULL,3,5,'maintenance_usage',1,'2026-06-02 08:59:55','Pemakaian untuk maintenance #3','2026-06-02 08:59:55'),(7,7,NULL,NULL,4,5,'maintenance_usage',1,'2026-06-02 09:13:19','Pemakaian untuk maintenance #4','2026-06-02 09:13:19');
+/*!40000 ALTER TABLE `bhp_stock_movements` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `bhp_stocks`
+--
+
+DROP TABLE IF EXISTS `bhp_stocks`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `bhp_stocks` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `lab_id` int NOT NULL,
+  `item_catalog_id` int NOT NULL,
+  `current_stock` int NOT NULL DEFAULT '0',
+  `minimum_stock` int NOT NULL DEFAULT '0',
+  `unit` varchar(50) NOT NULL,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_bhp_stock_per_lab_item` (`lab_id`,`item_catalog_id`),
+  KEY `fk_bhp_stocks_catalog` (`item_catalog_id`),
+  CONSTRAINT `fk_bhp_stocks_catalog` FOREIGN KEY (`item_catalog_id`) REFERENCES `item_catalogs` (`id`),
+  CONSTRAINT `fk_bhp_stocks_lab` FOREIGN KEY (`lab_id`) REFERENCES `laboratories` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=57 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `bhp_stocks`
+--
+
+LOCK TABLES `bhp_stocks` WRITE;
+/*!40000 ALTER TABLE `bhp_stocks` DISABLE KEYS */;
+INSERT INTO `bhp_stocks` VALUES (1,1,11,25,5,'pack','2026-05-31 04:58:29'),(2,1,10,200,50,'pcs','2026-05-31 04:58:29'),(3,1,9,10,3,'pcs','2026-05-31 04:58:29'),(4,1,8,95,20,'meter','2026-05-31 04:58:29'),(5,2,11,0,5,'pack','2026-06-02 07:43:44'),(6,2,10,200,50,'pcs','2026-05-31 04:58:29'),(7,2,9,7,10,'pcs','2026-06-02 09:13:19'),(8,2,8,95,50,'meter','2026-06-02 07:44:37'),(9,3,11,25,5,'pack','2026-05-31 04:58:29'),(10,3,10,200,50,'pcs','2026-05-31 04:58:29'),(11,3,9,10,3,'pcs','2026-05-31 04:58:29'),(12,3,8,100,20,'meter','2026-05-31 04:58:29'),(13,4,11,25,5,'pack','2026-05-31 04:58:29'),(14,4,10,200,50,'pcs','2026-05-31 04:58:29'),(15,4,9,10,3,'pcs','2026-05-31 04:58:29'),(16,4,8,100,20,'meter','2026-05-31 04:58:29'),(17,5,11,25,5,'pack','2026-05-31 04:58:29'),(18,5,10,200,50,'pcs','2026-05-31 04:58:29'),(19,5,9,10,3,'pcs','2026-05-31 04:58:29'),(20,5,8,100,20,'meter','2026-05-31 04:58:29'),(21,6,11,25,5,'pack','2026-05-31 04:58:29'),(22,6,10,200,50,'pcs','2026-05-31 04:58:29'),(23,6,9,10,3,'pcs','2026-05-31 04:58:29'),(24,6,8,100,20,'meter','2026-05-31 04:58:29'),(25,7,11,25,5,'pack','2026-05-31 04:58:29'),(26,7,10,200,50,'pcs','2026-05-31 04:58:29'),(27,7,9,10,3,'pcs','2026-05-31 04:58:29'),(28,7,8,100,20,'meter','2026-05-31 04:58:29'),(29,8,11,25,5,'pack','2026-05-31 04:58:29'),(30,8,10,200,50,'pcs','2026-05-31 04:58:29'),(31,8,9,10,3,'pcs','2026-05-31 04:58:29'),(32,8,8,100,20,'meter','2026-05-31 04:58:29'),(33,9,11,25,5,'pack','2026-05-31 04:58:29'),(34,9,10,200,50,'pcs','2026-05-31 04:58:29'),(35,9,9,10,3,'pcs','2026-05-31 04:58:29'),(36,9,8,100,20,'meter','2026-05-31 04:58:29'),(37,10,11,25,5,'pack','2026-05-31 04:58:29'),(38,10,10,200,50,'pcs','2026-05-31 04:58:29'),(39,10,9,10,3,'pcs','2026-05-31 04:58:29'),(40,10,8,100,20,'meter','2026-05-31 04:58:29'),(41,11,11,25,5,'pack','2026-05-31 04:58:29'),(42,11,10,200,50,'pcs','2026-05-31 04:58:29'),(43,11,9,10,3,'pcs','2026-05-31 04:58:29'),(44,11,8,100,20,'meter','2026-05-31 04:58:29'),(45,12,11,25,5,'pack','2026-05-31 04:58:29'),(46,12,10,200,50,'pcs','2026-05-31 04:58:29'),(47,12,9,10,3,'pcs','2026-05-31 04:58:29'),(48,12,8,100,20,'meter','2026-05-31 04:58:29'),(49,13,11,25,5,'pack','2026-05-31 04:58:29'),(50,13,10,200,50,'pcs','2026-05-31 04:58:29'),(51,13,9,10,3,'pcs','2026-05-31 04:58:29'),(52,13,8,100,20,'meter','2026-05-31 04:58:29'),(53,14,11,25,5,'pack','2026-05-31 04:58:29'),(54,14,10,200,50,'pcs','2026-05-31 04:58:29'),(55,14,9,10,3,'pcs','2026-05-31 04:58:29'),(56,14,8,100,20,'meter','2026-05-31 04:58:29');
+/*!40000 ALTER TABLE `bhp_stocks` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `buildings`
+--
+
+DROP TABLE IF EXISTS `buildings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `buildings` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(150) NOT NULL,
+  `code` varchar(50) NOT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `description` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `code` (`code`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `buildings`
+--
+
+LOCK TABLES `buildings` WRITE;
+/*!40000 ALTER TABLE `buildings` DISABLE KEYS */;
+INSERT INTO `buildings` VALUES (1,'Gedung GWM','GWM','Jl. Surya Sumantri No. 65, Bandung','Gedung utama untuk ruang administrasi dan laboratorium','2026-05-31 04:58:29','2026-05-31 04:58:29'),(2,'Gedung FTI','FTI','Jl. Surya Sumantri No. 65, Bandung','Gedung fakultas untuk kebutuhan akademik dan praktikum','2026-05-31 04:58:29','2026-05-31 04:58:29');
+/*!40000 ALTER TABLE `buildings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `cache`
+--
+
+DROP TABLE IF EXISTS `cache`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cache` (
+  `key` varchar(255) NOT NULL,
+  `value` mediumtext NOT NULL,
+  `expiration` int NOT NULL,
+  PRIMARY KEY (`key`),
+  KEY `idx_cache_expiration` (`expiration`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cache`
+--
+
+LOCK TABLES `cache` WRITE;
+/*!40000 ALTER TABLE `cache` DISABLE KEYS */;
+/*!40000 ALTER TABLE `cache` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `cache_locks`
+--
+
+DROP TABLE IF EXISTS `cache_locks`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cache_locks` (
+  `key` varchar(255) NOT NULL,
+  `owner` varchar(255) NOT NULL,
+  `expiration` int NOT NULL,
+  PRIMARY KEY (`key`),
+  KEY `idx_cache_locks_expiration` (`expiration`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cache_locks`
+--
+
+LOCK TABLES `cache_locks` WRITE;
+/*!40000 ALTER TABLE `cache_locks` DISABLE KEYS */;
+/*!40000 ALTER TABLE `cache_locks` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `floors`
+--
+
+DROP TABLE IF EXISTS `floors`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `floors` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `building_id` int NOT NULL,
+  `floor_number` int NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `description` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_floor_per_building` (`building_id`,`floor_number`),
+  CONSTRAINT `fk_floors_building` FOREIGN KEY (`building_id`) REFERENCES `buildings` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `floors`
+--
+
+LOCK TABLES `floors` WRITE;
+/*!40000 ALTER TABLE `floors` DISABLE KEYS */;
+INSERT INTO `floors` VALUES (1,1,7,'Lantai 7','Area ruang kelas dan kantor','2026-05-31 04:58:29','2026-05-31 04:58:29'),(2,1,8,'Lantai 8','Area laboratorium komputer dan ruang pendukung','2026-05-31 04:58:29','2026-05-31 04:58:29'),(3,2,2,'Lantai 2','Area laboratorium tambahan dan ruang penyimpanan','2026-05-31 04:58:29','2026-05-31 04:58:29'),(4,2,3,'Lantai 3','Area laboratorium lanjutan','2026-05-31 05:00:42','2026-05-31 05:00:42'),(5,2,4,'Lantai 4','Area laboratorium khusus','2026-05-31 05:00:42','2026-05-31 05:00:42');
+/*!40000 ALTER TABLE `floors` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `goods_receipts`
+--
+
+DROP TABLE IF EXISTS `goods_receipts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `goods_receipts` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `procurement_item_id` int NOT NULL,
+  `received_by` int NOT NULL,
+  `received_date` date NOT NULL,
+  `quantity_received` int NOT NULL,
+  `note` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_goods_receipts_procurement_item` (`procurement_item_id`),
+  KEY `fk_goods_receipts_received_by` (`received_by`),
+  CONSTRAINT `fk_goods_receipts_procurement_item` FOREIGN KEY (`procurement_item_id`) REFERENCES `procurement_items` (`id`),
+  CONSTRAINT `fk_goods_receipts_received_by` FOREIGN KEY (`received_by`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `goods_receipts`
+--
+
+LOCK TABLES `goods_receipts` WRITE;
+/*!40000 ALTER TABLE `goods_receipts` DISABLE KEYS */;
+INSERT INTO `goods_receipts` VALUES (6,13,4,'2026-06-01',5,NULL,'2026-06-01 19:33:06','2026-06-01 19:33:06'),(7,14,4,'2026-06-01',5,'No. Surat: ABCD12345\nBarang dalam kondisi baik, semua fungsi server berjalan oke.','2026-06-01 19:35:15','2026-06-01 19:35:15');
+/*!40000 ALTER TABLE `goods_receipts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `inventory_assets`
+--
+
+DROP TABLE IF EXISTS `inventory_assets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `inventory_assets` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `item_catalog_id` int NOT NULL,
+  `procurement_item_id` int DEFAULT NULL,
+  `receipt_id` int DEFAULT NULL,
+  `room_id` int DEFAULT NULL,
+  `replaced_by_asset_id` int DEFAULT NULL,
+  `asset_code` varchar(100) NOT NULL,
+  `label_number` varchar(100) DEFAULT NULL,
+  `qr_code` varchar(255) DEFAULT NULL,
+  `barcode` varchar(255) DEFAULT NULL,
+  `serial_number` varchar(100) DEFAULT NULL,
+  `purchase_price` decimal(12,2) DEFAULT NULL,
+  `purchase_date` date DEFAULT NULL,
+  `received_date` date DEFAULT NULL,
+  `asset_condition` enum('baik','rusak_ringan','rusak_berat','maintenance','dihapus','diganti') NOT NULL DEFAULT 'baik',
+  `status` enum('received','labeled','available','in_use','maintenance','disposed','replaced') NOT NULL DEFAULT 'received',
+  `photo_url` varchar(255) DEFAULT NULL,
+  `notes` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `asset_code` (`asset_code`),
+  KEY `fk_inventory_assets_catalog` (`item_catalog_id`),
+  KEY `fk_inventory_assets_procurement_item` (`procurement_item_id`),
+  KEY `fk_inventory_assets_receipt` (`receipt_id`),
+  KEY `fk_inventory_assets_room` (`room_id`),
+  KEY `fk_inventory_assets_replaced_by` (`replaced_by_asset_id`),
+  CONSTRAINT `fk_inventory_assets_catalog` FOREIGN KEY (`item_catalog_id`) REFERENCES `item_catalogs` (`id`),
+  CONSTRAINT `fk_inventory_assets_procurement_item` FOREIGN KEY (`procurement_item_id`) REFERENCES `procurement_items` (`id`),
+  CONSTRAINT `fk_inventory_assets_receipt` FOREIGN KEY (`receipt_id`) REFERENCES `goods_receipts` (`id`),
+  CONSTRAINT `fk_inventory_assets_replaced_by` FOREIGN KEY (`replaced_by_asset_id`) REFERENCES `inventory_assets` (`id`),
+  CONSTRAINT `fk_inventory_assets_room` FOREIGN KEY (`room_id`) REFERENCES `rooms` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `inventory_assets`
+--
+
+LOCK TABLES `inventory_assets` WRITE;
+/*!40000 ALTER TABLE `inventory_assets` DISABLE KEYS */;
+INSERT INTO `inventory_assets` VALUES (1,1,NULL,NULL,3,NULL,'INV-PC-PROG1-001','LBL-PROG1-001',NULL,NULL,'PCP1001',8500000.00,'2025-01-15','2025-01-20','rusak_berat','available',NULL,'PC ketumpahan air minum mahasiswa','2026-05-31 04:58:29','2026-06-01 13:01:54'),(2,1,NULL,NULL,3,NULL,'INV-PC-PROG1-002','LBL-PROG1-002',NULL,NULL,'PCP1002',8500000.00,'2025-01-15','2025-01-20','maintenance','maintenance',NULL,'PC sedang dicek karena lambat','2026-05-31 04:58:29','2026-05-31 04:58:29'),(3,2,NULL,NULL,3,NULL,'INV-MON-PROG1-001','LBL-MON-PROG1-001',NULL,NULL,'MON1001',1700000.00,'2025-01-15','2025-01-20','baik','available',NULL,'Monitor untuk PC programming','2026-05-31 04:58:29','2026-05-31 04:58:29'),(4,5,NULL,NULL,2,NULL,'INV-RTR-NET-001','LBL-NET-001',NULL,NULL,'RTR1001',2500000.00,'2025-02-10','2025-02-15','baik','available',NULL,'Router praktikum jaringan','2026-05-31 04:58:29','2026-05-31 04:58:29'),(5,6,NULL,NULL,2,NULL,'INV-SW-NET-001','LBL-NET-002',NULL,NULL,'SW1001',3200000.00,'2025-02-10','2025-02-15','rusak_ringan','available',NULL,'Switch perlu pengecekan port','2026-05-31 04:58:29','2026-05-31 04:58:29'),(6,7,NULL,NULL,18,NULL,'INV-AP-SRV-001','LBL-SRV-001',NULL,NULL,'AP1001',1200000.00,'2025-03-05','2025-03-09','baik','available',NULL,'Access point cadangan server room','2026-05-31 04:58:29','2026-05-31 04:58:29'),(7,3,NULL,NULL,4,NULL,'INV-KB-PROG2-001','LBL-PROG2-KB-001',NULL,NULL,'KBP2001',250000.00,'2025-02-01','2025-02-08','baik','available',NULL,'Keyboard untuk Programming Lab 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(8,4,NULL,NULL,4,NULL,'INV-MS-PROG2-001','LBL-PROG2-MS-001',NULL,NULL,'MSP2001',150000.00,'2025-02-01','2025-02-08','baik','available',NULL,'Mouse untuk Programming Lab 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(9,2,NULL,NULL,4,NULL,'INV-MON-PROG2-001',NULL,NULL,NULL,'MON2001',1750000.00,'2025-02-01','2025-02-08','baik','received',NULL,'Monitor baru belum diberi label','2026-05-31 04:58:29','2026-05-31 04:58:29'),(10,12,NULL,NULL,26,NULL,'INV-DESK-DB-001','LBL-DB-DSK-001',NULL,NULL,'DSK3001',1200000.00,'2025-01-12','2025-01-18','baik','available',NULL,'Meja komputer untuk Database Lab','2026-05-31 04:58:29','2026-05-31 04:58:29'),(11,13,NULL,NULL,27,NULL,'INV-CHR-MM-001',NULL,NULL,NULL,'CHR4001',450000.00,'2025-03-01','2025-03-06','baik','labeled',NULL,'Kursi laboratorium multimedia','2026-05-31 04:58:29','2026-05-31 04:58:29'),(12,1,NULL,NULL,35,NULL,'INV-PC-AI-001','LBL-AI-001',NULL,NULL,'PCAI001',9200000.00,'2025-03-15','2025-03-21','baik','available',NULL,'PC untuk AI Lab','2026-05-31 04:58:29','2026-05-31 04:58:29'),(13,2,NULL,NULL,35,NULL,'INV-MON-AI-001','LBL-AI-MON-001',NULL,NULL,'MONAI001',1800000.00,'2025-03-15','2025-03-21','rusak_ringan','maintenance',NULL,'Monitor AI Lab sedang dicek','2026-05-31 04:58:29','2026-05-31 04:58:29'),(14,14,13,6,NULL,NULL,'INV-LAB-PROG-1-2026-001','LBL-LAB-PROG-1-001','http://localhost:3000/uploads/qr/qr-label-14-1780323019165.png',NULL,NULL,NULL,NULL,'2026-06-01','baik','labeled',NULL,NULL,'2026-06-01 19:33:06','2026-06-01 21:10:19'),(15,14,13,6,NULL,NULL,'INV-LAB-PROG-1-2026-002','LBL-LAB-PROG-1-002','http://localhost:3000/uploads/qr/qr-label-15-1780321376450.png',NULL,NULL,NULL,NULL,'2026-06-01','baik','labeled',NULL,NULL,'2026-06-01 19:33:06','2026-06-01 20:42:56'),(16,14,13,6,NULL,NULL,'INV-LAB-PROG-1-2026-003','LBL-LAB-PROG-1-003','http://localhost:3000/uploads/qr/qr-label-16-1780321376484.png',NULL,NULL,NULL,NULL,'2026-06-01','baik','labeled',NULL,NULL,'2026-06-01 19:33:06','2026-06-01 20:42:56'),(17,14,13,6,NULL,NULL,'INV-LAB-PROG-1-2026-004','LBL-LAB-PROG-1-004','http://localhost:3000/uploads/qr/qr-label-17-1780321376510.png',NULL,NULL,NULL,NULL,'2026-06-01','baik','labeled',NULL,NULL,'2026-06-01 19:33:06','2026-06-01 20:42:56'),(18,14,13,6,NULL,NULL,'INV-LAB-PROG-1-2026-005','LBL-LAB-PROG-1-005','http://localhost:3000/uploads/qr/qr-label-18-1780321376538.png',NULL,NULL,NULL,NULL,'2026-06-01','baik','labeled',NULL,NULL,'2026-06-01 19:33:06','2026-06-01 20:42:56'),(19,15,14,7,NULL,NULL,'INV-LAB-PROG-1-2026-006','LBL-LAB-PROG-1-006','http://localhost:3000/uploads/qr/qr-label-19-1780321430506.png',NULL,NULL,NULL,NULL,'2026-06-01','rusak_ringan','available',NULL,NULL,'2026-06-01 19:35:15','2026-06-02 08:55:24'),(20,15,14,7,NULL,NULL,'INV-LAB-PROG-1-2026-007','LBL-LAB-PROG-1-007','http://localhost:3000/uploads/qr/qr-label-20-1780321430535.png',NULL,NULL,NULL,NULL,'2026-06-01','rusak_ringan','available',NULL,NULL,'2026-06-01 19:35:15','2026-06-02 09:13:19'),(21,15,14,7,NULL,NULL,'INV-LAB-PROG-1-2026-008','LBL-LAB-PROG-1-008','http://localhost:3000/uploads/qr/qr-label-21-1780321430560.png',NULL,NULL,NULL,NULL,'2026-06-01','baik','labeled',NULL,NULL,'2026-06-01 19:35:15','2026-06-01 20:43:50'),(22,15,14,7,NULL,NULL,'INV-LAB-PROG-1-2026-009','LBL-LAB-PROG-1-009','http://localhost:3000/uploads/qr/qr-label-22-1780321430585.png',NULL,NULL,NULL,NULL,'2026-06-01','baik','labeled',NULL,NULL,'2026-06-01 19:35:15','2026-06-01 20:43:50'),(23,15,14,7,NULL,NULL,'INV-LAB-PROG-1-2026-010','LBL-LAB-PROG-1-010','http://localhost:3000/uploads/qr/qr-label-23-1780321430614.png',NULL,NULL,NULL,NULL,'2026-06-01','baik','labeled',NULL,NULL,'2026-06-01 19:35:15','2026-06-01 20:43:50');
+/*!40000 ALTER TABLE `inventory_assets` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `item_catalogs`
+--
+
+DROP TABLE IF EXISTS `item_catalogs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `item_catalogs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `category_id` int DEFAULT NULL,
+  `name` varchar(150) NOT NULL,
+  `type` enum('inventory','bhp') NOT NULL,
+  `unit` varchar(50) NOT NULL,
+  `description` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_item_catalogs_category` (`category_id`),
+  CONSTRAINT `fk_item_catalogs_category` FOREIGN KEY (`category_id`) REFERENCES `item_categories` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `item_catalogs`
+--
+
+LOCK TABLES `item_catalogs` WRITE;
+/*!40000 ALTER TABLE `item_catalogs` DISABLE KEYS */;
+INSERT INTO `item_catalogs` VALUES (1,1,'PC Desktop','inventory','unit','Komputer desktop untuk praktikum','2026-05-31 04:58:29','2026-05-31 04:58:29'),(2,1,'Monitor','inventory','unit','Monitor komputer','2026-05-31 04:58:29','2026-05-31 04:58:29'),(3,1,'Keyboard','inventory','unit','Keyboard komputer','2026-05-31 04:58:29','2026-05-31 04:58:29'),(4,1,'Mouse','inventory','unit','Mouse komputer','2026-05-31 04:58:29','2026-05-31 04:58:29'),(5,2,'Router','inventory','unit','Perangkat router jaringan','2026-05-31 04:58:29','2026-05-31 04:58:29'),(6,2,'Switch','inventory','unit','Perangkat switch jaringan','2026-05-31 04:58:29','2026-05-31 04:58:29'),(7,2,'Access Point','inventory','unit','Perangkat access point','2026-05-31 04:58:29','2026-05-31 04:58:29'),(8,2,'Kabel LAN','bhp','meter','Kabel LAN untuk kebutuhan jaringan','2026-05-31 04:58:29','2026-05-31 04:58:29'),(9,3,'Thermal Paste','bhp','pcs','Thermal paste untuk maintenance komputer','2026-05-31 04:58:29','2026-05-31 04:58:29'),(10,3,'Cable Tie','bhp','pcs','Cable tie untuk pengaturan kabel','2026-05-31 04:58:29','2026-05-31 04:58:29'),(11,3,'Tisu Pembersih Elektronik','bhp','pack','Tisu untuk membersihkan perangkat lab','2026-05-31 04:58:29','2026-05-31 04:58:29'),(12,4,'Meja Komputer','inventory','unit','Meja komputer laboratorium','2026-05-31 04:58:29','2026-05-31 04:58:29'),(13,4,'Kursi Laboratorium','inventory','unit','Kursi laboratorium','2026-05-31 04:58:29','2026-05-31 04:58:29'),(14,NULL,'ASUS RT-AX1800HP AX1800 Dual Band WiFi 6 Wireless Router with AiMesh','inventory','unit',NULL,'2026-06-01 19:33:06','2026-06-01 19:33:06'),(15,NULL,'Server Dell R630 1u Xeon E5 2699v4x2 44 Core 88 Thread Ram 128 GB HDD SAS 4,2 TB','inventory','unit',NULL,'2026-06-01 19:35:15','2026-06-01 19:35:15');
+/*!40000 ALTER TABLE `item_catalogs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `item_categories`
+--
+
+DROP TABLE IF EXISTS `item_categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `item_categories` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(150) NOT NULL,
+  `description` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `item_categories`
+--
+
+LOCK TABLES `item_categories` WRITE;
+/*!40000 ALTER TABLE `item_categories` DISABLE KEYS */;
+INSERT INTO `item_categories` VALUES (1,'Komputer dan Perangkat','Barang inventaris seperti PC, monitor, keyboard, dan mouse','2026-05-31 04:58:29','2026-05-31 04:58:29'),(2,'Jaringan','Perangkat jaringan seperti router, switch, access point, dan kabel LAN','2026-05-31 04:58:29','2026-05-31 04:58:29'),(3,'Bahan Habis Pakai','Barang habis pakai untuk kebutuhan laboratorium','2026-05-31 04:58:29','2026-05-31 04:58:29'),(4,'Furniture','Meja, kursi, lemari, dan perlengkapan ruangan','2026-05-31 04:58:29','2026-05-31 04:58:29');
+/*!40000 ALTER TABLE `item_categories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `lab_group_rooms`
+--
+
+DROP TABLE IF EXISTS `lab_group_rooms`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `lab_group_rooms` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `group_id` int NOT NULL,
+  `room_id` int NOT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_lab_group_room` (`group_id`,`room_id`),
+  KEY `fk_lab_group_rooms_room` (`room_id`),
+  CONSTRAINT `fk_lab_group_rooms_group` FOREIGN KEY (`group_id`) REFERENCES `lab_groups` (`id`),
+  CONSTRAINT `fk_lab_group_rooms_room` FOREIGN KEY (`room_id`) REFERENCES `rooms` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `lab_group_rooms`
+--
+
+LOCK TABLES `lab_group_rooms` WRITE;
+/*!40000 ALTER TABLE `lab_group_rooms` DISABLE KEYS */;
+INSERT INTO `lab_group_rooms` VALUES (1,1,3,'2026-05-31 04:58:29'),(2,1,4,'2026-05-31 04:58:29'),(3,1,19,'2026-05-31 04:58:29'),(4,2,2,'2026-05-31 04:58:29'),(5,2,18,'2026-05-31 04:58:29'),(6,3,26,'2026-05-31 04:58:29'),(9,5,27,'2026-05-31 19:03:26');
+/*!40000 ALTER TABLE `lab_group_rooms` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `lab_group_users`
+--
+
+DROP TABLE IF EXISTS `lab_group_users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `lab_group_users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `group_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `role_in_group` enum('kepala_lab','staf_lab') NOT NULL DEFAULT 'staf_lab',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_lab_group_user` (`group_id`,`user_id`),
+  KEY `fk_lab_group_users_user` (`user_id`),
+  CONSTRAINT `fk_lab_group_users_group` FOREIGN KEY (`group_id`) REFERENCES `lab_groups` (`id`),
+  CONSTRAINT `fk_lab_group_users_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `lab_group_users`
+--
+
+LOCK TABLES `lab_group_users` WRITE;
+/*!40000 ALTER TABLE `lab_group_users` DISABLE KEYS */;
+INSERT INTO `lab_group_users` VALUES (1,1,5,'staf_lab','2026-05-31 04:58:29'),(2,1,6,'staf_lab','2026-05-31 04:58:29'),(3,2,7,'staf_lab','2026-05-31 04:58:29'),(4,2,6,'staf_lab','2026-05-31 04:58:29'),(5,3,6,'staf_lab','2026-05-31 04:58:29');
+/*!40000 ALTER TABLE `lab_group_users` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `lab_groups`
+--
+
+DROP TABLE IF EXISTS `lab_groups`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `lab_groups` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `laboratory_id` int NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `description` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_lab_group_name_per_lab` (`laboratory_id`,`name`),
+  CONSTRAINT `fk_lab_groups_laboratory` FOREIGN KEY (`laboratory_id`) REFERENCES `laboratories` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `lab_groups`
+--
+
+LOCK TABLES `lab_groups` WRITE;
+/*!40000 ALTER TABLE `lab_groups` DISABLE KEYS */;
+INSERT INTO `lab_groups` VALUES (1,2,'Grup Staff Programming','Grup staf lab untuk Programming Lab 1 dan Programming Lab 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(2,1,'Grup Staff Jaringan','Grup staf lab untuk Computer Network Lab','2026-05-31 04:58:29','2026-05-31 16:30:45'),(3,12,'Grup Staff Database','Grup staf lab untuk Database Lab','2026-05-31 04:58:29','2026-05-31 04:58:29'),(5,13,'Grup Staff Multimedia',NULL,'2026-05-31 19:03:12','2026-05-31 19:03:12');
+/*!40000 ALTER TABLE `lab_groups` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `laboratories`
+--
+
+DROP TABLE IF EXISTS `laboratories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `laboratories` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `room_id` int NOT NULL,
+  `head_user_id` int DEFAULT NULL,
+  `name` varchar(150) NOT NULL,
+  `code` varchar(50) NOT NULL,
+  `description` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `room_id` (`room_id`),
+  UNIQUE KEY `code` (`code`),
+  KEY `fk_laboratories_head_user` (`head_user_id`),
+  CONSTRAINT `fk_laboratories_head_user` FOREIGN KEY (`head_user_id`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_laboratories_room` FOREIGN KEY (`room_id`) REFERENCES `rooms` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `laboratories`
+--
+
+LOCK TABLES `laboratories` WRITE;
+/*!40000 ALTER TABLE `laboratories` DISABLE KEYS */;
+INSERT INTO `laboratories` VALUES (1,2,2,'Computer Network Lab','LAB-COMNET','Laboratorium jaringan komputer','2026-05-31 04:58:29','2026-05-31 04:58:29'),(2,3,2,'Programming Lab 1','LAB-PROG-1','Laboratorium programming 1','2026-05-31 04:58:29','2026-05-31 04:58:29'),(3,4,2,'Programming Lab 2','LAB-PROG-2','Laboratorium programming 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(4,7,2,'Enterprise Lab 1','LAB-ENT-1','Laboratorium enterprise 1','2026-05-31 04:58:29','2026-05-31 04:58:29'),(5,8,2,'Enterprise Lab 2','LAB-ENT-2','Laboratorium enterprise 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(6,14,2,'Advance Programming Lab 1','LAB-ADVPROG-1','Laboratorium advance programming 1','2026-05-31 04:58:29','2026-05-31 04:58:29'),(7,15,2,'Advance Programming Lab 2','LAB-ADVPROG-2','Laboratorium advance programming 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(8,20,2,'Advance Programming Lab 3','LAB-ADVPROG-3','Laboratorium advance programming 3','2026-05-31 04:58:29','2026-05-31 04:58:29'),(9,21,2,'Advance Programming Lab 4','LAB-ADVPROG-4','Laboratorium advance programming 4','2026-05-31 04:58:29','2026-05-31 04:58:29'),(10,22,2,'Internet Lab 1','LAB-INET-1','Laboratorium internet 1','2026-05-31 04:58:29','2026-05-31 04:58:29'),(11,23,2,'Internet Lab 2','LAB-INET-2','Laboratorium internet 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(12,26,2,'Database Lab','LAB-DB','Laboratorium database','2026-05-31 04:58:29','2026-05-31 04:58:29'),(13,27,2,'Multimedia Lab','LAB-MM','Laboratorium multimedia','2026-05-31 04:58:29','2026-05-31 04:58:29'),(14,35,2,'AI Lab','LAB-AI','Laboratorium AI tambahan','2026-05-31 04:58:29','2026-05-31 04:58:29');
+/*!40000 ALTER TABLE `laboratories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `maintenance_logs`
+--
+
+DROP TABLE IF EXISTS `maintenance_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `maintenance_logs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `inventory_asset_id` int NOT NULL,
+  `performed_by` int NOT NULL,
+  `maintenance_date` date NOT NULL,
+  `issue_description` text,
+  `action_taken` text,
+  `condition_before` enum('baik','rusak_ringan','rusak_berat','maintenance','dihapus','diganti') DEFAULT NULL,
+  `condition_after` enum('baik','rusak_ringan','rusak_berat','maintenance','dihapus','diganti') DEFAULT NULL,
+  `status` enum('planned','in_progress','done','cancelled') NOT NULL DEFAULT 'planned',
+  `cost` decimal(12,2) DEFAULT NULL,
+  `notes` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_maintenance_logs_asset` (`inventory_asset_id`),
+  KEY `fk_maintenance_logs_performed_by` (`performed_by`),
+  CONSTRAINT `fk_maintenance_logs_asset` FOREIGN KEY (`inventory_asset_id`) REFERENCES `inventory_assets` (`id`),
+  CONSTRAINT `fk_maintenance_logs_performed_by` FOREIGN KEY (`performed_by`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `maintenance_logs`
+--
+
+LOCK TABLES `maintenance_logs` WRITE;
+/*!40000 ALTER TABLE `maintenance_logs` DISABLE KEYS */;
+INSERT INTO `maintenance_logs` VALUES (1,2,5,'2025-05-20','PC lambat dan suhu cepat panas','Membersihkan debu dan mengganti thermal paste','maintenance','baik','done',50000.00,'Maintenance selesai dan stok thermal paste berkurang','2026-05-31 04:58:29','2026-05-31 04:58:29'),(2,5,7,'2025-05-22','Beberapa port switch tidak stabil','Membersihkan port dan merapikan kabel LAN','rusak_ringan','baik','done',25000.00,'Maintenance selesai dan kabel LAN terpakai','2026-05-31 04:58:29','2026-05-31 04:58:29'),(3,19,5,'2026-06-01','PC panas terus secara berulang; mengalami freeze, lag, dan shutdown mendadak','Pembersihan debu dalam mesin server; penggantian thermal paste','baik','rusak_ringan','done',270000.00,NULL,'2026-06-02 08:55:24','2026-06-02 08:59:55'),(4,20,5,'2026-05-31','PC panas terus secara berulang; mengalami freeze, lag, dan shutdown mendadak','Pembersihan debu dalam mesin server; penggantian thermal paste','baik','rusak_ringan','done',300000.00,'Gunakan thermal paste punya prodi','2026-06-02 09:07:15','2026-06-02 09:13:19');
+/*!40000 ALTER TABLE `maintenance_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `procurement_drafts`
+--
+
+DROP TABLE IF EXISTS `procurement_drafts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `procurement_drafts` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `lab_id` int NOT NULL,
+  `created_by` int NOT NULL,
+  `finalized_by` int DEFAULT NULL,
+  `title` varchar(200) NOT NULL,
+  `budget_year` year NOT NULL,
+  `status` enum('draft','submitted','finalized','rejected') NOT NULL DEFAULT 'draft',
+  `is_locked` tinyint(1) NOT NULL DEFAULT '0',
+  `notes` text,
+  `submitted_at` datetime DEFAULT NULL,
+  `finalized_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_procurement_drafts_lab` (`lab_id`),
+  KEY `fk_procurement_drafts_created_by` (`created_by`),
+  KEY `fk_procurement_drafts_finalized_by` (`finalized_by`),
+  CONSTRAINT `fk_procurement_drafts_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_procurement_drafts_finalized_by` FOREIGN KEY (`finalized_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_procurement_drafts_lab` FOREIGN KEY (`lab_id`) REFERENCES `laboratories` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `procurement_drafts`
+--
+
+LOCK TABLES `procurement_drafts` WRITE;
+/*!40000 ALTER TABLE `procurement_drafts` DISABLE KEYS */;
+INSERT INTO `procurement_drafts` VALUES (3,2,2,3,'Pengadaan Lab Komputer Tahun 2026',2026,'finalized',1,'Test 1','2026-06-01 10:30:42','2026-06-01 17:29:04','2026-06-01 08:44:38','2026-06-01 17:29:04'),(4,2,2,3,'\"AI for Everyone\" Procurement',2026,'finalized',1,'Testing 2','2026-06-01 10:31:14','2026-06-01 17:28:44','2026-06-01 10:22:15','2026-06-01 17:28:44'),(8,2,2,3,'\"Virtualization\" Procurement',2026,'finalized',1,'[Catatan Revisi Kaprodi - 1/6/2026, 14.45.43]:\r\nTolong perbaiki lagi untuk servernya; cari yang biayanya sesuai dengan budget Prodi.','2026-06-01 15:03:55','2026-06-01 17:28:20','2026-06-01 14:32:18','2026-06-01 17:28:20');
+/*!40000 ALTER TABLE `procurement_drafts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `procurement_items`
+--
+
+DROP TABLE IF EXISTS `procurement_items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `procurement_items` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `draft_id` int NOT NULL,
+  `item_catalog_id` int DEFAULT NULL,
+  `replacement_asset_id` int DEFAULT NULL,
+  `reviewed_by` int DEFAULT NULL,
+  `item_name` varchar(150) NOT NULL,
+  `item_description` text,
+  `item_type` enum('inventory','bhp') NOT NULL,
+  `quantity` int NOT NULL,
+  `estimated_price` decimal(12,2) NOT NULL,
+  `purchase_link` varchar(255) DEFAULT NULL,
+  `review_status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `review_note` text,
+  `reviewed_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_procurement_items_draft` (`draft_id`),
+  KEY `fk_procurement_items_catalog` (`item_catalog_id`),
+  KEY `fk_procurement_items_reviewed_by` (`reviewed_by`),
+  KEY `fk_procurement_items_replacement_asset` (`replacement_asset_id`),
+  CONSTRAINT `fk_procurement_items_catalog` FOREIGN KEY (`item_catalog_id`) REFERENCES `item_catalogs` (`id`),
+  CONSTRAINT `fk_procurement_items_draft` FOREIGN KEY (`draft_id`) REFERENCES `procurement_drafts` (`id`),
+  CONSTRAINT `fk_procurement_items_replacement_asset` FOREIGN KEY (`replacement_asset_id`) REFERENCES `inventory_assets` (`id`),
+  CONSTRAINT `fk_procurement_items_reviewed_by` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `procurement_items`
+--
+
+LOCK TABLES `procurement_items` WRITE;
+/*!40000 ALTER TABLE `procurement_items` DISABLE KEYS */;
+INSERT INTO `procurement_items` VALUES (5,3,NULL,NULL,3,'MEMORY CRUCIAL DDR5 5600MHZ 8GB 16GB 32GB SODIMM RAM NOTEBOOK DDR5 PC AIO 5600 SODIMM - 8GB',NULL,'inventory',10,2199000.00,'https://tk.tokopedia.com/ZSx7G37jk/','rejected',NULL,'2026-06-01 17:29:04','2026-06-01 10:18:58','2026-06-01 17:29:03'),(6,4,NULL,NULL,3,'Server Lenovo ThinkSystem ST45 V3 AMD EPIC 4124P 16GB 2TB HDD AMD PRO 665 Server PC',NULL,'inventory',1,17250000.00,'https://tk.tokopedia.com/ZSx7E1YRe/','approved',NULL,'2026-06-01 17:28:44','2026-06-01 10:27:38','2026-06-01 17:28:43'),(13,8,14,NULL,NULL,'ASUS RT-AX1800HP AX1800 Dual Band WiFi 6 Wireless Router with AiMesh','AX1800 Dual Band WiFi 6 (802.11ax) Router supporting MU-MIMO and OFDMA technology, with AiProtection Classic network security powered by Trend Micro, compatible with ASUS AiMesh WiFi system\n\nΓÇó New-Gen WiFi Standard ΓÇô WiFi 6(802.11ax) standard supporting MU-MIMO and OFDMA technology for better efficiency and throughput.\nΓÇó Ultra-fast WiFi Speed ΓÇô RT-AX1800HP supports 1024-QAM for dramatically faster wireless connections. With a total networking speed of about 1800Mbps ΓÇö 574 Mbps on the 2.4GHz band and 1201 Mbps on the 5GHz band\nΓÇó Increase Capacity and Efficiency ΓÇô Supporting not only MU-MIMO but also OFDMA technique to efficiently allocate channels, communicate with multiple devices simultaneously\nΓÇó 5 Gigabit ports ΓÇô One Gigabit WAN port and four Gigabit LAN ports, 10X faster than 100ΓÇôBase T Ethernet.\nProtection for Your Home Network ΓÇô Aiprotection powered by Trend Micro, blocks internet security threats for all your connected smart devices.','inventory',10,1450000.00,'https://tk.tokopedia.com/ZSxvukoXT/','approved',NULL,'2026-06-01 14:45:43','2026-06-01 14:56:30','2026-06-01 19:33:06'),(14,8,15,NULL,3,'Server Dell R630 1u Xeon E5 2699v4x2 44 Core 88 Thread Ram 128 GB HDD SAS 4,2 TB','Server Dell R630 1u\n\nSpesifikasi:\nXeon E5 2699v4 x 2 44 Core 88 Thread\nSpeed 2,2 Ghz Turbo hingga 3,6 Ghz\nMemori Ram 128 GB DDR4 ECC\nHDD SAS 4,2 TB ( 1 TB 3 pcs & 1,2 TB 1 pcs)\nLan Card 4 PORT Gigabit\nRaid Card H730\nDouble Power supply 750w redundent\n\nGaransi 6 Bulan Setelah barang sampai\n\nPacking tebal aman dengan packing kayu','inventory',5,29000000.00,'https://tk.tokopedia.com/ZSxv9vEbB/','approved',NULL,'2026-06-01 17:28:20','2026-06-01 14:56:30','2026-06-01 19:35:15');
+/*!40000 ALTER TABLE `procurement_items` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `roles`
+--
+
+DROP TABLE IF EXISTS `roles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `roles` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `roles`
+--
+
+LOCK TABLES `roles` WRITE;
+/*!40000 ALTER TABLE `roles` DISABLE KEYS */;
+INSERT INTO `roles` VALUES (1,'administrator'),(2,'kepala_laboratorium'),(3,'ketua_program_studi'),(4,'staf_administrasi'),(5,'staf_laboratorium');
+/*!40000 ALTER TABLE `roles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `room_types`
+--
+
+DROP TABLE IF EXISTS `room_types`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `room_types` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `description` text,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `room_types`
+--
+
+LOCK TABLES `room_types` WRITE;
+/*!40000 ALTER TABLE `room_types` DISABLE KEYS */;
+INSERT INTO `room_types` VALUES (1,'laboratory','Ruangan laboratorium'),(2,'office','Ruangan kantor atau administrasi'),(3,'storage','Ruangan penyimpanan'),(4,'meeting_room','Ruangan rapat'),(5,'study_room','Ruangan belajar'),(6,'server_room','Ruangan server'),(7,'toilet','Toilet'),(8,'utility','Ruangan utilitas seperti panel listrik atau janitor'),(9,'waiting_room','Ruang tunggu'),(10,'classroom','Ruang kelas biasa');
+/*!40000 ALTER TABLE `room_types` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `rooms`
+--
+
+DROP TABLE IF EXISTS `rooms`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `rooms` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `floor_id` int NOT NULL,
+  `room_type_id` int NOT NULL,
+  `code` varchar(50) NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `capacity` int DEFAULT NULL,
+  `description` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `code` (`code`),
+  KEY `fk_rooms_floor` (`floor_id`),
+  KEY `fk_rooms_room_type` (`room_type_id`),
+  CONSTRAINT `fk_rooms_floor` FOREIGN KEY (`floor_id`) REFERENCES `floors` (`id`),
+  CONSTRAINT `fk_rooms_room_type` FOREIGN KEY (`room_type_id`) REFERENCES `room_types` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `rooms`
+--
+
+LOCK TABLES `rooms` WRITE;
+/*!40000 ALTER TABLE `rooms` DISABLE KEYS */;
+INSERT INTO `rooms` VALUES (1,2,5,'H08-A01','Study Room',24,'Study room pada denah GWM lantai 8','2026-05-31 04:58:29','2026-05-31 04:58:29'),(2,2,1,'H08-A02','Computer Network Lab',35,'Laboratorium jaringan komputer','2026-05-31 04:58:29','2026-05-31 04:58:29'),(3,2,1,'H08-A03','Programming Lab 1',40,'Laboratorium programming 1','2026-05-31 04:58:29','2026-05-31 04:58:29'),(4,2,1,'H08-A04','Programming Lab 2',40,'Laboratorium programming 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(5,2,3,'H08-A05','Storage 1',NULL,'Ruang penyimpanan barang habis pakai','2026-05-31 04:58:29','2026-05-31 04:58:29'),(6,2,2,'H08-A06','Master Program of Computer Science',20,'Ruang program magister ilmu komputer','2026-05-31 04:58:29','2026-05-31 04:58:29'),(7,2,1,'H08-A07','Enterprise Lab 1',35,'Laboratorium enterprise 1','2026-05-31 04:58:29','2026-05-31 04:58:29'),(8,2,1,'H08-A08','Enterprise Lab 2',35,'Laboratorium enterprise 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(9,2,8,'H08-A09','Janitor Room 1',NULL,'Ruang janitor 1','2026-05-31 04:58:29','2026-05-31 04:58:29'),(10,2,8,'H08-A10','Electricity Panel Room 1',NULL,'Ruang panel listrik 1','2026-05-31 04:58:29','2026-05-31 04:58:29'),(11,2,7,'H08-A11','Gents Toilet',NULL,'Toilet pria area A','2026-05-31 04:58:29','2026-05-31 04:58:29'),(12,2,7,'H08-A12','Ladies Toilet',NULL,'Toilet wanita area A','2026-05-31 04:58:29','2026-05-31 04:58:29'),(13,2,2,'H08-B01','Staff Room 1',20,'Ruang staff 1','2026-05-31 04:58:29','2026-05-31 04:58:29'),(14,2,1,'H08-B02','Advance Programming Lab 1',40,'Laboratorium advance programming 1','2026-05-31 04:58:29','2026-05-31 04:58:29'),(15,2,1,'H08-B03','Advance Programming Lab 2',40,'Laboratorium advance programming 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(16,2,2,'H08-B04','Administration Room',12,'Ruang administrasi','2026-05-31 04:58:29','2026-05-31 04:58:29'),(17,2,2,'H08-B05','Head of Laboratory Office',8,'Ruang kepala laboratorium','2026-05-31 04:58:29','2026-05-31 04:58:29'),(18,2,6,'H08-B06','Server Room',NULL,'Ruang server','2026-05-31 04:58:29','2026-05-31 04:58:29'),(19,2,3,'H08-B07','Storage 2',NULL,'Ruang penyimpanan 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(20,2,1,'H08-B08','Advance Programming Lab 3',40,'Laboratorium advance programming 3','2026-05-31 04:58:29','2026-05-31 04:58:29'),(21,2,1,'H08-B09','Advance Programming Lab 4',40,'Laboratorium advance programming 4','2026-05-31 04:58:29','2026-05-31 04:58:29'),(22,2,1,'H08-B10','Internet Lab 1',35,'Laboratorium internet 1','2026-05-31 04:58:29','2026-05-31 04:58:29'),(23,2,1,'H08-B11','Internet Lab 2',35,'Laboratorium internet 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(24,2,2,'H08-C01','Staff Room 2',20,'Ruang staff 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(25,2,9,'H08-C02','Waiting Room',15,'Ruang tunggu','2026-05-31 04:58:29','2026-05-31 04:58:29'),(26,2,1,'H08-C03','Database Lab',40,'Laboratorium database','2026-05-31 04:58:29','2026-05-31 04:58:29'),(27,2,1,'H08-C04','Multimedia Lab',35,'Laboratorium multimedia','2026-05-31 04:58:29','2026-05-31 04:58:29'),(28,2,4,'H08-C05','Meeting Room',20,'Ruang rapat','2026-05-31 04:58:29','2026-05-31 04:58:29'),(29,2,8,'H08-C06','Electricity Panel Room 2',NULL,'Ruang panel listrik 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(30,2,3,'H08-C07','Storage 3',NULL,'Ruang penyimpanan 3','2026-05-31 04:58:29','2026-05-31 04:58:29'),(31,2,7,'H08-C08','Ladies Toilet',NULL,'Toilet wanita area C','2026-05-31 04:58:29','2026-05-31 04:58:29'),(32,2,7,'H08-C09','Gents Toilet',NULL,'Toilet pria area C','2026-05-31 04:58:29','2026-05-31 04:58:29'),(33,2,8,'H08-C10','Janitor Room 2',NULL,'Ruang janitor 2','2026-05-31 04:58:29','2026-05-31 04:58:29'),(34,1,10,'H07-D01','Ruang Kelas 701',50,'Ruang kelas untuk perkuliahan','2026-05-31 04:58:29','2026-05-31 04:58:29'),(35,3,1,'FTI-201','Artificial Intelligence Lab',30,'Laboratorium AI tambahan','2026-05-31 04:58:29','2026-05-31 05:38:09');
+/*!40000 ALTER TABLE `rooms` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `sessions`
+--
+
+DROP TABLE IF EXISTS `sessions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sessions` (
+  `id` varchar(255) NOT NULL,
+  `user_id` bigint unsigned DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` text,
+  `payload` longtext NOT NULL,
+  `last_activity` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_sessions_user_id` (`user_id`),
+  KEY `idx_sessions_last_activity` (`last_activity`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `sessions`
+--
+
+LOCK TABLES `sessions` WRITE;
+/*!40000 ALTER TABLE `sessions` DISABLE KEYS */;
+INSERT INTO `sessions` VALUES ('vJgsx6Z3zc5dOGUa9tfmraOTSYgeWVcYZc6lr7MI',NULL,'127.0.0.1','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36','YTo1OntzOjY6Il90b2tlbiI7czo0MDoiT3RFNUo4NmE4czliaUtJQ2RjbVZlcWJOWXltZzVqSFlrdHl5a3BnRyI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6MjE6Imh0dHA6Ly9sb2NhbGhvc3Q6ODAwMCI7czo1OiJyb3V0ZSI7czo5OiJkYXNoYm9hcmQiO31zOjEwOiJhdXRoX3Rva2VuIjtzOjIyODoiZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBaQ0k2TlN3aVpXMWhhV3dpT2lKemRHRm1iR0ZpUUdWNFlXMXdiR1V1WTI5dElpd2ljbTlzWlNJNkluTjBZV1pmYkdGaWIzSmhkRzl5YVhWdElpd2liR0ZpWDJsa0lqb3lMQ0pwWVhRaU9qRTNPREF6TlRFME16VXNJbVY0Y0NJNk1UYzRNRFF6Tnpnek5YMC44cDJndVRoOXpob2RnOU9EZDE2dm9mTlcxUEd2MUlGNWhfUzhDM2V4ZU5RIjtzOjk6ImF1dGhfdXNlciI7YTo3OntzOjI6ImlkIjtpOjU7czo0OiJuYW1lIjtzOjI5OiJTdGFmIExhYm9yYXRvcml1bSBQcm9ncmFtbWluZyI7czo1OiJlbWFpbCI7czoxOToic3RhZmxhYkBleGFtcGxlLmNvbSI7czo2OiJzdGF0dXMiO3M6NjoiYWN0aXZlIjtzOjY6ImxhYl9pZCI7aToyO3M6NDoicm9sZSI7czoxNzoic3RhZl9sYWJvcmF0b3JpdW0iO3M6MTU6ImxhYm9yYXRvcnlfbmFtZSI7czoxNzoiUHJvZ3JhbW1pbmcgTGFiIDEiO319',1780369161);
+/*!40000 ALTER TABLE `sessions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `role_id` int NOT NULL,
+  `lab_id` int DEFAULT NULL,
+  `name` varchar(150) NOT NULL,
+  `nrp_nip` varchar(50) DEFAULT NULL,
+  `email` varchar(150) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`),
+  KEY `fk_users_role` (`role_id`),
+  KEY `fk_users_lab` (`lab_id`),
+  CONSTRAINT `fk_users_lab` FOREIGN KEY (`lab_id`) REFERENCES `laboratories` (`id`),
+  CONSTRAINT `fk_users_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `users`
+--
+
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES (1,1,NULL,'Admin Sistem','ADM001','admin@example.com','password123','active','2026-05-31 04:58:29','2026-05-31 04:58:29'),(2,2,2,'Kepala Laboratorium','KALAB001','kalab@example.com','password123','active','2026-05-31 04:58:29','2026-05-31 04:58:29'),(3,3,NULL,'Ketua Program Studi','KAPRODI001','kaprodi@example.com','password123','active','2026-05-31 04:58:29','2026-05-31 04:58:29'),(4,4,NULL,'Staf Administrasi','STAFFADM001','stafadmin@example.com','password123','active','2026-05-31 04:58:29','2026-05-31 04:58:29'),(5,5,2,'Staf Laboratorium Programming','STAFFLAB001','staflab@example.com','password123','active','2026-05-31 04:58:29','2026-05-31 04:58:29'),(6,5,NULL,'Staf Laboratorium Multi Lab','STAFFLAB002','staflab.multi@example.com','password123','active','2026-05-31 04:58:29','2026-05-31 04:58:29'),(7,5,1,'Staf Laboratorium Jaringan','STAFFLAB003','staflab.jaringan@example.com','password123','active','2026-05-31 04:58:29','2026-05-31 04:58:29');
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-06-02 10:03:38

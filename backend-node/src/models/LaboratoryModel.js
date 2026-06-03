@@ -58,8 +58,7 @@ const LaboratoryModel = {
       JOIN room_types rt ON r.room_type_id = rt.id
       JOIN floors f ON r.floor_id = f.id
       JOIN buildings b ON f.building_id = b.id
-      LEFT JOIN laboratories l ON l.room_id = r.id
-      WHERE rt.name = 'laboratory' AND l.id IS NULL
+      WHERE rt.name = 'laboratory'
       ORDER BY b.name ASC, f.floor_number ASC, r.code ASC
     `);
     return rows;
@@ -149,6 +148,21 @@ const LaboratoryModel = {
     return result;
   },
 
+  async updateGroup(id, { laboratory_id, name, description }) {
+    const [result] = await db.query(`
+      UPDATE lab_groups
+      SET laboratory_id = ?, name = ?, description = ?
+      WHERE id = ?
+    `, [laboratory_id, name, description || null, id]);
+    return result;
+  },
+
+  async deleteGroup(id, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query("DELETE FROM lab_groups WHERE id = ?", [id]);
+    return result;
+  },
+
   async addUserToGroup({ group_id, user_id, role_in_group = 'staf_lab' }, tx = null) {
     const conn = tx || db;
     const [result] = await conn.query(`
@@ -169,6 +183,77 @@ const LaboratoryModel = {
     return result;
   },
 
+  async findGroupById(id) {
+    const [rows] = await db.query(`
+      SELECT
+        lg.id,
+        lg.name,
+        lg.description,
+        lg.laboratory_id,
+        l.code AS laboratory_code,
+        l.name AS laboratory_name
+      FROM lab_groups lg
+      JOIN laboratories l ON lg.laboratory_id = l.id
+      WHERE lg.id = ? LIMIT 1
+    `, [id]);
+    return rows[0] || null;
+  },
+
+  async findGroupUsers(groupId) {
+    const [rows] = await db.query(`
+      SELECT
+        lgu.id AS assignment_id,
+        lgu.user_id,
+        u.name,
+        u.email,
+        r.name AS role_name,
+        lgu.role_in_group,
+        lgu.created_at
+      FROM lab_group_users lgu
+      JOIN users u ON lgu.user_id = u.id
+      JOIN roles r ON u.role_id = r.id
+      WHERE lgu.group_id = ?
+      ORDER BY lgu.role_in_group ASC, u.name ASC
+    `, [groupId]);
+    return rows;
+  },
+
+  async findGroupRooms(groupId) {
+    const [rows] = await db.query(`
+      SELECT
+        lgr.id AS assignment_id,
+        lgr.room_id,
+        rm.code AS room_code,
+        rm.name AS room_name,
+        f.name AS floor_name,
+        b.name AS building_name,
+        lgr.created_at
+      FROM lab_group_rooms lgr
+      JOIN rooms rm ON lgr.room_id = rm.id
+      JOIN floors f ON rm.floor_id = f.id
+      JOIN buildings b ON f.building_id = b.id
+      WHERE lgr.group_id = ?
+      ORDER BY b.name ASC, f.floor_number ASC, rm.code ASC
+    `, [groupId]);
+    return rows;
+  },
+
+  async removeUserFromGroup(groupId, userId) {
+    const [result] = await db.query(
+      "DELETE FROM lab_group_users WHERE group_id = ? AND user_id = ?",
+      [groupId, userId]
+    );
+    return result;
+  },
+
+  async removeRoomFromGroup(groupId, roomId) {
+    const [result] = await db.query(
+      "DELETE FROM lab_group_rooms WHERE group_id = ? AND room_id = ?",
+      [groupId, roomId]
+    );
+    return result;
+  },
+
   async getOptions() {
     const [availableRooms] = await db.query(`
       SELECT
@@ -184,9 +269,7 @@ const LaboratoryModel = {
       JOIN room_types ON rooms.room_type_id = room_types.id
       JOIN floors ON rooms.floor_id = floors.id
       JOIN buildings ON floors.building_id = buildings.id
-      LEFT JOIN laboratories ON laboratories.room_id = rooms.id
       WHERE room_types.name = 'laboratory'
-        AND laboratories.id IS NULL
       ORDER BY buildings.name ASC, floors.floor_number ASC, rooms.code ASC
     `);
 

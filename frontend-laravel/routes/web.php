@@ -36,20 +36,31 @@ Route::middleware('frontend.auth')->group(function () {
         Route::post('/floors', [RoomManagementController::class, 'storeFloor'])->name('floors.store');
         Route::post('/room-types', [RoomManagementController::class, 'storeRoomType'])->name('room-types.store');
 
+        Route::put('/buildings/{id}', [RoomManagementController::class, 'updateBuilding'])->name('buildings.update');
+        Route::put('/floors/{id}', [RoomManagementController::class, 'updateFloor'])->name('floors.update');
+        Route::put('/room-types/{id}', [RoomManagementController::class, 'updateRoomType'])->name('room-types.update');
+
         Route::delete('/buildings/{id}', [RoomManagementController::class, 'destroyBuilding'])->name('buildings.destroy');
         Route::delete('/floors/{id}', [RoomManagementController::class, 'destroyFloor'])->name('floors.destroy');
         Route::delete('/room-types/{id}', [RoomManagementController::class, 'destroyRoomType'])->name('room-types.destroy');
 
         Route::get('/laboratories', [LaboratoryManagementController::class, 'index'])->name('laboratories');
         Route::post('/laboratories', [LaboratoryManagementController::class, 'store'])->name('laboratories.store');
+        Route::put('/laboratories/{id}', [LaboratoryManagementController::class, 'update'])->name('laboratories.update');
+        Route::delete('/laboratories/{id}', [LaboratoryManagementController::class, 'destroy'])->name('laboratories.destroy');
 
         Route::post('/lab-groups', [LaboratoryManagementController::class, 'storeGroup'])->name('lab-groups.store');
+        Route::put('/lab-groups/{id}', [LaboratoryManagementController::class, 'updateGroup'])->name('lab-groups.update');
+        Route::delete('/lab-groups/{id}', [LaboratoryManagementController::class, 'destroyGroup'])->name('lab-groups.destroy');
         Route::post('/lab-groups/{groupId}/users', [LaboratoryManagementController::class, 'addGroupUser'])->name('lab-groups.users.store');
         Route::post('/lab-groups/{groupId}/rooms', [LaboratoryManagementController::class, 'addGroupRoom'])->name('lab-groups.rooms.store');
+        Route::get('/lab-groups/{id}/details', [LaboratoryManagementController::class, 'getGroupDetails'])->name('lab-groups.details');
+        Route::delete('/lab-groups/{groupId}/users/{userId}', [LaboratoryManagementController::class, 'destroyGroupUser'])->name('lab-groups.users.destroy');
+        Route::delete('/lab-groups/{groupId}/rooms/{roomId}', [LaboratoryManagementController::class, 'destroyGroupRoom'])->name('lab-groups.rooms.destroy');
     });
 
     Route::get('/inventory', [DashboardController::class, 'inventory'])
-        ->middleware('frontend.role:administrator,staf_administrasi,staf_laboratorium')
+        ->middleware('frontend.role:administrator,staf_administrasi,staf_laboratorium,kepala_laboratorium,ketua_program_studi')
         ->name('inventory');
 
     Route::get('/inventory/history', [DashboardController::class, 'inventoryHistory'])
@@ -76,6 +87,10 @@ Route::middleware('frontend.auth')->group(function () {
         ->middleware('frontend.role:staf_laboratorium')
         ->name('bhp.movement');
 
+    Route::get('/bhp/{id}/movements', [BhpController::class, 'getMovements'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('bhp.movements');
+
     Route::get('/maintenance', [MaintenanceController::class, 'index'])
         ->middleware('frontend.role:staf_laboratorium')
         ->name('maintenance');
@@ -83,6 +98,14 @@ Route::middleware('frontend.auth')->group(function () {
     Route::post('/maintenance', [MaintenanceController::class, 'store'])
         ->middleware('frontend.role:staf_laboratorium')
         ->name('maintenance.store');
+
+    Route::put('/maintenance/{id}', [MaintenanceController::class, 'update'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('maintenance.update');
+
+    Route::delete('/maintenance/{id}', [MaintenanceController::class, 'destroy'])
+        ->middleware('frontend.role:staf_laboratorium')
+        ->name('maintenance.destroy');
 
     Route::get('/procurement', [DashboardController::class, 'procurement'])
         ->middleware('frontend.role:administrator,kepala_laboratorium,ketua_program_studi,staf_administrasi')
@@ -117,9 +140,10 @@ Route::middleware('frontend.auth')->group(function () {
     Route::patch('/api/procurement/{draftId}/items/{itemId}', [ProcurementController::class, 'updateItem']);
     Route::post('/api/procurement/{draftId}/items/{itemId}/review', [ProcurementController::class, 'reviewItem']);
     Route::post('/api/procurement/{id}/finalize', [ProcurementController::class, 'finalize']);
+    Route::post('/api/procurement/{id}/return', [ProcurementController::class, 'returnDraft']);
     Route::post('/api/procurement/{id}/submit', [ProcurementController::class, 'submit']);
 
-    Route::prefix('staf-admin')->middleware('frontend.role:staf_administrasi')->group(function () {
+    Route::middleware('frontend.role:staf_administrasi')->group(function () {
         Route::get('/procurement-approved', [StafAdminController::class, 'procurementApproved'])->name('staf-admin.procurement-approved');
         Route::get('/procurement-approved/{id}', [StafAdminController::class, 'procurementApprovedDetail'])->name('staf-admin.procurement-approved.detail');
 
@@ -128,7 +152,9 @@ Route::middleware('frontend.auth')->group(function () {
         Route::post('/api/goods-receipt', [StafAdminController::class, 'storeGoodsReceipt'])->name('staf-admin.goods-receipt.store');
 
         Route::get('/api/label-check', [StafAdminController::class, 'labelCheck'])->name('staf-admin.label-check');
+        Route::get('/api/next-label', [StafAdminController::class, 'nextLabelApi'])->name('staf-admin.next-label');
         Route::get('/api/inventory/assets', [StafAdminController::class, 'inventoryAssetsApi'])->name('staf-admin.inventory-assets-api');
+        Route::post('/api/inventory/batches/{id}/label-all', [StafAdminController::class, 'labelAllAjax'])->name('staf-admin.label-all.ajax');
         Route::get('/print-label', [StafAdminController::class, 'printLabel'])->name('staf-admin.print-label');
         Route::get('/inventory-label', [StafAdminController::class, 'inventoryLabel'])->name('staf-admin.inventory-label');
         Route::get('/inventory-label/{id}/edit', [StafAdminController::class, 'inventoryLabelEdit'])->name('staf-admin.inventory-label.edit');
@@ -136,7 +162,7 @@ Route::middleware('frontend.auth')->group(function () {
         Route::post('/api/inventory-label/{id}', [StafAdminController::class, 'inventoryLabelUpdateAjax'])->name('staf-admin.inventory-label.ajax');
         Route::get('/api/rooms', [StafAdminController::class, 'roomsApi'])->name('staf-admin.rooms-api');
 
-        Route::get('/dashboard', [StafAdminController::class, 'dashboard'])->name('staf-admin.dashboard');
+
         Route::get('/asset-list', [StafAdminController::class, 'assetList'])->name('staf-admin.asset-list');
         Route::get('/asset-timeline/{id}', [StafAdminController::class, 'assetTimeline'])->name('staf-admin.asset-timeline');
         Route::get('/inventaris', [StafAdminController::class, 'inventaris'])->name('staf-admin.inventaris');

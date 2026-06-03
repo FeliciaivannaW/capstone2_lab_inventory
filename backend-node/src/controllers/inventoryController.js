@@ -37,14 +37,20 @@ const checkAssetRoomAccess = async (user, asset, assetId) => {
 
 const getInventoryAssets = async (req, res) => {
   try {
-    const { search, status, condition, label_status, lab_id, receipt_id } = req.query;
+    const { search, status, condition, label_status, lab_id, receipt_id, sort } = req.query;
     const roomIds = await getAccessibleRoomIdsForUser(req.user);
+    
+    let labIds = null;
+    if (req.user?.role === "staf_laboratorium") {
+      labIds = await LabAccessModel.findAccessibleLabIds(req.user.id);
+      labIds = labIds.map(id => Number(id));
+    }
 
-    if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0)) {
+    if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0) && (!labIds || labIds.length === 0)) {
       return res.json({ success: true, data: [], message: "Data inventaris berhasil diambil" });
     }
 
-    const assets = await InventoryModel.findAll({ search, status, condition, label_status, lab_id, roomIds, receipt_id });
+    const assets = await InventoryModel.findAll({ search, status, condition, label_status, lab_id, roomIds, labIds, receipt_id, sort });
 
     res.json({ success: true, data: assets, message: "Data inventaris berhasil diambil" });
   } catch (error) {
@@ -55,7 +61,14 @@ const getInventoryAssets = async (req, res) => {
 
 const getInventoryBatches = async (req, res) => {
   try {
-    const { label_status } = req.query;
+    const { label_status, search, page = 1, limit = 10 } = req.query;
+
+    let whereClause = "";
+    let params = [];
+    if (search) {
+      whereClause = "WHERE pd.title LIKE ? OR l.name LIKE ?";
+      params = [`%${search}%`, `%${search}%`];
+    }
 
     const [rows] = await db.query(`
       SELECT
@@ -78,6 +91,7 @@ const getInventoryBatches = async (req, res) => {
       JOIN laboratories AS l        ON pd.lab_id = l.id
       LEFT JOIN item_catalogs AS ic ON pi.item_catalog_id = ic.id
       LEFT JOIN inventory_assets AS ia ON ia.receipt_id = gr.id
+      ${whereClause}
       GROUP BY gr.id, pd.id, l.id, pi.id, ic.id
       HAVING total_assets > 0
       ORDER BY gr.received_date DESC, gr.id DESC
@@ -123,7 +137,21 @@ const getInventoryBatches = async (req, res) => {
       batches = batches.filter(b => b.labeled_count > 0);
     }
 
-    res.json({ status: "success", data: batches });
+    const total = batches.length;
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedBatches = batches.slice(startIndex, endIndex);
+
+    res.json({
+      status: "success",
+      data: paginatedBatches,
+      meta: {
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        last_page: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     console.error("[INVENTORY BATCHES ERROR]", error);
     res.status(500).json({ status: "error", message: "Gagal mengambil data batch", detail: error.message });
@@ -225,13 +253,17 @@ const updateAssetLabel = async (req, res) => {
 
     const baseUrl = `${req.protocol}://${req.get("host")}`;
 
-    // Jika user upload foto manual → pakai itu
-    if (req.file) {
-      photo_url = `${baseUrl}/uploads/qr/${req.file.filename}`;
+    let qr_url = null;
+
+    if (req.files && req.files.qr_photo && req.files.qr_photo[0]) {
+      qr_url = `${baseUrl}/uploads/qr/${req.files.qr_photo[0].filename}`;
+    }
+    if (req.files && req.files.asset_photo && req.files.asset_photo[0]) {
+      photo_url = `${baseUrl}/uploads/assets/${req.files.asset_photo[0].filename}`;
     }
 
-    // Auto-generate QR code dari label_number (selalu, kecuali sudah ada upload manual)
-    let qr_url = photo_url; // default: pakai foto upload jika ada
+    // Auto-generate QR code dari label_number jika tidak ada upload manual
+    if (!qr_url) {
     try {
       const qrDir = path.join(__dirname, "../../uploads/qr");
       if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
@@ -246,13 +278,9 @@ const updateAssetLabel = async (req, res) => {
       });
 
       qr_url = `${baseUrl}/uploads/qr/${qrFilename}`;
-
-      // Jika tidak ada upload manual, pakai QR yang di-generate
-      if (!photo_url) {
-        photo_url = qr_url;
-      }
     } catch (qrErr) {
       console.warn("[QR GENERATE WARN]", qrErr.message);
+    }
     }
 
     await InventoryModel.updateLabel(id, {
@@ -300,6 +328,88 @@ const updateAssetLabel = async (req, res) => {
     });
   } finally {
     connection.release();
+  }
+};
+
+const labelAllAssets = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    await connection.beginTransaction();
+    const { id: receipt_id } = req.params;
+
+    // 1. Dapatkan daftar aset yang belum dilabeli
+    const [assets] = await connection.query(`
+      SELECT ia.id, pd.budget_year, l.code AS lab_code
+      FROM inventory_assets AS ia
+      JOIN goods_receipts AS gr ON ia.receipt_id = gr.id
+      JOIN procurement_items AS pi ON gr.procurement_item_id = pi.id
+      JOIN procurement_drafts AS pd ON pi.draft_id = pd.id
+      JOIN laboratories AS l ON pd.lab_id = l.id
+      WHERE ia.receipt_id = ? AND (ia.label_number IS NULL OR ia.label_number = '')
+    `, [receipt_id]);
+
+    if (assets.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({ status: "error", message: "Tidak ada aset yang perlu dilabeli dalam pengadaan ini." });
+    }
+
+    const { budget_year: year, lab_code } = assets[0];
+    
+    // 2. Dapatkan seq terakhir
+    let maxSeq = await InventoryModel.getMaxSequence(lab_code, connection);
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const qrDir = path.join(__dirname, "../../uploads/qr");
+    if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
+
+    // 3. Loop update
+    for (const asset of assets) {
+      maxSeq++;
+      const seqStr = String(maxSeq).padStart(3, '0');
+      const label_number = `LBL-${lab_code}-${seqStr}`;
+
+      const qrFilename = `qr-label-${asset.id}-${Date.now()}.png`;
+      const qrFilepath = path.join(qrDir, qrFilename);
+
+      await QRCode.toFile(qrFilepath, label_number, {
+        width: 400,
+        margin: 2,
+        color: { dark: "#1e293b", light: "#ffffff" }
+      });
+      const qr_url = `${baseUrl}/uploads/qr/${qrFilename}`;
+
+      await InventoryModel.updateLabel(asset.id, {
+        label_number,
+        qr_url,
+        status: 'labeled'
+      }, connection);
+    }
+
+    await connection.commit();
+    res.json({ status: "success", message: `${assets.length} aset berhasil dilabeli.` });
+  } catch (error) {
+    await connection.rollback();
+    console.error("[LABEL ALL ERROR]", error);
+    res.status(500).json({ status: "error", message: "Gagal melabeli semua aset", detail: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+const getNextLabel = async (req, res) => {
+  try {
+    const { lab_code } = req.query;
+    if (!lab_code) {
+      return res.status(400).json({ status: "error", message: "Parameter lab_code wajib diisi" });
+    }
+    const maxSeq = await InventoryModel.getMaxSequence(lab_code);
+    const nextSeqStr = String(maxSeq + 1).padStart(3, '0');
+    const label_number = `LBL-${lab_code}-${nextSeqStr}`;
+    
+    res.json({ status: "success", data: { label_number } });
+  } catch (error) {
+    console.error("[GET NEXT LABEL ERROR]", error);
+    res.status(500).json({ status: "error", message: "Gagal mendapatkan saran label" });
   }
 };
 
@@ -428,8 +538,14 @@ const getAssetTimeline = async (req, res) => {
 const getConditionHistory = async (req, res) => {
   try {
     const roomIds = await getAccessibleRoomIdsForUser(req.user);
+    
+    let labIds = null;
+    if (req.user?.role === "staf_laboratorium") {
+      labIds = await LabAccessModel.findAccessibleLabIds(req.user.id);
+      labIds = labIds.map(id => Number(id));
+    }
 
-    if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0)) {
+    if (req.user?.role === "staf_laboratorium" && (!roomIds || roomIds.length === 0) && (!labIds || labIds.length === 0)) {
       return res.json({
         success: true,
         data: [],
@@ -440,7 +556,8 @@ const getConditionHistory = async (req, res) => {
     const history = await InventoryModel.findConditionHistory({
       search: req.query.search,
       condition: req.query.condition,
-      roomIds
+      roomIds,
+      labIds
     });
 
     res.json({
@@ -597,7 +714,9 @@ module.exports = {
   getInventoryBatches,
   getInventoryAsset,
   updateAssetLabel,
+  labelAllAssets,
   checkLabelAvailability,
+  getNextLabel,
   getAssetTimeline,
   getConditionHistory,
   updateAssetCondition

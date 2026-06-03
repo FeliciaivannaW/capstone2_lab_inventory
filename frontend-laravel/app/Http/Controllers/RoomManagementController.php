@@ -120,7 +120,57 @@ class RoomManagementController extends Controller
             'description' => 'nullable|string',
         ]);
 
+        $validated['name'] = strtolower(str_replace(' ', '_', trim($validated['name'])));
+
         $result = $this->sendApiData('/room-types', $validated);
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function updateBuilding(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'code' => 'required|string|max:50',
+            'name' => 'required|string|max:150',
+            'address' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+
+        $result = $this->sendApiData("/buildings/{$id}", $validated, 'PUT');
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function updateFloor(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'building_id' => 'required|integer',
+            'floor_number' => 'required|integer',
+            'name' => 'nullable|string|max:100',
+            'description' => 'nullable|string',
+        ]);
+
+        $result = $this->sendApiData("/floors/{$id}", $validated, 'PUT');
+
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withInput()->with('error', $result['message']);
+    }
+
+    public function updateRoomType(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'description' => 'nullable|string',
+        ]);
+
+        $validated['name'] = strtolower(str_replace(' ', '_', trim($validated['name'])));
+
+        $result = $this->sendApiData("/room-types/{$id}", $validated, 'PUT');
 
         return $result['ok']
             ? back()->with('success', $result['message'])

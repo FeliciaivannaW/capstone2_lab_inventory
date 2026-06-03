@@ -61,11 +61,61 @@ class DashboardController extends Controller
         $role = session('auth_user')['role'] ?? null;
 
         if ($role === 'staf_administrasi') {
-            return redirect()->route('staf-admin.dashboard');
+            $stats = $this->getApiData('/statistics/summary') ?: [];
+
+            $inv        = $stats['inventory']      ?? [];
+            $label      = $stats['label']          ?? [];
+            $bhp        = $stats['bhp']            ?? [];
+            $bhpLow     = $stats['bhpLowStock']    ?? [];
+            $proc       = $stats['procurement']    ?? [];
+            $recv       = $stats['reception']      ?? [];
+            $trend      = $stats['monthlyTrend']   ?? [];
+            $activity   = $stats['recentActivity'] ?? [];
+
+            return view('pages.staf-admin.dashboard', compact(
+                'inv', 'label', 'bhp', 'bhpLow', 'proc', 'recv', 'trend', 'activity'
+            ));
+        }
+
+        if ($role === 'staf_laboratorium') {
+            $stats = $this->getApiData('/statistics/summary') ?: [];
+
+            $inv      = $stats['inventory']      ?? [];
+            $bhp      = $stats['bhp']            ?? [];
+            $bhpLow   = $stats['bhpLowStock']    ?? [];
+
+            $maintenanceLogs = $this->getApiData('/maintenance/logs') ?: [];
+            $recentMaintenance = array_slice($maintenanceLogs, 0, 5);
+
+            return view('pages.staf-lab.dashboard', compact(
+                'inv', 'bhp', 'bhpLow', 'recentMaintenance'
+            ));
         }
 
         if ($role === 'kepala_laboratorium') {
-            return redirect()->route('procurement');
+            $drafts = $this->getApiData('/procurement/drafts') ?: [];
+            
+            $stats = [
+                'total' => count($drafts),
+                'draft' => 0,
+                'submitted' => 0,
+                'finalized' => 0,
+            ];
+            
+            $actionableDrafts = [];
+
+            foreach ($drafts as $draft) {
+                if ($draft['status'] === 'draft') {
+                    $stats['draft']++;
+                    $actionableDrafts[] = $draft;
+                } elseif ($draft['status'] === 'submitted') {
+                    $stats['submitted']++;
+                } elseif ($draft['status'] === 'finalized') {
+                    $stats['finalized']++;
+                }
+            }
+
+            return view('pages.dashboard-kalab', compact('drafts', 'stats', 'actionableDrafts'));
         }
 
         try {
@@ -202,10 +252,6 @@ class DashboardController extends Controller
     {
         $authUser = session('auth_user');
         $params = [];
-
-        if (($authUser['role'] ?? '') === 'kepala_laboratorium' && !empty($authUser['lab_id'])) {
-            $params['lab_id'] = $authUser['lab_id'];
-        }
 
         $drafts = $this->getApiData('/procurement/drafts', $params);
 

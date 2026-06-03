@@ -47,6 +47,32 @@ const uploadQr = multer({
 });
 
 // ============================================================
+// MULTER — Multiple upload (QR & Asset photo) for Label
+// ============================================================
+const labelMultiStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const isAsset = file.fieldname === 'asset_photo';
+    const dir = path.join(__dirname, isAsset ? "../../uploads/assets" : "../../uploads/qr");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const prefix = file.fieldname === 'asset_photo' ? "asset-" : "qr-";
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, prefix + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const uploadLabelMulti = multer({
+  storage: labelMultiStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Hanya file gambar (JPEG, PNG, WEBP) yang diperbolehkan"));
+  }
+});
+
+// ============================================================
 // MULTER — Asset photo upload
 // ============================================================
 const assetPhotoStorage = multer.diskStorage({
@@ -129,8 +155,13 @@ router.delete("/laboratories/:id", authMiddleware, roleMiddleware(["administrato
 
 router.get("/lab-groups", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.getLabGroups);
 router.post("/lab-groups", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.createLabGroup);
+router.put("/lab-groups/:id", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.updateLabGroup);
+router.delete("/lab-groups/:id", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.deleteLabGroup);
 router.post("/lab-groups/:groupId/users", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.addUserToGroup);
 router.post("/lab-groups/:groupId/rooms", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.addRoomToGroup);
+router.get("/lab-groups/:id/details", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.getLabGroupDetails);
+router.delete("/lab-groups/:groupId/users/:userId", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.removeUserFromGroup);
+router.delete("/lab-groups/:groupId/rooms/:roomId", authMiddleware, roleMiddleware(["administrator"]), laboratoryController.removeRoomFromGroup);
 
 // ============================================================
 // BHP STOCK ROUTES (Staf Laboratorium only)
@@ -147,6 +178,8 @@ router.get("/bhp/stocks/:id/movements", authMiddleware, roleMiddleware(["staf_la
 // ============================================================
 router.get("/maintenance/logs", authMiddleware, roleMiddleware(["staf_laboratorium"]), maintenanceController.getMaintenanceLogs);
 router.post("/maintenance/logs", authMiddleware, roleMiddleware(["staf_laboratorium"]), maintenanceController.createMaintenanceLog);
+router.put("/maintenance/logs/:id", authMiddleware, roleMiddleware(["staf_laboratorium"]), maintenanceController.updateMaintenanceLog);
+router.delete("/maintenance/logs/:id", authMiddleware, roleMiddleware(["staf_laboratorium"]), maintenanceController.deleteMaintenanceLog);
 
 // ============================================================
 // PROCUREMENT DRAFT ROUTES
@@ -193,6 +226,12 @@ router.post(
   roleMiddleware(["kepala_laboratorium", "staf_administrasi"]),
   procurementController.addProcurementItem
 );
+router.put(
+  "/procurement/drafts/:id/items/sync",
+  authMiddleware,
+  roleMiddleware(["kepala_laboratorium", "staf_administrasi"]),
+  procurementController.syncProcurementItems
+);
 router.patch(
   "/procurement/drafts/:id/items/:itemId",
   authMiddleware,
@@ -217,6 +256,12 @@ router.post(
   roleMiddleware(["ketua_program_studi"]),
   procurementController.finalizeProcurementDraft
 );
+router.post(
+  "/procurement/drafts/:id/return",
+  authMiddleware,
+  roleMiddleware(["ketua_program_studi"]),
+  procurementController.returnProcurementDraft
+);
 
 // ============================================================
 // GOODS RECEIPT ROUTES
@@ -230,7 +275,7 @@ router.post("/goods-receipts", authMiddleware, roleMiddleware(["staf_administras
 // INVENTORY ASSET ROUTES
 // ============================================================
 router.get("/inventory/label-check", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.checkLabelAvailability);
-router.get("/inventory/assets", authMiddleware, roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium"]), inventoryController.getInventoryAssets);
+router.get("/inventory/assets", authMiddleware, roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium", "kepala_laboratorium", "ketua_program_studi"]), inventoryController.getInventoryAssets);
 router.get("/inventory/batches", authMiddleware, roleMiddleware(["staf_administrasi", "administrator"]), inventoryController.getInventoryBatches);
 router.get("/inventory/condition-history", authMiddleware, roleMiddleware(["staf_laboratorium"]), inventoryController.getConditionHistory);
 router.patch("/inventory/assets/:id/condition", authMiddleware, roleMiddleware(["staf_laboratorium"]), inventoryController.updateAssetCondition);
@@ -238,7 +283,9 @@ router.put("/inventory/assets/:id/condition", authMiddleware, roleMiddleware(["s
 router.get("/inventory/assets/:id", authMiddleware, roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium"]), inventoryController.getInventoryAsset);
 router.patch("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.updateAssetLabel);
 router.put("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.updateAssetLabel);
-router.post("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), uploadQr.single("qr_photo"), inventoryController.updateAssetLabel);
+router.post("/inventory/assets/:id/label", authMiddleware, roleMiddleware(["staf_administrasi"]), uploadLabelMulti.fields([{ name: "qr_photo", maxCount: 1 }, { name: "asset_photo", maxCount: 1 }]), inventoryController.updateAssetLabel);
+router.post("/inventory/batches/:id/label-all", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.labelAllAssets);
+router.get("/inventory/next-label", authMiddleware, roleMiddleware(["staf_administrasi"]), inventoryController.getNextLabel);
 router.get("/inventory/assets/:id/timeline", authMiddleware, roleMiddleware(["staf_administrasi", "administrator"]), inventoryController.getAssetTimeline);
 
 // ============================================================
@@ -249,7 +296,7 @@ router.post("/upload/asset-photo", authMiddleware, roleMiddleware(["staf_adminis
 // ============================================================
 // STATISTICS ROUTES
 // ============================================================
-router.get("/statistics/summary", authMiddleware, roleMiddleware(["staf_administrasi", "administrator"]), statisticsController.getSummary);
+router.get("/statistics/summary", authMiddleware, roleMiddleware(["staf_administrasi", "administrator", "staf_laboratorium"]), statisticsController.getSummary);
 
 router.get("/admin-only", authMiddleware, roleMiddleware(["administrator"]), (req, res) => {
   res.json({ status: "success", message: "Halaman khusus administrator" });

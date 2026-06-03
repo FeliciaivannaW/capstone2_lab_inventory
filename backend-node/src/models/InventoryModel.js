@@ -4,7 +4,7 @@ const InventoryModel = {
   /**
    * Find inventory assets based on filters
    */
-  async findAll({ search, status, condition, label_status, lab_id, roomIds, receipt_id } = {}) {
+  async findAll({ search, status, condition, label_status, lab_id, roomIds, labIds, receipt_id, sort } = {}) {
     let whereConditions = [];
     let params = [];
 
@@ -34,9 +34,15 @@ const InventoryModel = {
       params.push(lab_id);
     }
 
-    if (Array.isArray(roomIds) && roomIds.length > 0) {
+    if (Array.isArray(roomIds) && roomIds.length > 0 && Array.isArray(labIds) && labIds.length > 0) {
+      whereConditions.push("(ia.room_id IN (?) OR (ia.room_id IS NULL AND COALESCE(lproc.id, lroom.id) IN (?)))");
+      params.push(roomIds, labIds);
+    } else if (Array.isArray(roomIds) && roomIds.length > 0) {
       whereConditions.push("ia.room_id IN (?)");
       params.push(roomIds);
+    } else if (Array.isArray(labIds) && labIds.length > 0) {
+      whereConditions.push("(ia.room_id IS NULL AND COALESCE(lproc.id, lroom.id) IN (?))");
+      params.push(labIds);
     }
 
     if (receipt_id) {
@@ -47,6 +53,20 @@ const InventoryModel = {
     const whereClause = whereConditions.length > 0
       ? "WHERE " + whereConditions.join(" AND ")
       : "";
+
+    let orderClause = "ORDER BY ia.receipt_id DESC, ia.id ASC";
+    if (sort === 'condition') {
+      orderClause = `
+        ORDER BY CASE ia.asset_condition
+          WHEN 'rusak_berat' THEN 1
+          WHEN 'rusak_ringan' THEN 2
+          WHEN 'dihapus' THEN 3
+          WHEN 'maintenance' THEN 4
+          WHEN 'baik' THEN 5
+          ELSE 6
+        END ASC, ia.receipt_id DESC, ia.id ASC
+      `;
+    }
 
     const [assets] = await db.query(`
       SELECT
@@ -91,7 +111,7 @@ const InventoryModel = {
       LEFT JOIN laboratories AS lproc  ON pd.lab_id = lproc.id
       LEFT JOIN goods_receipts AS gr   ON ia.receipt_id = gr.id
       ${whereClause}
-      ORDER BY ia.receipt_id DESC, ia.id ASC
+      ${orderClause}
     `, params);
 
     return assets;
@@ -189,6 +209,20 @@ const InventoryModel = {
       WHERE l.code = ? AND YEAR(ia.received_date) = ?
     `, [labCode, year]);
     return rows[0]?.cnt || 0;
+  },
+
+  /**
+   * Get maximum sequence number for a lab (for generating codes)
+   */
+  async getMaxSequence(labCode, tx = null) {
+    const conn = tx || db;
+    const prefix = `LBL-${labCode}-`;
+    const [rows] = await conn.query(`
+      SELECT MAX(CAST(SUBSTRING(label_number, LENGTH(?) + 1) AS UNSIGNED)) AS max_seq
+      FROM inventory_assets
+      WHERE label_number LIKE ?
+    `, [prefix, prefix + '%']);
+    return rows[0]?.max_seq || 0;
   },
 
   /**
@@ -345,12 +379,12 @@ const InventoryModel = {
     return result;
   },
 
-  async findConditionHistory({ search, condition, roomIds }) {
+  async findConditionHistory({ search, condition, roomIds, labIds }) {
     const whereConditions = [];
     const params = [];
 
     if (search) {
-      whereConditions.push("(ia.asset_code LIKE ? OR ia.label_number LIKE ? OR ic.name LIKE ? OR acl.note LIKE ?)");
+      whereConditions.push("(ia.asset_code LIKE ? OR ia.label_number LIKE ? OR COALESCE(ic.name, pi.item_name) LIKE ? OR acl.note LIKE ?)");
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
@@ -359,9 +393,15 @@ const InventoryModel = {
       params.push(condition);
     }
 
-    if (Array.isArray(roomIds) && roomIds.length > 0) {
+    if (Array.isArray(roomIds) && roomIds.length > 0 && Array.isArray(labIds) && labIds.length > 0) {
+      whereConditions.push("(ia.room_id IN (?) OR (ia.room_id IS NULL AND l.id IN (?)))");
+      params.push(roomIds, labIds);
+    } else if (Array.isArray(roomIds) && roomIds.length > 0) {
       whereConditions.push("ia.room_id IN (?)");
       params.push(roomIds);
+    } else if (Array.isArray(labIds) && labIds.length > 0) {
+      whereConditions.push("(ia.room_id IS NULL AND l.id IN (?))");
+      params.push(labIds);
     }
 
     const whereClause = whereConditions.length ? `WHERE ${whereConditions.join(" AND ")}` : "";
@@ -377,13 +417,16 @@ const InventoryModel = {
         ia.asset_code,
         ia.label_number,
         ia.status,
-        ic.name AS item_name,
+        COALESCE(ic.name, pi.item_name) AS item_name,
         r.code AS room_code,
         r.name AS room_name,
         u.name AS updated_by_name
       FROM asset_condition_logs acl
       JOIN inventory_assets ia ON acl.inventory_asset_id = ia.id
-      JOIN item_catalogs ic ON ia.item_catalog_id = ic.id
+      LEFT JOIN item_catalogs ic ON ia.item_catalog_id = ic.id
+      LEFT JOIN procurement_items pi ON ia.procurement_item_id = pi.id
+      LEFT JOIN procurement_drafts pd ON pi.draft_id = pd.id
+      LEFT JOIN laboratories l ON pd.lab_id = l.id
       LEFT JOIN rooms r ON ia.room_id = r.id
       LEFT JOIN users u ON acl.updated_by = u.id
       ${whereClause}

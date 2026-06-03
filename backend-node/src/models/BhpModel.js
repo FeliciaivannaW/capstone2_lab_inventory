@@ -45,6 +45,7 @@ const BhpModel = {
         bs.current_stock,
         bs.minimum_stock,
         CASE
+          WHEN bs.current_stock <= 0 THEN 'habis'
           WHEN bs.current_stock <= bs.minimum_stock THEN 'kritis'
           WHEN bs.current_stock <= (bs.minimum_stock * 2) THEN 'menipis'
           ELSE 'aman'
