@@ -166,6 +166,7 @@ router.delete("/lab-groups/:groupId/rooms/:roomId", authMiddleware, roleMiddlewa
 // ============================================================
 // BHP STOCK ROUTES (Staf Laboratorium only)
 // ============================================================
+router.get("/bhp/catalog-readonly", authMiddleware, roleMiddleware(["administrator", "staf_administrasi", "staf_laboratorium", "kepala_laboratorium", "ketua_program_studi"]), bhpController.getBhpCatalogReadonly);
 router.get("/bhp/catalogs", authMiddleware, roleMiddleware(["staf_laboratorium"]), bhpController.getBhpCatalogs);
 router.get("/bhp/stocks", authMiddleware, roleMiddleware(["staf_laboratorium"]), bhpController.getStocks);
 router.post("/bhp/stocks", authMiddleware, roleMiddleware(["staf_laboratorium"]), bhpController.createStock);

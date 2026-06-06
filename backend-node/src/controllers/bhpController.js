@@ -240,11 +240,40 @@ const adjustStock = async (req, res) => {
   }
 };
 
+const getBhpCatalogReadonly = async (req, res) => {
+  try {
+    const { search, lab_id, stock_status } = req.query;
+    const user = req.user;
+
+    let labIds = null;
+    if (user?.role === "staf_laboratorium") {
+      const ids = await LabAccessModel.findAccessibleLabIds(user.id);
+      labIds = ids.map((id) => Number(id));
+      if (!labIds.length) {
+        return res.json({ success: true, data: [] });
+      }
+    }
+
+    const stocks = await BhpModel.findStocksReadonly({
+      labIds,
+      labId: lab_id || null,
+      search: search || null,
+      stockStatus: stock_status || null,
+    });
+
+    res.json({ success: true, data: stocks });
+  } catch (error) {
+    console.error("[GET BHP CATALOG READONLY ERROR]", error);
+    res.status(500).json({ success: false, message: "Gagal mengambil katalog BHP" });
+  }
+};
+
 module.exports = {
   getBhpCatalogs,
   getStocks,
   getStockMovements,
   createStock,
   updateStock,
-  adjustStock
+  adjustStock,
+  getBhpCatalogReadonly,
 };

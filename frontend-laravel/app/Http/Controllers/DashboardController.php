@@ -151,73 +151,64 @@ class DashboardController extends Controller
 
     public function inventory(Request $request)
     {
+        $activeTab = $request->get('tab', 'inventaris');
+
         $filters = [];
+        if ($request->filled('search'))       $filters['search']       = $request->search;
+        if ($request->filled('lab_id'))       $filters['lab_id']       = $request->lab_id;
+        if ($request->filled('status'))       $filters['status']       = $request->status;
+        if ($request->filled('condition'))    $filters['condition']    = $request->condition;
+        if ($request->filled('label_status')) $filters['label_status'] = $request->label_status;
 
-        if ($request->filled('search')) {
-            $filters['search'] = $request->search;
-        }
+        $bhpFilters = [];
+        if ($request->filled('bhp_search')) $bhpFilters['search']       = $request->bhp_search;
+        if ($request->filled('bhp_lab_id')) $bhpFilters['lab_id']       = $request->bhp_lab_id;
+        if ($request->filled('bhp_status')) $bhpFilters['stock_status'] = $request->bhp_status;
 
-        if ($request->filled('lab_id')) {
-            $filters['lab_id'] = $request->lab_id;
-        }
-
-        if ($request->filled('status')) {
-            $filters['status'] = $request->status;
-        }
-
-        if ($request->filled('condition')) {
-            $filters['condition'] = $request->condition;
-        }
-
-        if ($request->filled('label_status')) {
-            $filters['label_status'] = $request->label_status;
-        }
-
-        $assets = $this->getApiData('/inventory/assets', $filters) ?: [];
-        $labs = $this->getApiData('/laboratories') ?: [];
+        $assets    = $this->getApiData('/inventory/assets', $filters) ?: [];
+        $labs      = $this->getApiData('/laboratories') ?: [];
         $allAssets = $this->getApiData('/inventory/assets') ?: [];
 
-        $totalAssets = count($allAssets);
-        $byStatus = [];
-        $byCondition = [];
-        $labeledCount = 0;
+        $totalAssets    = count($allAssets);
+        $byStatus       = [];
+        $byCondition    = [];
+        $labeledCount   = 0;
         $unlabeledCount = 0;
         $availableCount = 0;
         $maintenanceCount = 0;
 
         foreach ($allAssets as $asset) {
-            $status = $asset['status'] ?? 'unknown';
+            $status    = $asset['status']          ?? 'unknown';
             $condition = $asset['asset_condition'] ?? 'unknown';
-
-            $byStatus[$status] = ($byStatus[$status] ?? 0) + 1;
+            $byStatus[$status]       = ($byStatus[$status]       ?? 0) + 1;
             $byCondition[$condition] = ($byCondition[$condition] ?? 0) + 1;
+            if (!empty($asset['label_number'])) $labeledCount++; else $unlabeledCount++;
+            if ($status === 'available') $availableCount++;
+            if ($status === 'maintenance' || $condition === 'maintenance') $maintenanceCount++;
+        }
 
-            if (!empty($asset['label_number'])) {
-                $labeledCount++;
-            } else {
-                $unlabeledCount++;
-            }
-
-            if (($asset['status'] ?? '') === 'available') {
-                $availableCount++;
-            }
-
-            if (($asset['status'] ?? '') === 'maintenance' || ($asset['asset_condition'] ?? '') === 'maintenance') {
-                $maintenanceCount++;
-            }
+        $bhpStocks   = $this->getApiData('/bhp/catalog-readonly', $bhpFilters) ?: [];
+        $bhpByStatus = [];
+        foreach ($bhpStocks as $s) {
+            $st = $s['stock_status'] ?? 'unknown';
+            $bhpByStatus[$st] = ($bhpByStatus[$st] ?? 0) + 1;
         }
 
         return view('pages.inventory', [
-            'assets' => $assets,
-            'labs' => $labs,
-            'filters' => $request->only(['search', 'lab_id', 'status', 'condition', 'label_status']),
-            'totalAssets' => $totalAssets,
-            'byStatus' => $byStatus,
-            'byCondition' => $byCondition,
-            'labeledCount' => $labeledCount,
-            'unlabeledCount' => $unlabeledCount,
-            'availableCount' => $availableCount,
+            'activeTab'        => $activeTab,
+            'assets'           => $assets,
+            'labs'             => $labs,
+            'filters'          => $request->only(['search', 'lab_id', 'status', 'condition', 'label_status']),
+            'totalAssets'      => $totalAssets,
+            'byStatus'         => $byStatus,
+            'byCondition'      => $byCondition,
+            'labeledCount'     => $labeledCount,
+            'unlabeledCount'   => $unlabeledCount,
+            'availableCount'   => $availableCount,
             'maintenanceCount' => $maintenanceCount,
+            'bhpStocks'        => $bhpStocks,
+            'bhpByStatus'      => $bhpByStatus,
+            'bhpFilters'       => $request->only(['bhp_search', 'bhp_lab_id', 'bhp_status']),
         ]);
     }
 

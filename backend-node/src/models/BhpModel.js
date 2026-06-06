@@ -61,6 +61,65 @@ const BhpModel = {
     return stocks;
   },
 
+  async findStocksReadonly({ labIds = null, labId = null, search = null, stockStatus = null } = {}) {
+    const conditions = ["ic.type = 'bhp'"];
+    const params = [];
+
+    if (Array.isArray(labIds) && labIds.length > 0) {
+      conditions.push("bs.lab_id IN (?)");
+      params.push(labIds);
+    }
+
+    if (labId) {
+      conditions.push("bs.lab_id = ?");
+      params.push(Number(labId));
+    }
+
+    if (search) {
+      conditions.push("(ic.name LIKE ? OR l.name LIKE ? OR l.code LIKE ?)");
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    if (stockStatus) {
+      const statusMap = {
+        habis:   "bs.current_stock <= 0",
+        kritis:  "bs.current_stock > 0 AND bs.current_stock <= bs.minimum_stock",
+        menipis: "bs.current_stock > bs.minimum_stock AND bs.current_stock <= (bs.minimum_stock * 2)",
+        aman:    "bs.current_stock > (bs.minimum_stock * 2)",
+      };
+      const cond = statusMap[stockStatus];
+      if (cond) conditions.push(cond);
+    }
+
+    const [stocks] = await db.query(`
+      SELECT
+        bs.id,
+        bs.lab_id,
+        l.name AS laboratory_name,
+        l.code AS laboratory_code,
+        bs.item_catalog_id,
+        ic.name AS item_name,
+        ic.unit  AS catalog_unit,
+        bs.unit,
+        bs.current_stock,
+        bs.minimum_stock,
+        CASE
+          WHEN bs.current_stock <= 0 THEN 'habis'
+          WHEN bs.current_stock <= bs.minimum_stock THEN 'kritis'
+          WHEN bs.current_stock <= (bs.minimum_stock * 2) THEN 'menipis'
+          ELSE 'aman'
+        END AS stock_status,
+        bs.updated_at
+      FROM bhp_stocks bs
+      JOIN item_catalogs ic ON bs.item_catalog_id = ic.id
+      JOIN laboratories l ON bs.lab_id = l.id
+      WHERE ${conditions.join(" AND ")}
+      ORDER BY l.name ASC, ic.name ASC
+    `, params);
+
+    return stocks;
+  },
+
   async findMovementsByStockId(stockId) {
     const [movements] = await db.query(`
       SELECT
