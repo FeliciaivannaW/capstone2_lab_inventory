@@ -56,7 +56,72 @@
         }
 
         $statusOptions = ['active' => 'Active', 'inactive' => 'Inactive'];
+
+        $groupAccessText = function ($group) {
+            return $group['managed_lab_names'] ?? $group['laboratory_name'] ?? '—';
+        };
+
+        $groupRoomText = function ($group) {
+            return $group['managed_room_names'] ?? null;
+        };
+
+        $groupById = [];
+        foreach ($labGroups as $group) {
+            $groupById[(string)($group['id'] ?? '')] = $group;
+        }
+
+        $userGroupDetails = function ($user) use ($groupById) {
+            $ids = collect(explode(',', $user['lab_group_ids'] ?? ''))
+                ->filter()
+                ->map(fn($id) => trim((string) $id))
+                ->toArray();
+
+            $details = [];
+            foreach ($ids as $id) {
+                if (isset($groupById[$id])) {
+                    $details[] = $groupById[$id];
+                }
+            }
+
+            return $details;
+        };
     @endphp
+
+    @if(!empty($labGroups))
+        <div class="glass-card rounded-2xl p-5 mb-5 border border-indigo-100/70">
+            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-4">
+                <div>
+                    <h2 class="text-sm font-bold text-slate-900">Ringkasan Grup Lab</h2>
+                    <p class="text-xs text-slate-400 mt-1">Bagian ini hanya untuk admin, supaya jelas setiap grup staf lab mengurus lab dan ruangan apa saja.</p>
+                </div>
+                <span class="text-[11px] font-bold px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 w-fit">
+                    {{ count($labGroups) }} Grup Terdaftar
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                @foreach($labGroups as $group)
+                    <div class="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <p class="text-sm font-bold text-slate-800 leading-snug">{{ $group['name'] }}</p>
+                            <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-slate-500 border border-slate-100">
+                                {{ $group['total_users'] ?? 0 }} user
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 leading-relaxed">
+                            <span class="font-semibold text-slate-600">Menangani:</span>
+                            {{ $groupAccessText($group) }}
+                        </p>
+                        @if($groupRoomText($group))
+                            <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                                Ruangan: {{ $groupRoomText($group) }}
+                            </p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     <!-- Modal Tambah User -->
     <template x-teleport="body">
@@ -83,7 +148,7 @@
                 <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <div>
                         <h2 class="text-lg font-bold text-slate-900">Tambah User</h2>
-                        <p class="text-xs text-slate-500 mt-1">Buat akun user baru dengan role, lab utama, dan akses grup lab.</p>
+                        <p class="text-xs text-slate-500 mt-1">Buat akun user baru dengan role, lab utama, dan akses grup lab yang ditangani.</p>
                     </div>
                     <button type="button" @click="activeModal = null" class="text-slate-400 hover:text-slate-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -110,12 +175,12 @@
 
                         <div x-show="!['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)">
                             <template x-if="selectedRole == '{{ $stafLabRoleId }}'">
-                                <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ old('lab_id') }}" />
+                                <x-form.field type="select" name="lab_id" label="Lab Utama (Default)" :options="$labOptions" value="{{ old('lab_id') }}" />
                             </template>
                             <template x-if="selectedRole != '{{ $stafLabRoleId }}'">
                                 <x-form.field type="select" name="lab_id" label="Akses Lab" :options="$labOptions" value="{{ old('lab_id') }}" />
                             </template>
-                            <p class="text-[0.68rem] text-slate-400 -mt-3">Opsional. Dipakai sebagai lab utama user.</p>
+                            <p class="text-[0.68rem] text-slate-400 -mt-3">Opsional. Ini hanya penanda/default user. Untuk Staf Laboratorium, akses kerja utama tetap mengikuti grup lab yang dicentang.</p>
                         </div>
                         <div x-show="['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Lab</label>
@@ -128,21 +193,27 @@
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Grup Lab</label>
                             <div class="border border-slate-200 rounded-xl max-h-48 overflow-y-auto p-3 space-y-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full">
                                 @forelse($labGroups as $group)
-                                    <label class="flex items-center gap-2.5 cursor-pointer px-2 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                                    <label class="flex items-start gap-2.5 cursor-pointer px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors">
                                         <input
                                             type="checkbox"
                                             name="lab_group_ids[]"
                                             value="{{ $group['id'] }}"
                                             {{ in_array((string) $group['id'], $oldGroupIds, true) ? 'checked' : '' }}
-                                            class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/20"
+                                            class="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/20"
                                         >
-                                        <span class="text-sm text-slate-700">{{ $group['laboratory_name'] }} — {{ $group['name'] }}</span>
+                                        <span class="flex-1 min-w-0">
+                                            <span class="block text-sm font-semibold text-slate-700">{{ $group['name'] }}</span>
+                                            <span class="block text-[11px] text-slate-500 mt-0.5">Menangani: {{ $groupAccessText($group) }}</span>
+                                            @if($groupRoomText($group))
+                                                <span class="block text-[10px] text-slate-400 mt-0.5">Ruangan: {{ $groupRoomText($group) }}</span>
+                                            @endif
+                                        </span>
                                     </label>
                                 @empty
                                     <p class="text-xs text-slate-400 py-2 text-center">Belum ada grup lab.</p>
                                 @endforelse
                             </div>
-                            <p class="text-[0.68rem] text-slate-400 mt-1">Centang satu atau lebih grup lab untuk memberikan akses.</p>
+                            <p class="text-[0.68rem] text-slate-400 mt-1">Centang grup yang berisi lab/ruangan yang boleh dikelola staf ini.</p>
                         </div>
 
                         <div class="sticky -bottom-5 bg-white py-4 mt-6 border-t border-slate-100 flex gap-3 -mx-5 -mb-5 px-5 z-10">
@@ -263,9 +334,19 @@
                                     @endif
                                 </div>
                                 @if($user['role'] === 'staf_laboratorium')
-                                    <div class="text-xs text-slate-400 mt-1">
+                                    <div class="text-xs text-slate-400 mt-1 space-y-0.5">
                                         <span class="font-semibold">Grup:</span>
-                                        {{ $user['lab_group_names'] ?? '—' }}
+                                        @php $adminGroupDetails = $userGroupDetails($user); @endphp
+                                        @if(!empty($adminGroupDetails))
+                                            @foreach($adminGroupDetails as $groupInfo)
+                                                <div class="mt-1 rounded-lg bg-slate-50 border border-slate-100 px-2 py-1.5">
+                                                    <div class="font-semibold text-slate-600">{{ $groupInfo['name'] }}</div>
+                                                    <div class="text-[10px] leading-relaxed text-slate-400">Menangani: {{ $groupAccessText($groupInfo) }}</div>
+                                                </div>
+                                            @endforeach
+                                        @else
+                                            <span>—</span>
+                                        @endif
                                     </div>
                                 @endif
                             </td>
@@ -361,12 +442,24 @@
                                                 <div class="col-span-2">
                                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Akses Grup Lab</p>
                                                     <div class="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                                                        @if(!empty($user['lab_group_names']))
-                                                            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
-                                                                @foreach(explode(',', $user['lab_group_names']) as $gName)
-                                                                    <li>{{ trim($gName) }}</li>
+                                                        @php $detailGroups = $userGroupDetails($user); @endphp
+                                                        @if(!empty($detailGroups))
+                                                            <div class="space-y-2">
+                                                                @foreach($detailGroups as $groupInfo)
+                                                                    <div class="rounded-xl border border-slate-100 bg-white px-3 py-2">
+                                                                        <p class="text-sm font-bold text-slate-700">{{ $groupInfo['name'] }}</p>
+                                                                        <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                                                            <span class="font-semibold text-slate-600">Menangani:</span>
+                                                                            {{ $groupAccessText($groupInfo) }}
+                                                                        </p>
+                                                                        @if($groupRoomText($groupInfo))
+                                                                            <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                                                                                Ruangan: {{ $groupRoomText($groupInfo) }}
+                                                                            </p>
+                                                                        @endif
+                                                                    </div>
                                                                 @endforeach
-                                                            </ul>
+                                                            </div>
                                                         @else
                                                             <p class="text-sm text-slate-500 italic">Tidak memiliki akses grup lab.</p>
                                                         @endif
@@ -434,16 +527,17 @@
                                                 <x-form.field type="select" name="role_id" label="Role" :options="$roleOptions" value="{{ $user['role_id'] }}" x-model="selectedRole" required />
                                                 <div x-show="!['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)">
                                                     <template x-if="selectedRole == '{{ $stafLabRoleId }}'">
-                                                        <x-form.field type="select" name="lab_id" label="Lab Utama" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
+                                                        <x-form.field type="select" name="lab_id" label="Lab Utama (Default)" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
                                                     </template>
                                                     <template x-if="selectedRole != '{{ $stafLabRoleId }}'">
                                                         <x-form.field type="select" name="lab_id" label="Akses Lab" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
                                                     </template>
+                                                    <p class="text-[0.68rem] text-slate-400 -mt-3">Untuk Staf Laboratorium, akses kerja utama tetap mengikuti grup lab yang dicentang.</p>
                                                 </div>
                                                 <div x-show="['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
                                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Lab</label>
                                                     <input type="text" value="Semua Laboratorium" disabled class="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed">
-                                                    <p class="text-[0.68rem] text-amber-600 mt-1">Terkunci (akses ke seluruh lab).</p>
+                                                    <p class="text-[0.68rem] text-amber-600 mt-1">Terkunci karena role ini punya akses ke seluruh lab.</p>
                                                 </div>
                                                 <x-form.field type="select" name="status" label="Status" :options="$statusOptions" value="{{ $user['status'] }}" />
                                             </div>
@@ -453,21 +547,27 @@
                                                 <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Grup Lab</label>
                                                 <div class="border border-slate-200 rounded-xl max-h-48 overflow-y-auto p-3 space-y-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full">
                                                     @forelse($labGroups as $group)
-                                                        <label class="flex items-center gap-2.5 cursor-pointer px-2 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                                                        <label class="flex items-start gap-2.5 cursor-pointer px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors">
                                                             <input
                                                                 type="checkbox"
                                                                 name="lab_group_ids[]"
                                                                 value="{{ $group['id'] }}"
                                                                 {{ in_array((string) $group['id'], $selectedGroupIds, true) ? 'checked' : '' }}
-                                                                class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/20"
+                                                                class="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/20"
                                                             >
-                                                            <span class="text-sm text-slate-700">{{ $group['laboratory_name'] }} — {{ $group['name'] }}</span>
+                                                            <span class="flex-1 min-w-0">
+                                                                <span class="block text-sm font-semibold text-slate-700">{{ $group['name'] }}</span>
+                                                                <span class="block text-[11px] text-slate-500 mt-0.5">Menangani: {{ $groupAccessText($group) }}</span>
+                                                                @if($groupRoomText($group))
+                                                                    <span class="block text-[10px] text-slate-400 mt-0.5">Ruangan: {{ $groupRoomText($group) }}</span>
+                                                                @endif
+                                                            </span>
                                                         </label>
                                                     @empty
                                                         <p class="text-xs text-slate-400 py-2 text-center">Belum ada grup lab.</p>
                                                     @endforelse
                                                 </div>
-                                                <p class="text-[0.68rem] text-slate-400 mt-1">Centang satu atau lebih grup lab untuk memberikan akses.</p>
+                                                <p class="text-[0.68rem] text-slate-400 mt-1">Centang grup yang berisi lab/ruangan yang boleh dikelola staf ini.</p>
                                             </div>
 
                                             <div class="sticky -bottom-5 bg-white py-4 mt-6 border-t border-slate-100 flex gap-3 -mx-5 -mb-5 px-5 z-10">
