@@ -37,14 +37,18 @@
         $stafLabRoleId = '';
         $kepalaLabRoleId = '';
         $kaprodiRoleId = '';
+
         foreach($roles as $role) {
             $roleOptions[$role['id']] = ucwords(str_replace('_', ' ', $role['name']));
+
             if ($role['name'] === 'staf_laboratorium') {
                 $stafLabRoleId = (string) $role['id'];
             }
+
             if ($role['name'] === 'kepala_laboratorium') {
                 $kepalaLabRoleId = (string) $role['id'];
             }
+
             if ($role['name'] === 'ketua_program_studi') {
                 $kaprodiRoleId = (string) $role['id'];
             }
@@ -108,10 +112,12 @@
                                 {{ $group['total_users'] ?? 0 }} user
                             </span>
                         </div>
+
                         <p class="text-[11px] text-slate-500 leading-relaxed">
                             <span class="font-semibold text-slate-600">Menangani:</span>
                             {{ $groupAccessText($group) }}
                         </p>
+
                         @if($groupRoomText($group))
                             <p class="text-[10px] text-slate-400 mt-1 leading-relaxed">
                                 Ruangan: {{ $groupRoomText($group) }}
@@ -126,7 +132,6 @@
     <!-- Modal Tambah User -->
     <template x-teleport="body">
         <div x-show="activeModal === 'tambah_user'" class="fixed inset-0 z-[999] flex items-center justify-center p-4" x-cloak>
-            <!-- Backdrop -->
             <div x-show="activeModal === 'tambah_user'"
                  x-transition:enter="transition ease-out duration-300"
                  x-transition:enter-start="opacity-0"
@@ -136,7 +141,6 @@
                  x-transition:leave-end="opacity-0"
                  class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
 
-            <!-- Modal Panel -->
             <div x-show="activeModal === 'tambah_user'"
                  x-transition:enter="transition ease-out duration-300"
                  x-transition:enter-start="opacity-0 scale-90 translate-y-8"
@@ -148,12 +152,15 @@
                 <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <div>
                         <h2 class="text-lg font-bold text-slate-900">Tambah User</h2>
-                        <p class="text-xs text-slate-500 mt-1">Buat akun user baru dengan role, lab utama, dan akses grup lab yang ditangani.</p>
+                        <p class="text-xs text-slate-500 mt-1">Buat akun user baru dengan role, status, dan akses lab yang ditangani.</p>
                     </div>
                     <button type="button" @click="activeModal = null" class="text-slate-400 hover:text-slate-600">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
                     </button>
                 </div>
+
                 <div class="p-5 max-h-[calc(100vh-10rem)] overflow-y-auto">
                     <form action="{{ route('users.store') }}" method="POST" class="space-y-4" x-data="{ selectedRole: '{{ old('role_id', '') }}' }">
                         @csrf
@@ -173,25 +180,20 @@
                             <x-form.field type="select" name="status" label="Status" :options="$statusOptions" value="{{ old('status', 'active') }}" />
                         </div>
 
-                        <div x-show="!['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)">
-                            <template x-if="selectedRole == '{{ $stafLabRoleId }}'">
-                                <x-form.field type="select" name="lab_id" label="Lab Utama (Default)" :options="$labOptions" value="{{ old('lab_id') }}" />
-                            </template>
-                            <template x-if="selectedRole != '{{ $stafLabRoleId }}'">
-                                <x-form.field type="select" name="lab_id" label="Akses Lab" :options="$labOptions" value="{{ old('lab_id') }}" />
-                            </template>
-                            <p class="text-[0.68rem] text-slate-400 -mt-3">Opsional. Ini hanya penanda/default user. Untuk Staf Laboratorium, akses kerja utama tetap mengikuti grup lab yang dicentang.</p>
+                        <div x-show="selectedRole && !['{{ $stafLabRoleId }}', '{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
+                            <x-form.field type="select" name="lab_id" label="Akses Lab" :options="$labOptions" value="{{ old('lab_id') }}" />
+                            <p class="text-[0.68rem] text-slate-400 -mt-3">Opsional. Pilih lab utama/default untuk role non-staf lab.</p>
                         </div>
+
                         <div x-show="['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Lab</label>
                             <input type="text" value="Semua Laboratorium" disabled class="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed">
                             <p class="text-[0.68rem] text-amber-600 mt-1" x-text="selectedRole == '{{ $kepalaLabRoleId }}' ? 'Kepala Laboratorium memiliki akses ke seluruh laboratorium.' : 'Ketua Program Studi memiliki akses ke seluruh laboratorium.'"></p>
                         </div>
 
-                        <!-- Akses Grup Lab (Checkbox) -->
                         <div x-show="selectedRole == '{{ $stafLabRoleId }}'" x-cloak>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Grup Lab</label>
-                            <div class="border border-slate-200 rounded-xl max-h-48 overflow-y-auto p-3 space-y-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Lab</label>
+                            <div class="border border-slate-200 rounded-xl max-h-52 overflow-y-auto p-3 space-y-2 bg-white [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full">
                                 @forelse($labGroups as $group)
                                     <label class="flex items-start gap-2.5 cursor-pointer px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors">
                                         <input
@@ -203,9 +205,13 @@
                                         >
                                         <span class="flex-1 min-w-0">
                                             <span class="block text-sm font-semibold text-slate-700">{{ $group['name'] }}</span>
-                                            <span class="block text-[11px] text-slate-500 mt-0.5">Menangani: {{ $groupAccessText($group) }}</span>
+                                            <span class="block text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                                Menangani: {{ $groupAccessText($group) }}
+                                            </span>
                                             @if($groupRoomText($group))
-                                                <span class="block text-[10px] text-slate-400 mt-0.5">Ruangan: {{ $groupRoomText($group) }}</span>
+                                                <span class="block text-[10px] text-slate-400 mt-0.5 leading-relaxed">
+                                                    Ruangan: {{ $groupRoomText($group) }}
+                                                </span>
                                             @endif
                                         </span>
                                     </label>
@@ -213,7 +219,9 @@
                                     <p class="text-xs text-slate-400 py-2 text-center">Belum ada grup lab.</p>
                                 @endforelse
                             </div>
-                            <p class="text-[0.68rem] text-slate-400 mt-1">Centang grup yang berisi lab/ruangan yang boleh dikelola staf ini.</p>
+                            <p class="text-[0.68rem] text-slate-400 mt-1">
+                                Centang satu atau lebih grup. Akses lab staf mengikuti lab dan ruangan yang dikelola grup tersebut.
+                            </p>
                         </div>
 
                         <div class="sticky -bottom-5 bg-white py-4 mt-6 border-t border-slate-100 flex gap-3 -mx-5 -mb-5 px-5 z-10">
@@ -239,7 +247,6 @@
             </div>
 
             <div class="flex flex-col md:flex-row flex-wrap items-center gap-4 flex-grow xl:justify-end">
-                <!-- Filters -->
                 <div class="flex flex-wrap items-center gap-3 border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-4 w-full md:w-auto">
                     <x-table-filter column="role" label="Role" :options="[
                         'administrator' => 'Administrator',
@@ -251,13 +258,12 @@
                     ]" />
                     <x-table-filter column="status" label="Status" :options="['active' => 'Active', 'inactive' => 'Inactive']" />
                     <x-table-filter column="lab" label="Laboratorium" :options="collect($laboratories)->pluck('name', 'id')->toArray()" />
-                    
+
                     <button type="button" @click="resetFilters()" x-show="Object.values(filters).some(v => v !== '')" class="text-xs text-red-600 font-semibold hover:text-red-700 transition-colors h-fit" x-cloak>
                         Reset Filter
                     </button>
                 </div>
 
-                <!-- Search -->
                 <form method="GET" action="{{ route('users') }}" class="flex gap-2 items-center w-full md:w-auto">
                     <div class="relative w-full md:w-auto">
                         <input
@@ -312,7 +318,15 @@
                                 ->toArray();
                         @endphp
 
-                        <tr @click="activeModal = 'detail_user_{{ $user['id'] }}'" class="cursor-pointer hover:bg-slate-50/50 transition-colors" x-show="showRow({{ $index }})" x-cloak data-filter-role="{{ $user['role'] }}" data-filter-status="{{ $user['status'] }}" data-filter-lab="{{ $user['lab_id'] ?? '' }}">
+                        <tr
+                            @click="activeModal = 'detail_user_{{ $user['id'] }}'"
+                            class="cursor-pointer hover:bg-slate-50/50 transition-colors"
+                            x-show="showRow({{ $index }})"
+                            x-cloak
+                            data-filter-role="{{ $user['role'] }}"
+                            data-filter-status="{{ $user['status'] }}"
+                            data-filter-lab="{{ $user['lab_id'] ?? '' }}"
+                        >
                             <td>
                                 <div class="font-semibold text-slate-800">{{ $user['name'] }}</div>
                                 <div class="text-xs text-slate-400">{{ $user['email'] }} · {{ $user['nrp_nip'] ?? '-' }}</div>
@@ -325,23 +339,27 @@
                             <td class="text-slate-500">
                                 <div>
                                     @if($user['role'] === 'staf_laboratorium')
-                                        <span class="text-xs font-semibold text-slate-400">Utama:</span>
+                                        <span class="text-xs font-semibold text-slate-400">Akses dari grup:</span>
                                     @endif
+
                                     @if(in_array($user['role'], ['kepala_laboratorium', 'ketua_program_studi']))
                                         <span class="font-medium text-slate-700">Semua Laboratorium</span>
-                                    @else
+                                    @elseif($user['role'] !== 'staf_laboratorium')
                                         {{ $user['laboratory_name'] ?? '—' }}
                                     @endif
                                 </div>
+
                                 @if($user['role'] === 'staf_laboratorium')
                                     <div class="text-xs text-slate-400 mt-1 space-y-0.5">
-                                        <span class="font-semibold">Grup:</span>
                                         @php $adminGroupDetails = $userGroupDetails($user); @endphp
+
                                         @if(!empty($adminGroupDetails))
                                             @foreach($adminGroupDetails as $groupInfo)
                                                 <div class="mt-1 rounded-lg bg-slate-50 border border-slate-100 px-2 py-1.5">
                                                     <div class="font-semibold text-slate-600">{{ $groupInfo['name'] }}</div>
-                                                    <div class="text-[10px] leading-relaxed text-slate-400">Menangani: {{ $groupAccessText($groupInfo) }}</div>
+                                                    <div class="text-[10px] leading-relaxed text-slate-400">
+                                                        Menangani: {{ $groupAccessText($groupInfo) }}
+                                                    </div>
                                                 </div>
                                             @endforeach
                                         @else
@@ -373,7 +391,6 @@
                         <!-- Modal Detail User -->
                         <template x-teleport="body">
                             <div x-show="activeModal === 'detail_user_{{ $user['id'] }}'" class="fixed inset-0 z-[999] flex items-center justify-center p-4" x-cloak>
-                                <!-- Backdrop -->
                                 <div x-show="activeModal === 'detail_user_{{ $user['id'] }}'"
                                      x-transition:enter="transition ease-out duration-300"
                                      x-transition:enter-start="opacity-0"
@@ -384,7 +401,6 @@
                                      @click="activeModal = null"
                                      class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm cursor-pointer"></div>
 
-                                <!-- Modal Panel -->
                                 <div x-show="activeModal === 'detail_user_{{ $user['id'] }}'"
                                      x-transition:enter="transition ease-out duration-300"
                                      x-transition:enter-start="opacity-0 scale-90 translate-y-8"
@@ -399,9 +415,12 @@
                                             <p class="text-xs text-slate-500 mt-1">Informasi lengkap akun user.</p>
                                         </div>
                                         <button type="button" @click="activeModal = null" class="text-slate-400 hover:text-slate-600">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
                                         </button>
                                     </div>
+
                                     <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
                                         <div class="grid grid-cols-2 gap-4">
                                             <div>
@@ -427,22 +446,24 @@
                                                 </span>
                                             </div>
                                             <div>
-                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                                                    {{ $user['role'] === 'staf_laboratorium' ? 'Lab Utama' : 'Akses Lab' }}
-                                                </p>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Akses Lab</p>
                                                 <p class="text-sm font-semibold text-slate-800">
                                                     @if(in_array($user['role'], ['kepala_laboratorium', 'ketua_program_studi']))
                                                         Semua Laboratorium
+                                                    @elseif($user['role'] === 'staf_laboratorium')
+                                                        Mengikuti grup lab
                                                     @else
                                                         {{ $user['laboratory_name'] ?? '—' }}
                                                     @endif
                                                 </p>
                                             </div>
+
                                             @if($user['role'] === 'staf_laboratorium')
                                                 <div class="col-span-2">
                                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Akses Grup Lab</p>
                                                     <div class="bg-slate-50 border border-slate-100 rounded-xl p-3">
                                                         @php $detailGroups = $userGroupDetails($user); @endphp
+
                                                         @if(!empty($detailGroups))
                                                             <div class="space-y-2">
                                                                 @foreach($detailGroups as $groupInfo)
@@ -467,6 +488,7 @@
                                                 </div>
                                             @endif
                                         </div>
+
                                         <div class="pt-4 border-t border-slate-100">
                                             <button type="button" @click="activeModal = null" class="w-full rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold py-2.5 hover:bg-slate-200 transition-colors">
                                                 Tutup
@@ -480,7 +502,6 @@
                         <!-- Modal Edit User -->
                         <template x-teleport="body">
                             <div x-show="activeModal === 'edit_user_{{ $user['id'] }}'" class="fixed inset-0 z-[999] flex items-center justify-center p-4" x-cloak>
-                                <!-- Backdrop -->
                                 <div x-show="activeModal === 'edit_user_{{ $user['id'] }}'"
                                      x-transition:enter="transition ease-out duration-300"
                                      x-transition:enter-start="opacity-0"
@@ -490,7 +511,6 @@
                                      x-transition:leave-end="opacity-0"
                                      class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
 
-                                <!-- Modal Panel -->
                                 <div x-show="activeModal === 'edit_user_{{ $user['id'] }}'"
                                      x-transition:enter="transition ease-out duration-300"
                                      x-transition:enter-start="opacity-0 scale-90 translate-y-8"
@@ -505,9 +525,12 @@
                                             <p class="text-xs text-slate-500 mt-1">Ubah data user <span class="font-semibold">{{ $user['name'] }}</span>.</p>
                                         </div>
                                         <button type="button" @click="activeModal = null" class="text-slate-400 hover:text-slate-600">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
                                         </button>
                                     </div>
+
                                     <div class="p-5 max-h-[calc(100vh-10rem)] overflow-y-auto">
                                         <form action="{{ route('users.update', $user['id']) }}" method="POST" class="space-y-4" x-data="{ selectedRole: '{{ $user['role_id'] }}' }">
                                             @csrf
@@ -525,27 +548,23 @@
 
                                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <x-form.field type="select" name="role_id" label="Role" :options="$roleOptions" value="{{ $user['role_id'] }}" x-model="selectedRole" required />
-                                                <div x-show="!['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)">
-                                                    <template x-if="selectedRole == '{{ $stafLabRoleId }}'">
-                                                        <x-form.field type="select" name="lab_id" label="Lab Utama (Default)" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
-                                                    </template>
-                                                    <template x-if="selectedRole != '{{ $stafLabRoleId }}'">
-                                                        <x-form.field type="select" name="lab_id" label="Akses Lab" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
-                                                    </template>
-                                                    <p class="text-[0.68rem] text-slate-400 -mt-3">Untuk Staf Laboratorium, akses kerja utama tetap mengikuti grup lab yang dicentang.</p>
+
+                                                <div x-show="selectedRole && !['{{ $stafLabRoleId }}', '{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
+                                                    <x-form.field type="select" name="lab_id" label="Akses Lab" :options="$labOptions" value="{{ $user['lab_id'] ?? '' }}" />
                                                 </div>
+
                                                 <div x-show="['{{ $kepalaLabRoleId }}', '{{ $kaprodiRoleId }}'].includes(selectedRole)" x-cloak>
                                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Lab</label>
                                                     <input type="text" value="Semua Laboratorium" disabled class="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed">
                                                     <p class="text-[0.68rem] text-amber-600 mt-1">Terkunci karena role ini punya akses ke seluruh lab.</p>
                                                 </div>
+
                                                 <x-form.field type="select" name="status" label="Status" :options="$statusOptions" value="{{ $user['status'] }}" />
                                             </div>
 
-                                            <!-- Akses Grup Lab (Checkbox) -->
                                             <div x-show="selectedRole == '{{ $stafLabRoleId }}'" x-cloak>
-                                                <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Grup Lab</label>
-                                                <div class="border border-slate-200 rounded-xl max-h-48 overflow-y-auto p-3 space-y-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full">
+                                                <label class="block text-xs font-semibold text-slate-600 mb-1">Akses Lab</label>
+                                                <div class="border border-slate-200 rounded-xl max-h-52 overflow-y-auto p-3 space-y-2 bg-white [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full">
                                                     @forelse($labGroups as $group)
                                                         <label class="flex items-start gap-2.5 cursor-pointer px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors">
                                                             <input
@@ -557,9 +576,13 @@
                                                             >
                                                             <span class="flex-1 min-w-0">
                                                                 <span class="block text-sm font-semibold text-slate-700">{{ $group['name'] }}</span>
-                                                                <span class="block text-[11px] text-slate-500 mt-0.5">Menangani: {{ $groupAccessText($group) }}</span>
+                                                                <span class="block text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                                                                    Menangani: {{ $groupAccessText($group) }}
+                                                                </span>
                                                                 @if($groupRoomText($group))
-                                                                    <span class="block text-[10px] text-slate-400 mt-0.5">Ruangan: {{ $groupRoomText($group) }}</span>
+                                                                    <span class="block text-[10px] text-slate-400 mt-0.5 leading-relaxed">
+                                                                        Ruangan: {{ $groupRoomText($group) }}
+                                                                    </span>
                                                                 @endif
                                                             </span>
                                                         </label>
@@ -567,7 +590,9 @@
                                                         <p class="text-xs text-slate-400 py-2 text-center">Belum ada grup lab.</p>
                                                     @endforelse
                                                 </div>
-                                                <p class="text-[0.68rem] text-slate-400 mt-1">Centang grup yang berisi lab/ruangan yang boleh dikelola staf ini.</p>
+                                                <p class="text-[0.68rem] text-slate-400 mt-1">
+                                                    Centang satu atau lebih grup. Akses lab staf mengikuti lab dan ruangan yang dikelola grup tersebut.
+                                                </p>
                                             </div>
 
                                             <div class="sticky -bottom-5 bg-white py-4 mt-6 border-t border-slate-100 flex gap-3 -mx-5 -mb-5 px-5 z-10">
