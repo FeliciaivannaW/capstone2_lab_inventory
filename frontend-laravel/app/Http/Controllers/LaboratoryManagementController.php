@@ -109,13 +109,16 @@ class LaboratoryManagementController extends Controller
             : back()->with('error', $result['message']);
     }
 
-    public function storeGroup(Request $request)
+        public function storeGroup(Request $request)
     {
         $validated = $request->validate([
-            'laboratory_id' => 'required|integer',
+            'lab_ids' => 'required|array|min:1',
+            'lab_ids.*' => 'integer',
             'name' => 'required|string|max:150',
             'description' => 'nullable|string',
         ]);
+
+        $validated['laboratory_id'] = $validated['lab_ids'][0] ?? null;
 
         $result = $this->sendApiData('/lab-groups', $validated);
 
@@ -127,10 +130,13 @@ class LaboratoryManagementController extends Controller
     public function updateGroup(Request $request, $id)
     {
         $validated = $request->validate([
-            'laboratory_id' => 'required|integer',
+            'lab_ids' => 'required|array|min:1',
+            'lab_ids.*' => 'integer',
             'name' => 'required|string|max:150',
             'description' => 'nullable|string',
         ]);
+
+        $validated['laboratory_id'] = $validated['lab_ids'][0] ?? null;
 
         $result = $this->sendApiData("/lab-groups/{$id}", $validated, 'PUT');
 
@@ -138,7 +144,6 @@ class LaboratoryManagementController extends Controller
             ? back()->with('success', $result['message'])
             : back()->withInput()->with('error', $result['message']);
     }
-
     public function destroyGroup($id)
     {
         $result = $this->sendApiData("/lab-groups/{$id}", [], 'DELETE');
