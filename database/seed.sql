@@ -94,6 +94,12 @@ UPDATE laboratories
 SET head_user_id = (SELECT id FROM users WHERE email = 'kalab@example.com')
 WHERE head_user_id IS NULL;
 
+-- ============================================================
+-- LAB GROUP ACCESS
+-- Dipakai supaya modal Manajemen User dan dashboard Staf Lab
+-- langsung menampilkan grup serta lab/ruangan yang dikelola.
+-- ============================================================
+
 INSERT INTO lab_groups (laboratory_id, name, description) VALUES
 ((SELECT id FROM laboratories WHERE code = 'LAB-PROG-1'), 'Grup Staff Programming', 'Grup staf lab untuk Programming Lab 1 dan Programming Lab 2'),
 ((SELECT id FROM laboratories WHERE code = 'LAB-COMNET'), 'Grup Staff Jaringan', 'Grup staf lab untuk Computer Network Lab'),

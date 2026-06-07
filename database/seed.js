@@ -54,8 +54,9 @@ async function seed() {
       'bhp_stock_movements','bhp_stocks','maintenance_logs',
       'asset_disposals','asset_condition_logs','inventory_assets',
       'goods_receipts','procurement_items','procurement_drafts',
-      'item_catalogs','item_categories','users','laboratories',
-      'rooms','room_types','floors','buildings'
+      'item_catalogs','item_categories',
+      'lab_group_rooms','lab_group_users','lab_groups',
+      'users','laboratories','rooms','room_types','floors','buildings'
     ];
     for (const t of tables) {
       await conn.execute(`TRUNCATE TABLE \`${t}\``);
@@ -141,7 +142,35 @@ async function seed() {
     console.log('  password: password123');
 
     // ════════════════════════════════════════════════════════
-    // 4. ITEM CATEGORIES + ITEM CATALOGS
+    // 4. LAB GROUP ACCESS — demo akses staf laboratorium
+    //    Data ini dipakai supaya modal User dan dashboard Staf Lab
+    //    langsung menampilkan grup serta lab/ruangan yang dikelola.
+    // ════════════════════════════════════════════════════════
+    const groupComnetId = await insertId(conn,
+      `INSERT INTO lab_groups (laboratory_id, name, description) VALUES (?, ?, ?)`,
+      [labId1, 'Grup Staff Computer Network', 'Grup staf lab untuk mengelola Laboratorium Computer Network']
+    );
+    const groupSeId = await insertId(conn,
+      `INSERT INTO lab_groups (laboratory_id, name, description) VALUES (?, ?, ?)`,
+      [labId2, 'Grup Staff Software Engineering', 'Grup staf lab untuk mengelola Laboratorium Software Engineering']
+    );
+
+    await conn.execute(
+      `INSERT INTO lab_group_users (group_id, user_id, role_in_group) VALUES (?, ?, 'staf_lab')`,
+      [groupComnetId, stafLabId]
+    );
+
+    await conn.execute(
+      `INSERT INTO lab_group_rooms (group_id, room_id) VALUES (?, ?), (?, ?)`,
+      [groupComnetId, roomId1, groupSeId, roomId2]
+    );
+
+    console.log('✓ Lab Groups & akses Staf Laboratorium');
+    console.log('  Grup Staff Computer Network      → Laboratorium Computer Network / LAB-CN-01');
+    console.log('  Grup Staff Software Engineering  → Laboratorium Software Engineering / LAB-SE-01');
+
+    // ════════════════════════════════════════════════════════
+    // 5. ITEM CATEGORIES + ITEM CATALOGS
     // ════════════════════════════════════════════════════════
     const catHardware = await insertId(conn,
       `INSERT INTO item_categories (name, description) VALUES (?, ?)`,
