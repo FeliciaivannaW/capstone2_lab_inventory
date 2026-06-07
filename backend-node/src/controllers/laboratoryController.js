@@ -11,6 +11,27 @@ const toPositiveInt = (value, fieldName, required = true) => {
   return parsed;
 };
 
+const normalizeIdArray = (value, fieldName) => {
+  const rawValues = Array.isArray(value)
+    ? value
+    : value === undefined || value === null || value === ""
+      ? []
+      : [value];
+
+  const ids = [...new Set(rawValues
+    .map((item) => Number(item))
+    .filter((item) => Number.isInteger(item) && item > 0)
+  )];
+
+  if (!ids.length) {
+    const error = new Error(`${fieldName} minimal pilih satu data`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return ids;
+};
+
 const getLaboratories = async (req, res) => {
   try {
     const laboratories = await LaboratoryModel.findAll();
@@ -132,8 +153,11 @@ const getLabGroups = async (req, res) => {
 
 const createLabGroup = async (req, res) => {
   try {
+    const labIds = normalizeIdArray(req.body.lab_ids || req.body.laboratory_id, "Laboratorium");
+
     const payload = {
-      laboratory_id: toPositiveInt(req.body.laboratory_id, "Laboratorium"),
+      laboratory_id: labIds[0],
+      lab_ids: labIds,
       name: String(req.body.name || "").trim(),
       description: req.body.description ? String(req.body.description).trim() : null
     };
@@ -151,7 +175,7 @@ const createLabGroup = async (req, res) => {
     }
     res.status(error.statusCode || 500).json({ status: "error", message: error.message || "Gagal membuat grup lab" });
   }
-};
+};  
 
 const updateLabGroup = async (req, res) => {
   try {
@@ -162,8 +186,11 @@ const updateLabGroup = async (req, res) => {
       return res.status(404).json({ status: "error", message: "Grup lab tidak ditemukan" });
     }
 
+    const labIds = normalizeIdArray(req.body.lab_ids || req.body.laboratory_id, "Laboratorium");
+
     const payload = {
-      laboratory_id: toPositiveInt(req.body.laboratory_id, "Laboratorium"),
+      laboratory_id: labIds[0],
+      lab_ids: labIds,
       name: String(req.body.name || "").trim(),
       description: req.body.description ? String(req.body.description).trim() : null
     };
@@ -232,14 +259,15 @@ const getLabGroupDetails = async (req, res) => {
       return res.status(404).json({ status: "error", message: "Grup lab tidak ditemukan" });
     }
 
-    const [users, rooms] = await Promise.all([
+    const [users, rooms, labs] = await Promise.all([
       LaboratoryModel.findGroupUsers(id),
-      LaboratoryModel.findGroupRooms(id)
+      LaboratoryModel.findGroupRooms(id),
+      LaboratoryModel.findGroupLabs(id)
     ]);
 
     res.json({
       status: "success",
-      data: { ...group, users, rooms }
+      data: { ...group, users, rooms, labs }
     });
   } catch (error) {
     console.error("[GET LAB GROUP DETAILS ERROR]", error);
