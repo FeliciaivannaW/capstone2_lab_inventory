@@ -1,5 +1,6 @@
 const db = require("../config/database");
 const UserModel = require("../models/UserModel");
+const LabAccessModel = require("../models/LabAccessModel");
 const bcrypt = require("bcrypt");
 
 const normalizeNullableInt = (value) => {
@@ -19,6 +20,22 @@ const normalizeIdArray = (value) => {
       .map((item) => Number(item))
       .filter((item) => Number.isInteger(item) && item > 0)
   )];
+};
+
+
+const getMyLabAccess = async (req, res) => {
+  try {
+    const access = await LabAccessModel.findAccessSummary(req.user.id);
+
+    if (!access) {
+      return res.status(404).json({ status: "error", message: "User tidak ditemukan" });
+    }
+
+    res.json({ status: "success", data: access });
+  } catch (error) {
+    console.error("[GET MY LAB ACCESS ERROR]", error);
+    res.status(500).json({ status: "error", message: "Gagal mengambil akses lab user" });
+  }
 };
 
 const getUsers = async (req, res) => {
@@ -240,6 +257,7 @@ const deleteUser = async (req, res) => {
 };
 
 module.exports = {
+  getMyLabAccess,
   getUsers,
   getUser,
   createUser,

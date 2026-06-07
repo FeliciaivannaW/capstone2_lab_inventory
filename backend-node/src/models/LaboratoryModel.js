@@ -103,15 +103,32 @@ const LaboratoryModel = {
         l.code AS laboratory_code,
         l.name AS laboratory_name,
         COUNT(DISTINCT lgu.user_id) AS total_users,
-        COUNT(DISTINCT lgr.room_id) AS total_rooms
+        COUNT(DISTINCT lgr.room_id) AS total_rooms,
+        GROUP_CONCAT(
+          DISTINCT COALESCE(l_room.name, rm.name)
+          ORDER BY COALESCE(l_room.name, rm.name)
+          SEPARATOR ', '
+        ) AS managed_lab_names,
+        GROUP_CONCAT(
+          DISTINCT CONCAT(rm.code, ' - ', rm.name)
+          ORDER BY rm.code
+          SEPARATOR ', '
+        ) AS managed_room_names
       FROM lab_groups lg
       JOIN laboratories l ON lg.laboratory_id = l.id
       LEFT JOIN lab_group_users lgu ON lgu.group_id = lg.id
       LEFT JOIN lab_group_rooms lgr ON lgr.group_id = lg.id
+      LEFT JOIN rooms rm ON rm.id = lgr.room_id
+      LEFT JOIN laboratories l_room ON l_room.room_id = rm.id
       GROUP BY lg.id, lg.name, lg.description, lg.laboratory_id, l.code, l.name
       ORDER BY l.name ASC, lg.name ASC
     `);
-    return rows;
+
+    return rows.map((row) => ({
+      ...row,
+      managed_lab_names: row.managed_lab_names || row.laboratory_name,
+      managed_room_names: row.managed_room_names || null
+    }));
   },
 
   async create({ room_id, head_user_id, name, code, description }, tx = null) {

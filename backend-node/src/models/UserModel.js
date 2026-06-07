@@ -42,7 +42,25 @@ const UserModel = {
           WHERE lgu.user_id = u.id
         ) AS lab_group_ids,
         (
-          SELECT GROUP_CONCAT(CONCAT(l.name, ' - ', lg.name) ORDER BY l.name, lg.name SEPARATOR ', ')
+          SELECT GROUP_CONCAT(
+            CONCAT(
+              lg.name,
+              ' (',
+              COALESCE(
+                (
+                  SELECT GROUP_CONCAT(DISTINCT COALESCE(l_room.name, rm.name) ORDER BY COALESCE(l_room.name, rm.name) SEPARATOR ', ')
+                  FROM lab_group_rooms lgr
+                  JOIN rooms rm ON rm.id = lgr.room_id
+                  LEFT JOIN laboratories l_room ON l_room.room_id = rm.id
+                  WHERE lgr.group_id = lg.id
+                ),
+                l.name
+              ),
+              ')'
+            )
+            ORDER BY l.name, lg.name
+            SEPARATOR ' | '
+          )
           FROM lab_group_users lgu
           JOIN lab_groups lg ON lg.id = lgu.group_id
           JOIN laboratories l ON l.id = lg.laboratory_id
@@ -79,7 +97,25 @@ const UserModel = {
           WHERE lgu.user_id = u.id
         ) AS lab_group_ids,
         (
-          SELECT GROUP_CONCAT(CONCAT(l.name, ' - ', lg.name) ORDER BY l.name, lg.name SEPARATOR ', ')
+          SELECT GROUP_CONCAT(
+            CONCAT(
+              lg.name,
+              ' (',
+              COALESCE(
+                (
+                  SELECT GROUP_CONCAT(DISTINCT COALESCE(l_room.name, rm.name) ORDER BY COALESCE(l_room.name, rm.name) SEPARATOR ', ')
+                  FROM lab_group_rooms lgr
+                  JOIN rooms rm ON rm.id = lgr.room_id
+                  LEFT JOIN laboratories l_room ON l_room.room_id = rm.id
+                  WHERE lgr.group_id = lg.id
+                ),
+                l.name
+              ),
+              ')'
+            )
+            ORDER BY l.name, lg.name
+            SEPARATOR ' | '
+          )
           FROM lab_group_users lgu
           JOIN lab_groups lg ON lg.id = lgu.group_id
           JOIN laboratories l ON l.id = lg.laboratory_id
