@@ -25,6 +25,13 @@ const LabAccessModel = {
   async findGroupLabIds(userId) {
     const [rows] = await db.query(`
       SELECT lab_id FROM (
+        SELECT lgl.laboratory_id AS lab_id
+        FROM lab_group_users lgu
+        JOIN lab_group_laboratories lgl ON lgu.group_id = lgl.group_id
+        WHERE lgu.user_id = ?
+
+        UNION
+
         SELECT lg.laboratory_id AS lab_id
         FROM lab_group_users lgu
         JOIN lab_groups lg ON lgu.group_id = lg.id
@@ -40,7 +47,7 @@ const LabAccessModel = {
         WHERE lgu.user_id = ?
       ) AS access_labs
       WHERE lab_id IS NOT NULL
-    `, [userId, userId]);
+    `, [userId, userId, userId]);
 
     return uniqueNumbers(rows.map((row) => row.lab_id));
   },
@@ -48,6 +55,14 @@ const LabAccessModel = {
   async findGroupRoomIds(userId) {
     const [rows] = await db.query(`
       SELECT room_id FROM (
+        SELECT l.room_id AS room_id
+        FROM lab_group_users lgu
+        JOIN lab_group_laboratories lgl ON lgu.group_id = lgl.group_id
+        JOIN laboratories l ON l.id = lgl.laboratory_id
+        WHERE lgu.user_id = ? AND l.room_id IS NOT NULL
+
+        UNION
+
         SELECT l.room_id AS room_id
         FROM lab_group_users lgu
         JOIN lab_groups lg ON lgu.group_id = lg.id
@@ -62,7 +77,7 @@ const LabAccessModel = {
         WHERE lgu.user_id = ?
       ) AS access_rooms
       WHERE room_id IS NOT NULL
-    `, [userId, userId]);
+    `, [userId, userId, userId]);
 
     return uniqueNumbers(rows.map((row) => row.room_id));
   },
@@ -128,24 +143,25 @@ const LabAccessModel = {
         l.code AS laboratory_code,
         l.name AS laboratory_name,
         lgu.role_in_group,
-        GROUP_CONCAT(
-          DISTINCT COALESCE(l_room.name, rm.name)
-          ORDER BY COALESCE(l_room.name, rm.name)
-          SEPARATOR ', '
+        COALESCE(
+          (
+            SELECT GROUP_CONCAT(DISTINCT gl.name ORDER BY gl.name SEPARATOR ', ')
+            FROM lab_group_laboratories lgl
+            JOIN laboratories gl ON gl.id = lgl.laboratory_id
+            WHERE lgl.group_id = lg.id
+          ),
+          l.name
         ) AS managed_lab_names,
-        GROUP_CONCAT(
-          DISTINCT CONCAT(rm.code, ' - ', rm.name)
-          ORDER BY rm.code
-          SEPARATOR ', '
+        (
+          SELECT GROUP_CONCAT(DISTINCT CONCAT(rm.code, ' - ', rm.name) ORDER BY rm.code SEPARATOR ', ')
+          FROM lab_group_rooms lgr
+          JOIN rooms rm ON rm.id = lgr.room_id
+          WHERE lgr.group_id = lg.id
         ) AS managed_room_names
       FROM lab_group_users lgu
       JOIN lab_groups lg ON lgu.group_id = lg.id
       JOIN laboratories l ON lg.laboratory_id = l.id
-      LEFT JOIN lab_group_rooms lgr ON lgr.group_id = lg.id
-      LEFT JOIN rooms rm ON rm.id = lgr.room_id
-      LEFT JOIN laboratories l_room ON l_room.room_id = rm.id
       WHERE lgu.user_id = ?
-      GROUP BY lg.id, lg.name, lg.description, lg.laboratory_id, l.code, l.name, lgu.role_in_group
       ORDER BY l.name ASC, lg.name ASC
     `, [userId]);
 
