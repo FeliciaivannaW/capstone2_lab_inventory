@@ -359,6 +359,24 @@ CREATE TABLE `lab_groups` (
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+-- Table structure for table `lab_group_laboratories`
+
+DROP TABLE IF EXISTS `lab_group_laboratories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `lab_group_laboratories` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `group_id` int NOT NULL,
+  `laboratory_id` int NOT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_lab_group_laboratory` (`group_id`,`laboratory_id`),
+  KEY `fk_lab_group_laboratories_laboratory` (`laboratory_id`),
+  CONSTRAINT `fk_lab_group_laboratories_group` FOREIGN KEY (`group_id`) REFERENCES `lab_groups` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_lab_group_laboratories_laboratory` FOREIGN KEY (`laboratory_id`) REFERENCES `laboratories` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
 --
 -- Table structure for table `laboratories`
 --
