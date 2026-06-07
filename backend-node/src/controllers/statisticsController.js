@@ -1,7 +1,31 @@
 const db = require("../config/database");
+const LabAccessModel = require("../models/LabAccessModel");
 
 const getSummary = async (req, res) => {
   try {
+    let staffLabIds = null;
+    let staffRoomIds = null;
+
+    if (req.user?.role === "staf_laboratorium") {
+      staffLabIds = await LabAccessModel.findAccessibleLabIds(req.user.id);
+      staffRoomIds = await LabAccessModel.findAccessibleRoomIds(req.user.id);
+
+      if (!staffLabIds.length) staffLabIds = [0];
+      if (!staffRoomIds.length) staffRoomIds = [0];
+    }
+
+    const inventoryWhere = staffRoomIds ? "WHERE room_id IN (?)" : "";
+    const labelWhere = staffRoomIds ? "WHERE room_id IN (?) AND status NOT IN ('disposed','replaced')" : "WHERE status NOT IN ('disposed','replaced')";
+    const bhpWhere = staffLabIds ? "WHERE lab_id IN (?)" : "";
+    const bhpLowWhere = staffLabIds
+      ? "WHERE bs.lab_id IN (?) AND bs.current_stock <= bs.minimum_stock AND bs.minimum_stock > 0"
+      : "WHERE bs.current_stock <= bs.minimum_stock AND bs.minimum_stock > 0";
+
+    const inventoryParams = staffRoomIds ? [staffRoomIds] : [];
+    const labelParams = staffRoomIds ? [staffRoomIds] : [];
+    const bhpParams = staffLabIds ? [staffLabIds] : [];
+    const bhpLowParams = staffLabIds ? [staffLabIds] : [];
+
     const [
       [inventoryStats],
       [labelStats],
@@ -26,7 +50,8 @@ const getSummary = async (req, res) => {
           SUM(CASE WHEN asset_condition = 'rusak_berat'  THEN 1 ELSE 0 END)       AS cond_rusak_berat,
           SUM(CASE WHEN asset_condition = 'maintenance'  THEN 1 ELSE 0 END)       AS cond_maintenance
         FROM inventory_assets
-      `),
+        ${inventoryWhere}
+      `, inventoryParams),
 
       // 2. Label stats
       db.query(`
@@ -34,8 +59,8 @@ const getSummary = async (req, res) => {
           SUM(CASE WHEN label_number IS NOT NULL AND label_number != '' THEN 1 ELSE 0 END) AS labeled,
           SUM(CASE WHEN label_number IS NULL OR label_number = ''        THEN 1 ELSE 0 END) AS unlabeled
         FROM inventory_assets
-        WHERE status NOT IN ('disposed','replaced')
-      `),
+        ${labelWhere}
+      `, labelParams),
 
       // 3. BHP summary
       db.query(`
@@ -44,7 +69,8 @@ const getSummary = async (req, res) => {
           COALESCE(SUM(current_stock), 0)                                            AS total_stock,
           SUM(CASE WHEN current_stock <= minimum_stock AND minimum_stock > 0 THEN 1 ELSE 0 END) AS low_stock_count
         FROM bhp_stocks
-      `),
+        ${bhpWhere}
+      `, bhpParams),
 
       // 4. BHP low stock detail (top 5)
       db.query(`
@@ -57,10 +83,10 @@ const getSummary = async (req, res) => {
         FROM bhp_stocks bs
         JOIN item_catalogs ic  ON bs.item_catalog_id = ic.id
         JOIN laboratories l    ON bs.lab_id = l.id
-        WHERE bs.current_stock <= bs.minimum_stock AND bs.minimum_stock > 0
+        ${bhpLowWhere}
         ORDER BY (bs.current_stock / GREATEST(bs.minimum_stock, 1)) ASC
         LIMIT 5
-      `),
+      `, bhpLowParams),
 
       // 5. Procurement pipeline
       db.query(`

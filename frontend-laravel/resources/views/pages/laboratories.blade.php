@@ -47,6 +47,7 @@
         $heads = $heads ?? [];
         $staffLabUsers = $staffLabUsers ?? [];
         $labGroups = $labGroups ?? [];
+        $oldLabIds = collect(old('lab_ids', []))->map(fn($id) => (string) $id)->toArray();
         $rooms = $rooms ?? [];
     @endphp
 
@@ -147,10 +148,38 @@
                 <div class="p-5">
                     <form action="{{ route('lab-groups.store') }}" method="POST" class="space-y-4">
                         @csrf
-                        @php
-                            $labOpts = collect($laboratories)->mapWithKeys(fn($l) => [$l['id'] => $l['code'] . ' - ' . $l['name']])->toArray();
-                        @endphp
-                        <x-form.field type="select" name="laboratory_id" label="Laboratorium" :options="$labOpts" value="{{ old('laboratory_id') }}" required />
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">
+                                Laboratorium yang Dikelola <span class="text-red-500">*</span>
+                            </label>
+                            <div class="border border-slate-200 rounded-xl max-h-56 overflow-y-auto p-3 space-y-2 bg-white">
+                                @forelse($laboratories as $lab)
+                                    <label class="flex items-start gap-2.5 cursor-pointer px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            name="lab_ids[]"
+                                            value="{{ $lab['id'] }}"
+                                            {{ in_array((string) $lab['id'], $oldLabIds, true) ? 'checked' : '' }}
+                                            class="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/20"
+                                        >
+                                        <span class="flex-1 min-w-0">
+                                            <span class="block text-sm font-semibold text-slate-700">
+                                                {{ $lab['code'] }} - {{ $lab['name'] }}
+                                            </span>
+                                            <span class="block text-[11px] text-slate-400">
+                                                {{ $lab['building_name'] ?? '-' }} • {{ $lab['floor_name'] ?? '-' }}
+                                            </span>
+                                        </span>
+                                    </label>
+                                @empty
+                                    <p class="text-xs text-slate-400 py-2 text-center">Belum ada laboratorium.</p>
+                                @endforelse
+                            </div>
+                            <p class="text-[0.68rem] text-slate-400 mt-1">
+                                Bisa pilih lebih dari satu lab. Lab pertama yang dicentang akan dipakai sebagai lab induk/default grup.
+                            </p>
+                        </div>
+
                         <x-form.field type="text" name="name" label="Nama Grup" placeholder="contoh: Programming Group" value="{{ old('name') }}" required />
                         <x-form.field type="textarea" name="description" label="Deskripsi (Opsional)" placeholder="Deskripsi grup" value="{{ old('description') }}" />
                         
@@ -205,7 +234,7 @@
                             <select x-model="formGroupId" name="group_id_user" class="w-full mt-1 rounded-xl border-slate-200 text-sm" :class="fixedGroupId ? 'pointer-events-none bg-slate-50 opacity-80' : ''" :tabindex="fixedGroupId ? '-1' : '0'" :readonly="fixedGroupId" required>
                                 <option value="">Pilih grup lab</option>
                                 @foreach($labGroups as $group)
-                                    <option value="{{ $group['id'] }}">{{ $group['laboratory_name'] }} - {{ $group['name'] }}</option>
+                                    <option value="{{ $group['id'] }}">{{ $group['name'] }} — {{ $group['managed_lab_names'] ?? $group['laboratory_name'] }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -278,7 +307,7 @@
                             <select x-model="formGroupId" name="group_id_room" class="w-full mt-1 rounded-xl border-slate-200 text-sm" :class="fixedGroupId ? 'pointer-events-none bg-slate-50 opacity-80' : ''" :tabindex="fixedGroupId ? '-1' : '0'" :readonly="fixedGroupId" required>
                                 <option value="">Pilih grup lab</option>
                                 @foreach($labGroups as $group)
-                                    <option value="{{ $group['id'] }}">{{ $group['laboratory_name'] }} - {{ $group['name'] }}</option>
+                                    <option value="{{ $group['id'] }}">{{ $group['name'] }} — {{ $group['managed_lab_names'] ?? $group['laboratory_name'] }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -364,12 +393,14 @@
                     @forelse($labGroups as $group)
                         <tr x-data="{ totalUsers: {{ $group['total_users'] ?? 0 }}, totalRooms: {{ $group['total_rooms'] ?? 0 }} }"
                             @update-group-counts.window="if ($event.detail.groupId == {{ $group['id'] }}) { totalUsers = $event.detail.users; totalRooms = $event.detail.rooms; }"
-                            x-show="searchGroup === '' || '{{ addslashes(strtolower($group['name'] . ' ' . $group['laboratory_name'] . ' ' . $group['laboratory_code'] . ' ' . ($group['description'] ?? ''))) }}'.includes(searchGroup.toLowerCase())" 
+                            x-show="searchGroup === '' || '{{ addslashes(strtolower($group['name'] . ' ' . ($group['managed_lab_names'] ?? $group['laboratory_name']) . ' ' . $group['laboratory_code'] . ' ' . ($group['description'] ?? ''))) }}'.includes(searchGroup.toLowerCase())" 
                             @click="openGroupDetail({{ $group['id'] }})" class="cursor-pointer">
                             <td class="font-semibold text-slate-800">{{ $group['name'] }}</td>
                             <td class="text-slate-600">
-                                {{ $group['laboratory_name'] }}
-                                <div class="font-mono text-[11px] text-slate-400">{{ $group['laboratory_code'] }}</div>
+                                {{ $group['managed_lab_names'] ?? $group['laboratory_name'] }}
+                                <div class="font-mono text-[11px] text-slate-400">
+                                    Lab induk: {{ $group['laboratory_code'] }} - {{ $group['laboratory_name'] }}
+                                </div>
                             </td>
                             <td x-text="totalUsers + ' user'"></td>
                             <td x-text="totalRooms + ' ruangan'"></td>
@@ -540,13 +571,33 @@
                             <x-form.field label="Nama Grup" name="name" required="true" x-bind:value="editData.name" />
                             
                             <div>
-                                <label for="edit_laboratory_id" class="block text-sm font-semibold text-slate-700 mb-1.5">Laboratorium Induk <span class="text-red-500">*</span></label>
-                                <select name="laboratory_id" id="edit_laboratory_id" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm" required>
-                                    <option value="" disabled>Pilih Laboratorium</option>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                    Laboratorium yang Dikelola <span class="text-red-500">*</span>
+                                </label>
+                                <div class="border border-slate-200 rounded-xl max-h-56 overflow-y-auto p-3 space-y-2 bg-white">
                                     @foreach($laboratories as $lab)
-                                        <option value="{{ $lab['id'] }}" x-bind:selected="editData.laboratory_id == {{ $lab['id'] }}">{{ $lab['name'] }}</option>
+                                        <label class="flex items-start gap-2.5 cursor-pointer px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                name="lab_ids[]"
+                                                value="{{ $lab['id'] }}"
+                                                :checked="String(editData.managed_lab_ids || editData.laboratory_id || '').split(',').map(id => id.trim()).includes('{{ $lab['id'] }}')"
+                                                class="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/20"
+                                            >
+                                            <span class="flex-1 min-w-0">
+                                                <span class="block text-sm font-semibold text-slate-700">
+                                                    {{ $lab['code'] }} - {{ $lab['name'] }}
+                                                </span>
+                                                <span class="block text-[11px] text-slate-400">
+                                                    {{ $lab['building_name'] ?? '-' }} • {{ $lab['floor_name'] ?? '-' }}
+                                                </span>
+                                            </span>
+                                        </label>
                                     @endforeach
-                                </select>
+                                </div>
+                                <p class="text-[0.68rem] text-slate-400 mt-1">
+                                    Centang semua lab yang dikelola grup ini.
+                                </p>
                             </div>
 
                             <x-form.field label="Deskripsi (Opsional)" name="description" type="textarea" x-bind:value="editData.description" />
@@ -716,7 +767,10 @@
                 <div class="flex items-center justify-between px-6 py-3.5 border-b border-slate-100">
                     <div>
                         <h3 class="text-lg font-bold text-slate-800" x-text="detailData.name || 'Detail Grup Lab'"></h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Lab: <span x-text="detailData.laboratory_name || '-'" class="font-semibold text-slate-500"></span> <span class="font-mono" x-text="'(' + (detailData.laboratory_code || '') + ')'"></span></p>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            Menangani:
+                            <span x-text="detailData.managed_lab_names || detailData.laboratory_name || '-'" class="font-semibold text-slate-500"></span>
+                        </p>
                     </div>
                     <button @click="activeModal = null" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -738,6 +792,27 @@
                             <p class="text-sm text-slate-600" x-text="detailData.description"></p>
                         </div>
                     </template>
+
+                    <!-- Laboratorium yang Dikelola -->
+                    <div>
+                        <p class="text-sm font-bold text-slate-800 flex items-center gap-2 mb-3">
+                            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m4-8h10M9 7h1m4 0h1m-6 4h1m4 0h1"/></svg>
+                            Laboratorium yang Dikelola (<span x-text="(groupDetail.labs || []).length"></span>)
+                        </p>
+                        <div class="rounded-xl border border-slate-100 overflow-hidden">
+                            <template x-if="(groupDetail.labs || []).length === 0">
+                                <div class="p-6 text-center text-xs text-slate-400">
+                                    Belum ada data lab di grup ini.
+                                </div>
+                            </template>
+                            <template x-for="lab in (groupDetail.labs || [])" :key="lab.id">
+                                <div class="px-4 py-3 border-b border-slate-50 last:border-b-0 hover:bg-slate-50 transition-colors">
+                                    <p class="text-sm font-semibold text-slate-800" x-text="lab.name"></p>
+                                    <p class="text-xs text-slate-400 font-mono" x-text="lab.code"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
 
                     <!-- Anggota User -->
                     <div>
@@ -817,4 +892,4 @@
 @push('scripts')
 <script src="{{ asset('js/laboratories.js') }}"></script>
 @endpush
-@endsection
+@endsection 

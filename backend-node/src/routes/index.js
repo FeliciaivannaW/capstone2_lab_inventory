@@ -105,6 +105,7 @@ router.get("/login", (req, res) => {
 });
 router.post("/login", authController.login);
 router.get("/profile", authMiddleware, authController.profile);
+router.get("/me/lab-access", authMiddleware, userController.getMyLabAccess);
 
 router.get("/roles", roleController.getRoles);
 router.get("/rooms", roomController.getRooms);
