@@ -86,9 +86,10 @@ class DashboardController extends Controller
 
             $maintenanceLogs = $this->getApiData('/maintenance/logs') ?: [];
             $recentMaintenance = array_slice($maintenanceLogs, 0, 5);
+            $labAccess = $this->getApiData('/me/lab-access') ?: [];
 
             return view('pages.staf-lab.dashboard', compact(
-                'inv', 'bhp', 'bhpLow', 'recentMaintenance'
+                'inv', 'bhp', 'bhpLow', 'recentMaintenance', 'labAccess'
             ));
         }
 
