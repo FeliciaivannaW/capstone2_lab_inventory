@@ -1,110 +1,54 @@
-USE lab_inventory_db;
-
-INSERT INTO roles (name) VALUES
-('administrator'),
-('kepala_laboratorium'),
-('ketua_program_studi'),
-('staf_administrasi'),
-('staf_laboratorium');
-
-INSERT INTO buildings (name, code, address, description) VALUES
-('Gedung GWM', 'GWM', 'Jl. Surya Sumantri No. 65, Bandung', 'Gedung utama untuk ruang administrasi dan laboratorium'),
-('Gedung FTI', 'FTI', 'Jl. Surya Sumantri No. 65, Bandung', 'Gedung fakultas untuk kebutuhan akademik dan praktikum');
-
-INSERT INTO floors (building_id, floor_number, name, description) VALUES
-((SELECT id FROM buildings WHERE code = 'GWM'), 7, 'Lantai 7', 'Area ruang kelas dan kantor'),
-((SELECT id FROM buildings WHERE code = 'GWM'), 8, 'Lantai 8', 'Area laboratorium komputer dan ruang pendukung'),
-((SELECT id FROM buildings WHERE code = 'FTI'), 2, 'Lantai 2', 'Area laboratorium tambahan dan ruang penyimpanan');
-
-INSERT INTO room_types (name, description) VALUES
-('laboratory', 'Ruangan laboratorium'),
-('office', 'Ruangan kantor atau administrasi'),
-('storage', 'Ruangan penyimpanan'),
-('meeting_room', 'Ruangan rapat'),
-('study_room', 'Ruangan belajar'),
-('server_room', 'Ruangan server'),
-('toilet', 'Toilet'),
-('utility', 'Ruangan utilitas seperti panel listrik atau janitor'),
-('waiting_room', 'Ruang tunggu'),
-('classroom', 'Ruang kelas biasa');
-
-INSERT INTO rooms (floor_id, room_type_id, code, name, capacity, description) VALUES
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'study_room'), 'H08-A01', 'Study Room', 24, 'Study room pada denah GWM lantai 8'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-A02', 'Computer Network Lab', 35, 'Laboratorium jaringan komputer'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-A03', 'Programming Lab 1', 40, 'Laboratorium programming 1'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-A04', 'Programming Lab 2', 40, 'Laboratorium programming 2'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'storage'), 'H08-A05', 'Storage 1', NULL, 'Ruang penyimpanan barang habis pakai'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'office'), 'H08-A06', 'Master Program of Computer Science', 20, 'Ruang program magister ilmu komputer'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-A07', 'Enterprise Lab 1', 35, 'Laboratorium enterprise 1'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-A08', 'Enterprise Lab 2', 35, 'Laboratorium enterprise 2'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'utility'), 'H08-A09', 'Janitor Room 1', NULL, 'Ruang janitor 1'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'utility'), 'H08-A10', 'Electricity Panel Room 1', NULL, 'Ruang panel listrik 1'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'toilet'), 'H08-A11', 'Gents Toilet', NULL, 'Toilet pria area A'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'toilet'), 'H08-A12', 'Ladies Toilet', NULL, 'Toilet wanita area A'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'office'), 'H08-B01', 'Staff Room 1', 20, 'Ruang staff 1'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-B02', 'Advance Programming Lab 1', 40, 'Laboratorium advance programming 1'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-B03', 'Advance Programming Lab 2', 40, 'Laboratorium advance programming 2'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'office'), 'H08-B04', 'Administration Room', 12, 'Ruang administrasi'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'office'), 'H08-B05', 'Head of Laboratory Office', 8, 'Ruang kepala laboratorium'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'server_room'), 'H08-B06', 'Server Room', NULL, 'Ruang server'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'storage'), 'H08-B07', 'Storage 2', NULL, 'Ruang penyimpanan 2'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-B08', 'Advance Programming Lab 3', 40, 'Laboratorium advance programming 3'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-B09', 'Advance Programming Lab 4', 40, 'Laboratorium advance programming 4'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-B10', 'Internet Lab 1', 35, 'Laboratorium internet 1'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-B11', 'Internet Lab 2', 35, 'Laboratorium internet 2'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'office'), 'H08-C01', 'Staff Room 2', 20, 'Ruang staff 2'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'waiting_room'), 'H08-C02', 'Waiting Room', 15, 'Ruang tunggu'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-C03', 'Database Lab', 40, 'Laboratorium database'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'laboratory'), 'H08-C04', 'Multimedia Lab', 35, 'Laboratorium multimedia'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'meeting_room'), 'H08-C05', 'Meeting Room', 20, 'Ruang rapat'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'utility'), 'H08-C06', 'Electricity Panel Room 2', NULL, 'Ruang panel listrik 2'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'storage'), 'H08-C07', 'Storage 3', NULL, 'Ruang penyimpanan 3'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'toilet'), 'H08-C08', 'Ladies Toilet', NULL, 'Toilet wanita area C'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'toilet'), 'H08-C09', 'Gents Toilet', NULL, 'Toilet pria area C'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 8), (SELECT id FROM room_types WHERE name = 'utility'), 'H08-C10', 'Janitor Room 2', NULL, 'Ruang janitor 2'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'GWM') AND floor_number = 7), (SELECT id FROM room_types WHERE name = 'classroom'), 'H07-D01', 'Ruang Kelas 701', 50, 'Ruang kelas untuk perkuliahan'),
-((SELECT id FROM floors WHERE building_id = (SELECT id FROM buildings WHERE code = 'FTI') AND floor_number = 2), (SELECT id FROM room_types WHERE name = 'laboratory'), 'FTI-201', 'AI Lab', 30, 'Laboratorium AI tambahan');
-
-INSERT INTO laboratories (room_id, name, code, description) VALUES
-((SELECT id FROM rooms WHERE code = 'H08-A02'), 'Computer Network Lab', 'LAB-COMNET', 'Laboratorium jaringan komputer'),
-((SELECT id FROM rooms WHERE code = 'H08-A03'), 'Programming Lab 1', 'LAB-PROG-1', 'Laboratorium programming 1'),
-((SELECT id FROM rooms WHERE code = 'H08-A04'), 'Programming Lab 2', 'LAB-PROG-2', 'Laboratorium programming 2'),
-((SELECT id FROM rooms WHERE code = 'H08-A07'), 'Enterprise Lab 1', 'LAB-ENT-1', 'Laboratorium enterprise 1'),
-((SELECT id FROM rooms WHERE code = 'H08-A08'), 'Enterprise Lab 2', 'LAB-ENT-2', 'Laboratorium enterprise 2'),
-((SELECT id FROM rooms WHERE code = 'H08-B02'), 'Advance Programming Lab 1', 'LAB-ADVPROG-1', 'Laboratorium advance programming 1'),
-((SELECT id FROM rooms WHERE code = 'H08-B03'), 'Advance Programming Lab 2', 'LAB-ADVPROG-2', 'Laboratorium advance programming 2'),
-((SELECT id FROM rooms WHERE code = 'H08-B08'), 'Advance Programming Lab 3', 'LAB-ADVPROG-3', 'Laboratorium advance programming 3'),
-((SELECT id FROM rooms WHERE code = 'H08-B09'), 'Advance Programming Lab 4', 'LAB-ADVPROG-4', 'Laboratorium advance programming 4'),
-((SELECT id FROM rooms WHERE code = 'H08-B10'), 'Internet Lab 1', 'LAB-INET-1', 'Laboratorium internet 1'),
-((SELECT id FROM rooms WHERE code = 'H08-B11'), 'Internet Lab 2', 'LAB-INET-2', 'Laboratorium internet 2'),
-((SELECT id FROM rooms WHERE code = 'H08-C03'), 'Database Lab', 'LAB-DB', 'Laboratorium database'),
-((SELECT id FROM rooms WHERE code = 'H08-C04'), 'Multimedia Lab', 'LAB-MM', 'Laboratorium multimedia'),
-((SELECT id FROM rooms WHERE code = 'FTI-201'), 'AI Lab', 'LAB-AI', 'Laboratorium AI tambahan');
-
-INSERT INTO users (role_id, lab_id, name, nrp_nip, email, password, status) VALUES
-((SELECT id FROM roles WHERE name = 'administrator'), NULL, 'Admin Sistem', 'ADM001', 'admin@example.com', 'password123', 'active'),
-((SELECT id FROM roles WHERE name = 'kepala_laboratorium'), (SELECT id FROM laboratories WHERE code = 'LAB-PROG-1'), 'Kepala Laboratorium', 'KALAB001', 'kalab@example.com', 'password123', 'active'),
-((SELECT id FROM roles WHERE name = 'ketua_program_studi'), NULL, 'Ketua Program Studi', 'KAPRODI001', 'kaprodi@example.com', 'password123', 'active'),
-((SELECT id FROM roles WHERE name = 'staf_administrasi'), NULL, 'Staf Administrasi', 'STAFFADM001', 'stafadmin@example.com', 'password123', 'active'),
-((SELECT id FROM roles WHERE name = 'staf_laboratorium'), (SELECT id FROM laboratories WHERE code = 'LAB-PROG-1'), 'Staf Laboratorium Programming', 'STAFFLAB001', 'staflab@example.com', 'password123', 'active'),
-((SELECT id FROM roles WHERE name = 'staf_laboratorium'), NULL, 'Staf Laboratorium Multi Lab', 'STAFFLAB002', 'staflab.multi@example.com', 'password123', 'active'),
-((SELECT id FROM roles WHERE name = 'staf_laboratorium'), (SELECT id FROM laboratories WHERE code = 'LAB-COMNET'), 'Staf Laboratorium Jaringan', 'STAFFLAB003', 'staflab.jaringan@example.com', 'password123', 'active');
-
-UPDATE laboratories
-SET head_user_id = (SELECT id FROM users WHERE email = 'kalab@example.com')
-WHERE head_user_id IS NULL;
-
 -- ============================================================
 -- LAB GROUP ACCESS
--- Dipakai supaya modal Manajemen User dan dashboard Staf Lab
--- langsung menampilkan grup serta lab/ruangan yang dikelola.
+-- Dipakai supaya admin bisa melihat grup staf lab mengurus lab apa saja.
+-- Satu grup bisa mengelola lebih dari satu laboratorium.
 -- ============================================================
 
 INSERT INTO lab_groups (laboratory_id, name, description) VALUES
-((SELECT id FROM laboratories WHERE code = 'LAB-PROG-1'), 'Grup Staff Programming', 'Grup staf lab untuk Programming Lab 1 dan Programming Lab 2'),
-((SELECT id FROM laboratories WHERE code = 'LAB-COMNET'), 'Grup Staff Jaringan', 'Grup staf lab untuk Computer Network Lab'),
-((SELECT id FROM laboratories WHERE code = 'LAB-DB'), 'Grup Staff Database', 'Grup staf lab untuk Database Lab'),
+((SELECT id FROM laboratories WHERE code = 'LAB-PROG-1'), 'Grup Staff Programming', 'Grup staf lab untuk Programming dan Advance Programming Lab'),
+((SELECT id FROM laboratories WHERE code = 'LAB-COMNET'), 'Grup Staff Jaringan', 'Grup staf lab untuk Computer Network dan Internet Lab'),
+((SELECT id FROM laboratories WHERE code = 'LAB-DB'), 'Grup Staff Database', 'Grup staf lab untuk Database dan AI Lab'),
 ((SELECT id FROM laboratories WHERE code = 'LAB-MM'), 'Grup Staff Multimedia', 'Grup staf lab untuk Multimedia Lab');
+
+INSERT INTO lab_group_laboratories (group_id, laboratory_id)
+SELECT g.id, l.id
+FROM lab_groups g
+JOIN laboratories l ON l.code IN (
+  'LAB-PROG-1',
+  'LAB-PROG-2',
+  'LAB-ADVPROG-1',
+  'LAB-ADVPROG-2',
+  'LAB-ADVPROG-3',
+  'LAB-ADVPROG-4'
+)
+WHERE g.name = 'Grup Staff Programming';
+
+INSERT INTO lab_group_laboratories (group_id, laboratory_id)
+SELECT g.id, l.id
+FROM lab_groups g
+JOIN laboratories l ON l.code IN (
+  'LAB-COMNET',
+  'LAB-INET-1',
+  'LAB-INET-2'
+)
+WHERE g.name = 'Grup Staff Jaringan';
+
+INSERT INTO lab_group_laboratories (group_id, laboratory_id)
+SELECT g.id, l.id
+FROM lab_groups g
+JOIN laboratories l ON l.code IN (
+  'LAB-DB',
+  'LAB-AI'
+)
+WHERE g.name = 'Grup Staff Database';
+
+INSERT INTO lab_group_laboratories (group_id, laboratory_id)
+SELECT g.id, l.id
+FROM lab_groups g
+JOIN laboratories l ON l.code IN (
+  'LAB-MM'
+)
+WHERE g.name = 'Grup Staff Multimedia';
 
 INSERT INTO lab_group_users (group_id, user_id, role_in_group) VALUES
 ((SELECT id FROM lab_groups WHERE name = 'Grup Staff Programming'), (SELECT id FROM users WHERE email = 'staflab@example.com'), 'staf_lab'),
@@ -113,14 +57,45 @@ INSERT INTO lab_group_users (group_id, user_id, role_in_group) VALUES
 ((SELECT id FROM lab_groups WHERE name = 'Grup Staff Jaringan'), (SELECT id FROM users WHERE email = 'staflab.multi@example.com'), 'staf_lab'),
 ((SELECT id FROM lab_groups WHERE name = 'Grup Staff Database'), (SELECT id FROM users WHERE email = 'staflab.multi@example.com'), 'staf_lab');
 
-INSERT INTO lab_group_rooms (group_id, room_id) VALUES
-((SELECT id FROM lab_groups WHERE name = 'Grup Staff Programming'), (SELECT id FROM rooms WHERE code = 'H08-A03')),
-((SELECT id FROM lab_groups WHERE name = 'Grup Staff Programming'), (SELECT id FROM rooms WHERE code = 'H08-A04')),
-((SELECT id FROM lab_groups WHERE name = 'Grup Staff Programming'), (SELECT id FROM rooms WHERE code = 'H08-B07')),
-((SELECT id FROM lab_groups WHERE name = 'Grup Staff Jaringan'), (SELECT id FROM rooms WHERE code = 'H08-A02')),
-((SELECT id FROM lab_groups WHERE name = 'Grup Staff Jaringan'), (SELECT id FROM rooms WHERE code = 'H08-B06')),
-((SELECT id FROM lab_groups WHERE name = 'Grup Staff Database'), (SELECT id FROM rooms WHERE code = 'H08-C03')),
-((SELECT id FROM lab_groups WHERE name = 'Grup Staff Multimedia'), (SELECT id FROM rooms WHERE code = 'H08-C04'));
+INSERT INTO lab_group_rooms (group_id, room_id)
+SELECT g.id, r.id
+FROM lab_groups g
+JOIN rooms r ON r.code IN (
+  'H08-A03',
+  'H08-A04',
+  'H08-B02',
+  'H08-B03',
+  'H08-B08',
+  'H08-B09'
+)
+WHERE g.name = 'Grup Staff Programming';
+
+INSERT INTO lab_group_rooms (group_id, room_id)
+SELECT g.id, r.id
+FROM lab_groups g
+JOIN rooms r ON r.code IN (
+  'H08-A02',
+  'H08-B10',
+  'H08-B11'
+)
+WHERE g.name = 'Grup Staff Jaringan';
+
+INSERT INTO lab_group_rooms (group_id, room_id)
+SELECT g.id, r.id
+FROM lab_groups g
+JOIN rooms r ON r.code IN (
+  'H08-C03',
+  'FTI-201'
+)
+WHERE g.name = 'Grup Staff Database';
+
+INSERT INTO lab_group_rooms (group_id, room_id)
+SELECT g.id, r.id
+FROM lab_groups g
+JOIN rooms r ON r.code IN (
+  'H08-C04'
+)
+WHERE g.name = 'Grup Staff Multimedia';
 
 INSERT INTO item_categories (name, description) VALUES
 ('Komputer dan Perangkat', 'Barang inventaris seperti PC, monitor, keyboard, dan mouse'),
