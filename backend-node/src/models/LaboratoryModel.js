@@ -68,7 +68,9 @@ const LaboratoryModel = {
       JOIN room_types rt ON r.room_type_id = rt.id
       JOIN floors f ON r.floor_id = f.id
       JOIN buildings b ON f.building_id = b.id
+      LEFT JOIN laboratories lab_used ON lab_used.room_id = r.id
       WHERE rt.name = 'laboratory'
+        AND lab_used.id IS NULL
       ORDER BY b.name ASC, f.floor_number ASC, r.code ASC
     `);
 
