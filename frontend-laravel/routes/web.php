@@ -18,8 +18,12 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/sign-up', [AuthController::class, 'showSignUp'])->name('signup');
 Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('forgot.password');
 
+Route::get('/', function () {
+    return view('landing');
+})->name('landing');
+
 Route::middleware('frontend.auth')->group(function () {
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::middleware('frontend.role:administrator')->group(function () {
         Route::get('/users', [UserManagementController::class, 'index'])->name('users');

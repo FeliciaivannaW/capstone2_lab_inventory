@@ -1,4 +1,86 @@
 -- ============================================================
+-- BASE DATA (Roles, Users, Buildings, Floors, Room Types, Rooms, Labs)
+-- Ditambahkan agar seed.sql bisa berdiri sendiri dan tidak error
+-- ============================================================
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- Kosongkan dulu untuk mencegah duplikasi jika dijalankan ulang
+TRUNCATE TABLE `roles`;
+TRUNCATE TABLE `users`;
+TRUNCATE TABLE `buildings`;
+TRUNCATE TABLE `floors`;
+TRUNCATE TABLE `room_types`;
+TRUNCATE TABLE `rooms`;
+TRUNCATE TABLE `laboratories`;
+TRUNCATE TABLE `lab_group_laboratories`;
+TRUNCATE TABLE `lab_group_users`;
+TRUNCATE TABLE `lab_group_rooms`;
+TRUNCATE TABLE `lab_groups`;
+TRUNCATE TABLE `asset_condition_logs`;
+TRUNCATE TABLE `bhp_stock_movements`;
+TRUNCATE TABLE `maintenance_logs`;
+TRUNCATE TABLE `inventory_assets`;
+TRUNCATE TABLE `bhp_stocks`;
+TRUNCATE TABLE `item_catalogs`;
+TRUNCATE TABLE `item_categories`;
+
+-- 1. Roles
+INSERT INTO `roles` (id, name) VALUES 
+(1, 'administrator'),
+(2, 'kepala_laboratorium'),
+(3, 'ketua_program_studi'),
+(4, 'staf_administrasi'),
+(5, 'staf_laboratorium');
+
+-- 2. Users
+INSERT INTO `users` (id, role_id, name, email, password, status) VALUES
+(1, 1, 'Administrator', 'admin@example.com', '$2b$10$I./CizOyzoKxdJwRNztJkuK3JtOcWOTaezTWq2hF5wbCxpc9ZT9q.', 'active'),
+(2, 2, 'Kepala Laboratorium', 'kalab@example.com', '$2b$10$I./CizOyzoKxdJwRNztJkuK3JtOcWOTaezTWq2hF5wbCxpc9ZT9q.', 'active'),
+(3, 3, 'Ketua Program Studi', 'kaprodi@example.com', '$2b$10$I./CizOyzoKxdJwRNztJkuK3JtOcWOTaezTWq2hF5wbCxpc9ZT9q.', 'active'),
+(4, 4, 'Staf Administrasi', 'stafadmin@example.com', '$2b$10$I./CizOyzoKxdJwRNztJkuK3JtOcWOTaezTWq2hF5wbCxpc9ZT9q.', 'active'),
+(5, 5, 'Staf Lab 1', 'staflab@example.com', '$2b$10$I./CizOyzoKxdJwRNztJkuK3JtOcWOTaezTWq2hF5wbCxpc9ZT9q.', 'active'),
+(6, 5, 'Staf Lab Multi', 'staflab.multi@example.com', '$2b$10$I./CizOyzoKxdJwRNztJkuK3JtOcWOTaezTWq2hF5wbCxpc9ZT9q.', 'active'),
+(7, 5, 'Staf Lab Jaringan', 'staflab.jaringan@example.com', '$2b$10$I./CizOyzoKxdJwRNztJkuK3JtOcWOTaezTWq2hF5wbCxpc9ZT9q.', 'active');
+
+-- 3. Buildings & Floors & Room Types
+INSERT INTO `buildings` (id, name, code) VALUES (1, 'Gedung H', 'H'), (2, 'Gedung FTI', 'FTI');
+INSERT INTO `floors` (id, building_id, floor_number, name) VALUES (1, 1, 8, 'Lantai 8'), (2, 2, 2, 'Lantai 2');
+INSERT INTO `room_types` (id, name) VALUES (1, 'Laboratorium');
+
+-- 4. Rooms
+INSERT INTO `rooms` (id, floor_id, room_type_id, code, name) VALUES
+(1, 1, 1, 'H08-A02', 'Ruang H08-A02'),
+(2, 1, 1, 'H08-A03', 'Ruang H08-A03'),
+(3, 1, 1, 'H08-A04', 'Ruang H08-A04'),
+(4, 1, 1, 'H08-B02', 'Ruang H08-B02'),
+(5, 1, 1, 'H08-B03', 'Ruang H08-B03'),
+(6, 1, 1, 'H08-B06', 'Ruang H08-B06'),
+(7, 1, 1, 'H08-B08', 'Ruang H08-B08'),
+(8, 1, 1, 'H08-B09', 'Ruang H08-B09'),
+(9, 1, 1, 'H08-B10', 'Ruang H08-B10'),
+(10, 1, 1, 'H08-B11', 'Ruang H08-B11'),
+(11, 1, 1, 'H08-C03', 'Ruang H08-C03'),
+(12, 1, 1, 'H08-C04', 'Ruang H08-C04'),
+(13, 2, 1, 'FTI-201', 'Ruang FTI-201');
+
+-- 5. Laboratories
+INSERT INTO `laboratories` (id, room_id, head_user_id, name, code) VALUES
+(1, (SELECT id FROM rooms WHERE code = 'H08-A03'), 2, 'Lab Programming 1', 'LAB-PROG-1'),
+(2, (SELECT id FROM rooms WHERE code = 'H08-A04'), 2, 'Lab Programming 2', 'LAB-PROG-2'),
+(3, (SELECT id FROM rooms WHERE code = 'H08-B02'), 2, 'Lab Adv Programming 1', 'LAB-ADVPROG-1'),
+(4, (SELECT id FROM rooms WHERE code = 'H08-B03'), 2, 'Lab Adv Programming 2', 'LAB-ADVPROG-2'),
+(5, (SELECT id FROM rooms WHERE code = 'H08-B08'), 2, 'Lab Adv Programming 3', 'LAB-ADVPROG-3'),
+(6, (SELECT id FROM rooms WHERE code = 'H08-B09'), 2, 'Lab Adv Programming 4', 'LAB-ADVPROG-4'),
+(7, (SELECT id FROM rooms WHERE code = 'H08-A02'), 2, 'Lab Computer Network', 'LAB-COMNET'),
+(8, (SELECT id FROM rooms WHERE code = 'H08-B10'), 2, 'Lab Internet 1', 'LAB-INET-1'),
+(9, (SELECT id FROM rooms WHERE code = 'H08-B11'), 2, 'Lab Internet 2', 'LAB-INET-2'),
+(10, (SELECT id FROM rooms WHERE code = 'H08-C03'), 2, 'Lab Database', 'LAB-DB'),
+(11, (SELECT id FROM rooms WHERE code = 'FTI-201'), 2, 'Lab AI', 'LAB-AI'),
+(12, (SELECT id FROM rooms WHERE code = 'H08-C04'), 2, 'Lab Multimedia', 'LAB-MM');
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================
 -- LAB GROUP ACCESS
 -- Dipakai supaya admin bisa melihat grup staf lab mengurus lab apa saja.
 -- Satu grup bisa mengelola lebih dari satu laboratorium.

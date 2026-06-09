@@ -295,9 +295,9 @@ const RoomModel = {
       "DELETE FROM room_types WHERE id = ?",
       [id]
     );
-
     return result;
   },
+
 };
 
 module.exports = RoomModel;

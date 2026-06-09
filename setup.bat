@@ -15,16 +15,18 @@ echo Pilihan Menu:
 echo   1. Full Setup (Reset Database ^& Install/Update Dependencies)
 echo   2. Update Dependencies Saja (Tanpa Reset Database)
 echo   3. Reset Database Saja
-echo   4. Jalankan Aplikasi (Start Servers)
-echo   5. Keluar
+echo   4. Masukkan Data Dummy (Seed) Saja
+echo   5. Jalankan Aplikasi (Start Servers)
+echo   6. Keluar
 echo.
-set /p menu_choice="Pilih menu [1-5]: "
+set /p menu_choice="Pilih menu [1-6]: "
 
 if "%menu_choice%"=="1" goto FULL_SETUP
 if "%menu_choice%"=="2" goto UPDATE_DEPS
 if "%menu_choice%"=="3" goto RESET_DB
-if "%menu_choice%"=="4" goto START_SERVERS
-if "%menu_choice%"=="5" goto END
+if "%menu_choice%"=="4" goto SEED_DB
+if "%menu_choice%"=="5" goto START_SERVERS
+if "%menu_choice%"=="6" goto END
 
 echo [ERROR] Pilihan tidak valid.
 pause
@@ -84,10 +86,31 @@ if %errorlevel% neq 0 (
 echo [OK] Database dan table berhasil dibuat
 
 echo [INFO] Memasukkan data awal...
-mysql -u root < database\seed.sql
+mysql -u root lab_inventory_db < database\seed.sql
 if %errorlevel% neq 0 (
     echo [ERROR] Gagal seed data!
     pause
+    exit /b 1
+)
+echo [OK] Data awal berhasil dimasukkan
+exit /b 0
+
+:DO_SEED_DB
+call :CHECK_MYSQL
+if %errorlevel% neq 0 exit /b 1
+
+echo.
+mysql -u root -e "USE lab_inventory_db" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Database 'lab_inventory_db' belum ada!
+    echo Silakan jalankan Reset Database terlebih dahulu.
+    exit /b 1
+)
+
+echo [INFO] Memasukkan data awal (seed)...
+mysql -u root lab_inventory_db < database\seed.sql
+if %errorlevel% neq 0 (
+    echo [ERROR] Gagal seed data!
     exit /b 1
 )
 echo [OK] Data awal berhasil dimasukkan
@@ -225,6 +248,18 @@ if !errorlevel! neq 0 (
 ) else (
     echo.
     echo [OK] Reset Database Selesai!
+)
+pause
+goto MAIN_MENU
+
+:SEED_DB
+call :DO_SEED_DB
+if !errorlevel! neq 0 (
+    echo.
+    echo [INFO] Operasi dibatalkan.
+) else (
+    echo.
+    echo [OK] Seed Database Selesai!
 )
 pause
 goto MAIN_MENU
