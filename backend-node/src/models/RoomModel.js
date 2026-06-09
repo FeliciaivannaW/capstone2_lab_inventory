@@ -121,6 +121,7 @@ const RoomModel = {
         floors.building_id,
         floors.name,
         floors.floor_number,
+        floors.description,
         buildings.code AS building_code,
         buildings.name AS building_name
       FROM floors
@@ -207,7 +208,7 @@ const RoomModel = {
 
   async getOptions() {
     const [buildings] = await db.query(`
-      SELECT id, code, name
+      SELECT id, code, name, address, description
       FROM buildings
       ORDER BY name ASC
     `);
@@ -218,6 +219,7 @@ const RoomModel = {
         floors.building_id,
         floors.floor_number,
         floors.name,
+        floors.description,
         buildings.code AS building_code,
         buildings.name AS building_name
       FROM floors
@@ -236,6 +238,38 @@ const RoomModel = {
       floors,
       room_types: roomTypes
     };
+  },
+
+
+
+  async updateBuilding(id, { code, name, address, description }, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(`
+      UPDATE buildings
+      SET code = ?, name = ?, address = ?, description = ?
+      WHERE id = ?
+    `, [code, name, address || null, description || null, id]);
+    return result;
+  },
+
+  async updateFloor(id, { building_id, floor_number, name, description }, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(`
+      UPDATE floors
+      SET building_id = ?, floor_number = ?, name = ?, description = ?
+      WHERE id = ?
+    `, [building_id, floor_number, name, description || null, id]);
+    return result;
+  },
+
+  async updateRoomType(id, { name, description }, tx = null) {
+    const conn = tx || db;
+    const [result] = await conn.query(`
+      UPDATE room_types
+      SET name = ?, description = ?
+      WHERE id = ?
+    `, [name, description || null, id]);
+    return result;
   },
 
   async deleteBuilding(id) {

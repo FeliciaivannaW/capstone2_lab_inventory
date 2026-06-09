@@ -133,21 +133,21 @@ router.delete("/users/:id", authMiddleware, roleMiddleware(["administrator"]), u
 // ============================================================
 // ROOM MANAGEMENT ROUTES (Administrator)
 // ============================================================
-router.post("/buildings", authMiddleware, roleMiddleware(["administrator"]), roomController.createBuilding);
-router.put("/buildings/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.updateBuilding);
-router.post("/floors", authMiddleware, roleMiddleware(["administrator"]), roomController.createFloor);
-router.put("/floors/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.updateFloor);
-router.post("/room-types", authMiddleware, roleMiddleware(["administrator"]), roomController.createRoomType);
-router.put("/room-types/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.updateRoomType);
-router.get("/rooms/options", authMiddleware, roleMiddleware(["administrator"]), roomController.getRoomOptions);
-router.post("/rooms/bulk", authMiddleware, roleMiddleware(["administrator"]), roomController.createRoomsBulk);
-router.get("/rooms/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.getRoom);
-router.post("/rooms", authMiddleware, roleMiddleware(["administrator"]), roomController.createRoom);
-router.put("/rooms/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.updateRoom);
-router.delete("/rooms/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.deleteRoom);
-router.delete("/buildings/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.deleteBuilding);
-router.delete("/floors/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.deleteFloor);
-router.delete("/room-types/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.deleteRoomType);
+router.post("/buildings", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.createBuilding);
+router.post("/floors", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.createFloor);
+router.post("/room-types", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.createRoomType);
+router.put("/buildings/:id", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.updateBuilding);
+router.put("/floors/:id", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.updateFloor);
+router.put("/room-types/:id", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.updateRoomType);
+router.get("/rooms/options", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.getRoomOptions);
+router.post("/rooms/bulk", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.createRoomsBulk);
+router.get("/rooms/:id", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.getRoom);
+router.post("/rooms", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.createRoom);
+router.put("/rooms/:id", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.updateRoom);
+router.delete("/rooms/:id", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.deleteRoom);
+router.delete("/buildings/:id", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.deleteBuilding);
+router.delete("/floors/:id", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.deleteFloor);
+router.delete("/room-types/:id", authMiddleware, roleMiddleware(["administrator", "staf_laboratorium"]), roomController.deleteRoomType);
 
 // ============================================================
 // LABORATORY + LAB GROUP MANAGEMENT ROUTES (Administrator)

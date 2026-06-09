@@ -144,7 +144,11 @@
                                 </span>
                             </td>
 
-                            <td class="text-slate-500">{{ $room['building_name'] }}</td>
+                            <td class="text-slate-500">
+                                <span class="font-mono text-xs font-semibold text-slate-600">{{ $room['building_code'] }}</span>
+                                <span class="mx-1 text-slate-300">-</span>
+                                {{ $room['building_name'] }}
+                            </td>
                             <td class="text-slate-500">{{ $room['floor_name'] }}</td>
 
                             <td class="whitespace-nowrap space-x-2">
@@ -581,6 +585,7 @@
                                             @endphp
                                             <x-form.field type="select" name="building_id" label="Pilih Gedung" :options="$bldgOptions" value="{{ old('building_id', $floor['building_id']) }}" required />
                                             <x-form.field type="number" name="floor_number" label="Nomor Lantai" placeholder="contoh: 8" value="{{ old('floor_number', $floor['floor_number'] ?? str_replace('Lantai ', '', $floor['name'])) }}" required />
+                                            <x-form.field type="text" name="name" label="Nama Lantai" placeholder="contoh: Lantai 8" value="{{ old('name', $floor['name'] ?? '') }}" />
                                             <x-form.field type="textarea" name="description" label="Deskripsi (Opsional)" placeholder="Deskripsi lantai" value="{{ old('description', $floor['description'] ?? '') }}" />
                                             <div class="pt-2 flex gap-3">
                                                 <button type="button" @click="activeModal = null" class="flex-1 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold py-2.5 hover:bg-slate-200">
@@ -836,6 +841,7 @@
                         @endphp
                         <x-form.field type="select" name="building_id" label="Pilih Gedung" :options="$bldgOptions" value="{{ old('building_id') }}" required />
                         <x-form.field type="number" name="floor_number" label="Nomor Lantai" placeholder="contoh: 8" value="{{ old('floor_number') }}" required />
+                        <x-form.field type="text" name="name" label="Nama Lantai" placeholder="contoh: Lantai 8" value="{{ old('name') }}" />
                         <x-form.field type="textarea" name="description" label="Deskripsi (Opsional)" placeholder="Deskripsi lantai" value="{{ old('description') }}" />
                         <div class="pt-2 flex gap-3">
                             <button type="button" @click="activeModal = null" class="flex-1 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold py-2.5 hover:bg-slate-200">
