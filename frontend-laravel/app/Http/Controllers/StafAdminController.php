@@ -624,6 +624,7 @@ class StafAdminController extends Controller
      */
     public function inventaris(Request $request)
     {
+        $tab = $request->input('tab', 'aset');
         $filters = [];
 
         if ($request->filled('search'))    { $filters['search']    = $request->search; }
@@ -631,7 +632,18 @@ class StafAdminController extends Controller
         if ($request->filled('condition')) { $filters['condition'] = $request->condition; }
         if ($request->filled('status'))    { $filters['status']    = $request->status; }
 
-        $assets = $this->getApiData('/inventory/assets', $filters) ?: [];
+        $assets = [];
+        $bhpStocks = [];
+
+        if ($tab === 'aset') {
+            $assets = $this->getApiData('/inventory/assets', $filters) ?: [];
+        } else {
+            $bhpFilters = [
+                'search' => $filters['search'] ?? null,
+                'lab_id' => $filters['lab_id'] ?? null,
+            ];
+            $bhpStocks = $this->getApiData('/bhp/catalog-readonly', $bhpFilters) ?: [];
+        }
 
         // Fetch labs for filter dropdown
         $labs = $this->getApiData('/laboratories') ?: [];
@@ -649,7 +661,9 @@ class StafAdminController extends Controller
         }
 
         return view('pages.staf-admin.inventaris', [
+            'tab'         => $tab,
             'assets'      => $assets,
+            'bhpStocks'   => $bhpStocks,
             'labs'        => $labs,
             'filters'     => $request->only(['search', 'lab_id', 'condition', 'status']),
             'totalAssets' => $totalAssets,

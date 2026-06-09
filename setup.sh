@@ -51,12 +51,36 @@ do_reset_db() {
         fi
     fi
 
+    echo ""
+    echo "[INFO] Menghapus database lama (jika ada) dan membuat ulang..."
+    mysql -u root -e "DROP DATABASE IF EXISTS lab_inventory_db;"
+
     echo "[INFO] Membuat database dan table..."
     mysql -u root < database/schema.sql
     echo "[OK] Database dan table berhasil dibuat"
 
     echo "[INFO] Memasukkan data awal..."
-    mysql -u root < database/seed.sql
+    mysql -u root lab_inventory_db < database/seed.sql
+    echo "[OK] Database berhasil di-reset dengan data awal"
+}
+
+do_seed_db() {
+    if ! check_mysql; then
+        return 1
+    fi
+
+    if ! mysql -u root -e "USE lab_inventory_db" > /dev/null 2>&1; then
+        echo "[ERROR] Database 'lab_inventory_db' belum ada!"
+        echo "Silakan jalankan Reset Database terlebih dahulu."
+        return 1
+    fi
+
+    echo "[INFO] Memasukkan data awal (seed)..."
+    mysql -u root lab_inventory_db < database/seed.sql
+    if [ $? -ne 0 ]; then
+        echo "[ERROR] Gagal memasukkan data awal!"
+        return 1
+    fi
     echo "[OK] Data awal berhasil dimasukkan"
 }
 
@@ -201,10 +225,11 @@ show_menu() {
     echo "  1. Full Setup (Reset Database & Install/Update Dependencies)"
     echo "  2. Update Dependencies Saja (Tanpa Reset Database)"
     echo "  3. Reset Database Saja"
-    echo "  4. Jalankan Aplikasi (Start Servers)"
-    echo "  5. Keluar"
+    echo "  4. Masukkan Data Dummy (Seed) Saja"
+    echo "  5. Jalankan Aplikasi (Start Servers)"
+    echo "  6. Keluar"
     echo ""
-    read -p "Pilih menu [1-5]: " menu_choice
+    read -p "Pilih menu [1-6]: " menu_choice
 
     case $menu_choice in
         1)
@@ -235,10 +260,20 @@ show_menu() {
             read -p "Press Enter to return to menu..."
             ;;
         4)
+            if do_seed_db; then
+                echo ""
+                echo "[OK] Seed Database Selesai!"
+            else
+                echo ""
+                echo "[INFO] Operasi dibatalkan."
+            fi
+            read -p "Press Enter to return to menu..."
+            ;;
+        5)
             start_servers
             exit 0
             ;;
-        5)
+        6)
             echo "Keluar."
             exit 0
             ;;

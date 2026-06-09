@@ -1,22 +1,22 @@
 const express = require("express");
-const router  = express.Router();
-const multer  = require("multer");
-const path    = require("path");
-const fs      = require("fs");
+const router = express.Router();
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
-const healthController       = require("../controllers/healthController");
-const roleController         = require("../controllers/roleController");
-const roomController         = require("../controllers/roomController");
-const userController         = require("../controllers/userController");
-const bhpController          = require("../controllers/bhpController");
-const maintenanceController  = require("../controllers/maintenanceController");
-const laboratoryController   = require("../controllers/laboratoryController");
-const procurementController  = require("../controllers/procurementController");
-const authController         = require("../controllers/authController");
+const healthController = require("../controllers/healthController");
+const roleController = require("../controllers/roleController");
+const roomController = require("../controllers/roomController");
+const userController = require("../controllers/userController");
+const bhpController = require("../controllers/bhpController");
+const maintenanceController = require("../controllers/maintenanceController");
+const laboratoryController = require("../controllers/laboratoryController");
+const procurementController = require("../controllers/procurementController");
+const authController = require("../controllers/authController");
 const goodsReceiptController = require("../controllers/goodsReceiptController");
-const inventoryController    = require("../controllers/inventoryController");
-const statisticsController   = require("../controllers/statisticsController");
-const uploadController       = require("../controllers/uploadController");
+const inventoryController = require("../controllers/inventoryController");
+const statisticsController = require("../controllers/statisticsController");
+const uploadController = require("../controllers/uploadController");
 const adminOverviewController = require("../controllers/adminOverviewController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -134,8 +134,11 @@ router.delete("/users/:id", authMiddleware, roleMiddleware(["administrator"]), u
 // ROOM MANAGEMENT ROUTES (Administrator)
 // ============================================================
 router.post("/buildings", authMiddleware, roleMiddleware(["administrator"]), roomController.createBuilding);
+router.put("/buildings/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.updateBuilding);
 router.post("/floors", authMiddleware, roleMiddleware(["administrator"]), roomController.createFloor);
+router.put("/floors/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.updateFloor);
 router.post("/room-types", authMiddleware, roleMiddleware(["administrator"]), roomController.createRoomType);
+router.put("/room-types/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.updateRoomType);
 router.get("/rooms/options", authMiddleware, roleMiddleware(["administrator"]), roomController.getRoomOptions);
 router.post("/rooms/bulk", authMiddleware, roleMiddleware(["administrator"]), roomController.createRoomsBulk);
 router.get("/rooms/:id", authMiddleware, roleMiddleware(["administrator"]), roomController.getRoom);

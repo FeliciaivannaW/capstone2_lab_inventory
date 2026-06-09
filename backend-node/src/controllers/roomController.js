@@ -352,6 +352,88 @@ const deleteRoomType = async (req, res) => {
   }
 };
 
+const updateBuilding = async (req, res) => {
+  try {
+    const payload = {
+      code: String(req.body.code || "").trim().toUpperCase(),
+      name: String(req.body.name || "").trim(),
+      address: req.body.address ? String(req.body.address).trim() : null,
+      description: req.body.description ? String(req.body.description).trim() : null
+    };
+
+    if (!payload.code || !payload.name) {
+      return res.status(400).json({ status: "error", message: "Kode dan nama gedung wajib diisi" });
+    }
+
+    const result = await RoomModel.updateBuilding(req.params.id, payload);
+    if (!result.affectedRows) {
+      return res.status(404).json({ status: "error", message: "Gedung tidak ditemukan" });
+    }
+    res.json({ status: "success", message: "Gedung berhasil diperbarui" });
+  } catch (error) {
+    console.error("[UPDATE BUILDING ERROR]", error);
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ status: "error", message: "Kode gedung sudah digunakan" });
+    }
+    res.status(500).json({ status: "error", message: "Gagal memperbarui gedung" });
+  }
+};
+
+const updateFloor = async (req, res) => {
+  try {
+    const buildingId = toPositiveInt(req.body.building_id, "Gedung");
+    const floorNumber = Number(req.body.floor_number);
+
+    if (!Number.isInteger(floorNumber)) {
+      return res.status(400).json({ status: "error", message: "Nomor lantai harus berupa angka" });
+    }
+
+    const payload = {
+      building_id: buildingId,
+      floor_number: floorNumber,
+      name: req.body.name ? String(req.body.name).trim() : null,
+      description: req.body.description ? String(req.body.description).trim() : null
+    };
+
+    const result = await RoomModel.updateFloor(req.params.id, payload);
+    if (!result.affectedRows) {
+      return res.status(404).json({ status: "error", message: "Lantai tidak ditemukan" });
+    }
+    res.json({ status: "success", message: "Lantai berhasil diperbarui" });
+  } catch (error) {
+    console.error("[UPDATE FLOOR ERROR]", error);
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ status: "error", message: "Lantai ini sudah ada di gedung yang sama" });
+    }
+    res.status(500).json({ status: "error", message: "Gagal memperbarui lantai" });
+  }
+};
+
+const updateRoomType = async (req, res) => {
+  try {
+    const payload = {
+      name: String(req.body.name || "").trim().toLowerCase().replace(/\s+/g, '_'),
+      description: req.body.description ? String(req.body.description).trim() : null
+    };
+
+    if (!payload.name) {
+      return res.status(400).json({ status: "error", message: "Nama tipe ruangan wajib diisi" });
+    }
+
+    const result = await RoomModel.updateRoomType(req.params.id, payload);
+    if (!result.affectedRows) {
+      return res.status(404).json({ status: "error", message: "Tipe ruangan tidak ditemukan" });
+    }
+    res.json({ status: "success", message: "Tipe ruangan berhasil diperbarui" });
+  } catch (error) {
+    console.error("[UPDATE ROOM TYPE ERROR]", error);
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ status: "error", message: "Tipe ruangan sudah ada" });
+    }
+    res.status(500).json({ status: "error", message: "Gagal memperbarui tipe ruangan" });
+  }
+};
+
 module.exports = {
   getRooms,
   getRoom,
@@ -365,5 +447,8 @@ module.exports = {
   deleteRoom,
   deleteBuilding,
   deleteFloor,
-  deleteRoomType
+  deleteRoomType,
+  updateBuilding,
+  updateFloor,
+  updateRoomType
 };
