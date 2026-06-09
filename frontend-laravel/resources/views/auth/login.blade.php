@@ -129,6 +129,14 @@
         <div class="panel-left relative lg:w-[42%] bg-[#F8FAFC] px-8 py-12 lg:px-12 flex flex-col justify-center">
             <div class="panel-divider hidden lg:block"></div>
 
+            {{-- Back to Home --}}
+            <a href="{{ url('/') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-indigo-600 transition-colors mb-10 w-fit">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                Back to Home
+            </a>
+
             {{-- Logo --}}
             <div class="flex items-center gap-3 mb-10">
                 <svg width="38" height="38" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -231,11 +239,11 @@
             <div class="mt-6 bg-white border border-slate-200 rounded-2xl p-4">
                 <p class="text-[0.68rem] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">Demo Accounts</p>
                 <div class="space-y-1.5 text-xs">
-                    <div class="flex justify-between text-slate-500"><span class="font-semibold text-slate-700 w-24">Admin</span><span>admin@example.com / password123</span></div>
-                    <div class="flex justify-between text-slate-500"><span class="font-semibold text-slate-700 w-24">Ka. Lab</span><span>kalab@example.com / password123</span></div>
-                    <div class="flex justify-between text-slate-500"><span class="font-semibold text-slate-700 w-24">Ka. Prodi</span><span>kaprodi@example.com / password123</span></div>
-                    <div class="flex justify-between text-slate-500"><span class="font-semibold text-slate-700 w-24">Staf Admin</span><span>stafadmin@example.com / password123</span></div>
-                    <div class="flex justify-between text-slate-500"><span class="font-semibold text-slate-700 w-24">Staf Lab</span><span>staflab@example.com / password123</span></div>
+                    <div class="flex justify-between text-slate-500"><span class="font-semibold text-slate-700 w-24">Admin</span><span>admin@example.com / password</span></div>
+                    <div class="flex justify-between text-slate-500"><span class="font-semibold text-slate-700 w-24">Ka. Lab</span><span>kalab@example.com / password</span></div>
+                    <div class="flex justify-between text-slate-500"><span class="font-semibold text-slate-700 w-24">Ka. Prodi</span><span>kaprodi@example.com / password</span></div>
+                    <div class="flex justify-between text-slate-500"><span class="font-semibold text-slate-700 w-24">Staf Admin</span><span>stafadmin@example.com / password</span></div>
+                    <div class="flex justify-between text-slate-500"><span class="font-semibold text-slate-700 w-24">Staf Lab</span><span>staflab@example.com / password</span></div>
                 </div>
             </div>
 
