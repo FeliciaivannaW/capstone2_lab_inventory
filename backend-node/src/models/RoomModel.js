@@ -298,29 +298,6 @@ const RoomModel = {
     return result;
   },
 
-  async updateBuilding(id, { code, name, address, description }) {
-    const [result] = await db.query(
-      "UPDATE buildings SET code = ?, name = ?, address = ?, description = ? WHERE id = ?",
-      [code, name, address || null, description || null, id]
-    );
-    return result;
-  },
-
-  async updateFloor(id, { building_id, floor_number, name, description }) {
-    const [result] = await db.query(
-      "UPDATE floors SET building_id = ?, floor_number = ?, name = ?, description = ? WHERE id = ?",
-      [building_id, floor_number, name || null, description || null, id]
-    );
-    return result;
-  },
-
-  async updateRoomType(id, { name, description }) {
-    const [result] = await db.query(
-      "UPDATE room_types SET name = ?, description = ? WHERE id = ?",
-      [name, description || null, id]
-    );
-    return result;
-  },
 };
 
 module.exports = RoomModel;
